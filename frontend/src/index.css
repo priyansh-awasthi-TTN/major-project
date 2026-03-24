@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'Inter', sans-serif; }
+
+@keyframes ring {
+  0%   { transform: rotate(0deg); }
+  5%   { transform: rotate(15deg); }
+  10%  { transform: rotate(-12deg); }
+  15%  { transform: rotate(10deg); }
+  20%  { transform: rotate(-8deg); }
+  25%  { transform: rotate(5deg); }
+  30%  { transform: rotate(0deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(100%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
