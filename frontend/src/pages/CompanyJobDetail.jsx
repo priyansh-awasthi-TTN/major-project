@@ -1,14 +1,25 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { jobs, companies } from '../data/mockData';
+import { useAuth } from '../context/AuthContext';
 import ApplicationModal from '../components/ApplicationModal';
 import JobCard from '../components/JobCard';
 
 export default function CompanyJobDetail() {
   const { companyId, jobId } = useParams();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const company = companies.find(c => c.id === Number(companyId)) || companies[0];
   const job = jobs.find(j => j.id === Number(jobId)) || jobs[0];
   const [showModal, setShowModal] = useState(false);
+
+  const handleApply = () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    setShowModal(true);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -40,7 +51,7 @@ export default function CompanyJobDetail() {
           </div>
           <div className="flex gap-3">
             <button className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">🔗</button>
-            <button onClick={() => setShowModal(true)} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700 font-medium">Apply</button>
+            <button onClick={handleApply} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700 font-medium">Apply</button>
           </div>
         </div>
 
