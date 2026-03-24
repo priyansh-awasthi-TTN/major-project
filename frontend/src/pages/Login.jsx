@@ -5,12 +5,11 @@ import { useAuth } from '../context/AuthContext';
 export default function Login() {
   const [tab, setTab] = useState('jobseeker');
   const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
   const navigate = useNavigate();
   const { login } = useAuth();
 
   const handleLogin = () => {
-    const displayName = name.trim() || email.split('@')[0] || 'User';
+    const displayName = email.split('@')[0] || 'User';
     login(displayName, email || 'user@email.com');
     navigate('/dashboard');
   };
@@ -61,11 +60,7 @@ export default function Login() {
             <div className="flex-1 h-px bg-gray-200" />
           </div>
 
-            <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">Full Name</label>
-              <input value={name} onChange={e => setName(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Your full name" />
-            </div>
+          <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-1">Email Address</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="example@email.com" />
