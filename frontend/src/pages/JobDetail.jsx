@@ -1,13 +1,24 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { jobs } from '../data/mockData';
+import { useAuth } from '../context/AuthContext';
 import JobCard from '../components/JobCard';
 import ApplicationModal from '../components/ApplicationModal';
 
 export default function JobDetail() {
   const { id } = useParams();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const job = jobs.find(j => j.id === Number(id)) || jobs[0];
   const [showModal, setShowModal] = useState(false);
+
+  const handleApply = () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    setShowModal(true);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -34,7 +45,7 @@ export default function JobDetail() {
           </div>
           <div className="flex gap-3">
             <button className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">🔗</button>
-            <button onClick={() => setShowModal(true)} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700">Apply</button>
+            <button onClick={handleApply} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700">Apply</button>
           </div>
         </div>
 

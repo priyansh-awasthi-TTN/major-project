@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const allJobs = [
   { id: 1, title: 'Social Media Assistant', company: 'Nomad', location: 'Paris, France', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'N', color: 'bg-emerald-500', applied: 5, capacity: 10 },
@@ -46,6 +47,16 @@ const salaryRanges = [
 ];
 
 export default function FindJobs() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const handleApply = (jobId) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    navigate(`/jobs/${jobId}`);
+  };
+
   const [search, setSearch] = useState('');
   const [viewGrid, setViewGrid] = useState(false);
 
@@ -185,9 +196,12 @@ export default function FindJobs() {
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                    <Link to={`/jobs/${job.id}`}>
-                      <button className="bg-blue-600 text-white text-sm px-5 py-2 rounded-lg hover:bg-blue-700 font-medium">Apply</button>
-                    </Link>
+                    <button 
+                      onClick={() => handleApply(job.id)}
+                      className="bg-blue-600 text-white text-sm px-5 py-2 rounded-lg hover:bg-blue-700 font-medium"
+                    >
+                      Apply
+                    </button>
                     <div className="text-right">
                       <div className="w-32 bg-gray-200 rounded-full h-1.5 mb-1">
                         <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${(job.applied / job.capacity) * 100}%` }} />
@@ -207,9 +221,12 @@ export default function FindJobs() {
                 <div key={job.id} className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-sm transition">
                   <div className="flex items-start justify-between mb-3">
                     <span className="text-xs border border-green-500 text-green-600 rounded px-2 py-0.5">{job.type}</span>
-                    <Link to={`/jobs/${job.id}`}>
-                      <button className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-blue-700">Apply</button>
-                    </Link>
+                    <button 
+                      onClick={() => handleApply(job.id)}
+                      className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-blue-700"
+                    >
+                      Apply
+                    </button>
                   </div>
                   <div className="flex items-start gap-3">
                     <div className={`${job.color} text-white rounded-xl w-11 h-11 flex items-center justify-center font-bold flex-shrink-0`}>{job.logo}</div>

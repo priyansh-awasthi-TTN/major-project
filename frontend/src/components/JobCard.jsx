@@ -1,7 +1,19 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function JobCard({ job, grid = false, dashboard = false }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const basePath = dashboard ? '/dashboard/jobs' : '/jobs';
+  
+  const handleApply = (e) => {
+    e.preventDefault();
+    if (!user && !dashboard) {
+      navigate('/login');
+      return;
+    }
+    navigate(`${basePath}/${job.id}`);
+  };
   return (
     <div className={`bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition ${grid ? '' : 'flex items-start gap-4'}`}>
       <div className={`${job.color} text-white rounded-xl w-12 h-12 flex items-center justify-center font-bold text-lg flex-shrink-0 ${grid ? 'mb-3' : ''}`}>
@@ -13,9 +25,12 @@ export default function JobCard({ job, grid = false, dashboard = false }) {
             <span className="text-xs border border-green-500 text-green-600 rounded px-2 py-0.5 mr-2">{job.type}</span>
           </div>
           {!grid && (
-            <Link to={`${basePath}/${job.id}`}>
-              <button className="bg-blue-50 text-blue-600 text-sm px-4 py-1.5 rounded hover:bg-blue-600 hover:text-white transition">Apply</button>
-            </Link>
+            <button 
+              onClick={handleApply}
+              className="bg-blue-50 text-blue-600 text-sm px-4 py-1.5 rounded hover:bg-blue-600 hover:text-white transition"
+            >
+              Apply
+            </button>
           )}
         </div>
         <Link to={`${basePath}/${job.id}`}>
@@ -29,9 +44,12 @@ export default function JobCard({ job, grid = false, dashboard = false }) {
         </div>
         {grid && (
           <div className="mt-3">
-            <Link to={`${basePath}/${job.id}`}>
-              <button className="w-full bg-blue-50 text-blue-600 text-sm px-4 py-1.5 rounded hover:bg-blue-600 hover:text-white transition">Apply</button>
-            </Link>
+            <button 
+              onClick={handleApply}
+              className="w-full bg-blue-50 text-blue-600 text-sm px-4 py-1.5 rounded hover:bg-blue-600 hover:text-white transition"
+            >
+              Apply
+            </button>
           </div>
         )}
         <p className="text-xs text-gray-400 mt-2">{job.applied} applied of {job.capacity} capacity</p>
