@@ -5,13 +5,29 @@ import { useAuth } from '../context/AuthContext';
 export default function Login() {
   const [tab, setTab] = useState('jobseeker');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const handleLogin = () => {
-    const displayName = email.split('@')[0] || 'User';
-    login(displayName, email || 'user@email.com');
-    navigate('/dashboard');
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      await login({
+        email,
+        password,
+        userType: tab.toUpperCase()
+      });
+      navigate('/dashboard');
+    } catch (error) {
+      setError(error.message || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -60,14 +76,34 @@ export default function Login() {
             <div className="flex-1 h-px bg-gray-200" />
           </div>
 
-          <div className="space-y-4">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-1">Email Address</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="example@email.com" />
+              <input 
+                type="email" 
+                value={email} 
+                onChange={e => setEmail(e.target.value)} 
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-500" 
+                placeholder="example@email.com"
+                required
+              />
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-1">Password</label>
-              <input type="password" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="At least 8 characters" />
+              <input 
+                type="password" 
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-500" 
+                placeholder="At least 8 characters"
+                required
+              />
             </div>
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
@@ -75,8 +111,14 @@ export default function Login() {
               </label>
               <Link to="#" className="text-blue-600 text-sm hover:underline">Forgot password?</Link>
             </div>
-            <button onClick={handleLogin} className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700">Login</button>
-          </div>
+            <button 
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Logging in...' : 'Login'}
+            </button>
+          </form>
           <p className="text-center text-sm text-gray-500 mt-4">Don't have an account? <Link to="/signup" className="text-blue-600 hover:underline">Sign Up</Link></p>
         </div>
       </div>
