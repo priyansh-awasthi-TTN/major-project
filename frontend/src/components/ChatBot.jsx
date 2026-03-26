@@ -87,7 +87,7 @@ export default function ChatBot() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'bot', text: `Hi${user?.name ? ' ' + user.name.split(' ')[0] : ''}! 👋 I'm your JobHuntly assistant. How can I help you today?` }
+    { role: 'bot', text: `Hi${user?.fullName ? ' ' + user.fullName.split(' ')[0] : ''}! 👋 I'm your JobHuntly assistant. How can I help you today?` }
   ]);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);

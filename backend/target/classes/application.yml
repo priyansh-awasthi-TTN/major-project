@@ -9,7 +9,7 @@ spring:
     url: jdbc:mysql://localhost:3306/jobhuntly?createDatabaseIfNotExist=true
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
-    password: root
+    password: Meghajaiswal@97
   
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect

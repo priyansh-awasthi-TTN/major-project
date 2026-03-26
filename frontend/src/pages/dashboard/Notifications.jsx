@@ -77,8 +77,8 @@ export default function Notifications() {
   const { notifications, unreadCount, markAllRead, markRead, timeAgo } = useNotifications();
   const [filter, setFilter] = useState('All');
 
-  const userName = user?.name || 'Jake Gyll';
-  const userEmail = user?.email || 'jakegyll@email.com';
+  const userName = user?.fullName || 'User Name';
+  const userEmail = user?.email || 'user@email.com';
 
   const filtered = notifications.filter(n => {
     if (filter === 'Unread') return !n.read;
