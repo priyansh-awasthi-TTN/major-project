@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import DropdownMenu from '../../components/DropdownMenu';
 import { useAuth } from '../../context/AuthContext';
 import DashTopBar from '../../components/DashTopBar';
+import Toast from '../../components/Toast';
+import { messages } from '../../data/mockData';
 
 const allApplications = [
   { id: 1,  company: 'Nomad',        logo: 'N',  color: 'bg-emerald-500', location: 'Paris, France',        title: 'Social Media Assistant', dateApplied: '24 July 2021', status: 'In Review',    salary: '$75k-$85k', type: 'Full-Time', note: 'Application under review by the hiring team.' },
@@ -155,17 +157,49 @@ function DetailDrawer({ app, onClose }) {
   );
 }
 
-const appMenuItems = (app, onRemove) => [
-  { icon: '👁️', label: 'View Details', action: () => {} },
-  { icon: '📄', label: 'View Job Posting', action: () => {} },
-  { icon: '✉️', label: 'Message Recruiter', action: () => {} },
+const appMenuItems = (app, onRemove, navigate, user) => [
+  { 
+    icon: '👁️', 
+    label: 'View Details', 
+    action: () => navigate(`/dashboard/jobs/${app.id}`)
+  },
+  { 
+    icon: '📄', 
+    label: 'View Job Posting', 
+    action: () => navigate(`/dashboard/jobs/${app.id}`)
+  },
+  { 
+    icon: '✉️', 
+    label: 'Message Recruiter', 
+    action: () => {
+      // Find recruiter email from messages data
+      const recruiterMessage = messages.find(msg => 
+        msg.company.toLowerCase() === app.company.toLowerCase()
+      );
+      const recruiterEmail = recruiterMessage ? 
+        `${recruiterMessage.name.toLowerCase().replace(' ', '.')}@${app.company.toLowerCase()}.com` : 
+        `recruiter@${app.company.toLowerCase()}.com`;
+      
+      // Open default email client with compose window
+      const subject = encodeURIComponent(`Regarding ${app.title} Position`);
+      const body = encodeURIComponent(`Dear Hiring Manager,\n\nI hope this email finds you well. I am writing to follow up on my application for the ${app.title} position at ${app.company}.\n\nI am very excited about this opportunity and would love to discuss how my skills and experience align with your team's needs.\n\nThank you for your time and consideration.\n\nBest regards,\n${user?.fullName || 'Applicant'}`);
+      
+      window.location.href = `mailto:${recruiterEmail}?subject=${subject}&body=${body}`;
+    }
+  },
   'divider',
-  { icon: '🗑️', label: 'Remove Application', action: () => onRemove(app.id), danger: true },
+  { 
+    icon: '🗑️', 
+    label: 'Remove Application', 
+    action: () => onRemove(app.id), 
+    danger: true 
+  },
 ];
 
 export default function MyApplications() {
   const { user } = useAuth();
-  const firstName = (user?.name || 'Jake').split(' ')[0];
+  const navigate = useNavigate();
+  const firstName = (user?.fullName || 'Jake').split(' ')[0];
   const [activeTab, setActiveTab] = useState(0);
   const [showNotice, setShowNotice] = useState(true);
   const [search, setSearch] = useState('');
@@ -176,8 +210,14 @@ export default function MyApplications() {
   const [selectedApp, setSelectedApp] = useState(null);
   const [openMenu, setOpenMenu] = useState(null);
   const [applications, setApplications] = useState(allApplications);
+  const [toast, setToast] = useState(null);
 
-  const handleRemove = (id) => setApplications(prev => prev.filter(a => a.id !== id));
+  const handleRemove = (id) => {
+    if (confirm('Are you sure you want to remove this application?')) {
+      setApplications(prev => prev.filter(a => a.id !== id));
+      setToast({ message: 'Application removed successfully', type: 'success' });
+    }
+  };
 
   const tabFilter = tabs[activeTab].filter;
 
@@ -313,7 +353,9 @@ export default function MyApplications() {
                       <button onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === app.id ? null : app.id); }}
                         className="text-gray-400 hover:text-gray-600 text-lg px-1">•••</button>
                       {openMenu === app.id && (
-                        <DropdownMenu items={appMenuItems(app, handleRemove)} onClose={() => setOpenMenu(null)} />
+                        <div className="absolute right-0 top-8 z-50">
+                          <DropdownMenu items={appMenuItems(app, handleRemove, navigate, user)} onClose={() => setOpenMenu(null)} />
+                        </div>
                       )}
                     </div>
                   </td>
@@ -338,6 +380,13 @@ export default function MyApplications() {
       </div>
 
       <DetailDrawer app={selectedApp} onClose={() => setSelectedApp(null)} />
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
+      )}
     </div>
   );
 }

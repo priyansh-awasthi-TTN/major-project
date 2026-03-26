@@ -71,7 +71,7 @@ export default function NotificationPanel({ open, onClose }) {
   const panelRef = useRef(null);
   const navigate = useNavigate();
 
-  const userName = user?.name || 'Jake Gyll';
+  const userName = user?.fullName || 'Jake Gyll';
   const userEmail = user?.email || 'jakegyll@email.com';
 
   useEffect(() => {

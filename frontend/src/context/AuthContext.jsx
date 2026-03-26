@@ -14,11 +14,14 @@ export function AuthProvider({ children }) {
       if (token) {
         try {
           const response = await apiService.getCurrentUser();
-          setUser(response.user);
+          if (response && response.user) {
+            setUser(response.user);
+          }
         } catch (error) {
           console.error('Auth check failed:', error);
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
+          setUser(null);
         }
       }
       setLoading(false);
@@ -31,14 +34,18 @@ export function AuthProvider({ children }) {
     try {
       const response = await apiService.login(credentials);
       
-      // Store tokens
-      localStorage.setItem('accessToken', response.accessToken);
-      localStorage.setItem('refreshToken', response.refreshToken);
-      
-      // Set user
-      setUser(response.user);
-      
-      return response;
+      if (response && response.accessToken && response.user) {
+        // Store tokens
+        localStorage.setItem('accessToken', response.accessToken);
+        localStorage.setItem('refreshToken', response.refreshToken);
+        
+        // Set user
+        setUser(response.user);
+        
+        return response;
+      } else {
+        throw new Error('Invalid response from server');
+      }
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -66,15 +73,20 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
+    console.log('AuthContext logout called');
+    // Clear user state immediately
+    setUser(null);
+    
+    // Clear local storage immediately
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    
     try {
+      console.log('Calling API logout');
       await apiService.logout();
+      console.log('API logout successful');
     } catch (error) {
-      console.error('Logout failed:', error);
-    } finally {
-      // Clear local storage and user state
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      setUser(null);
+      console.error('API logout failed:', error);
     }
   };
 

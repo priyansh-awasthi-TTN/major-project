@@ -81,14 +81,15 @@ const PORTFOLIOS = [
 
 export default function Profile() {
   const { user } = useAuth();
-  const displayName = user?.name || 'Jake Gyll';
+  const displayName = user?.fullName || 'User Name';
+  const userEmail = user?.email || 'user@email.com';
   const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
   // Profile header state
   const [profile, setProfile] = useState({ name: displayName, title: 'Product Designer', company: 'Twitter', location: 'Manchester, UK' });
   const [about, setAbout]     = useState("I'm a product designer — filmmaker currently working remotely at Twitter from beautiful Manchester, United Kingdom. I'm passionate about designing digital products that have a positive impact on the world.\n\nFor 10 years, I've specialised in interface, experience & interaction design as well as working in user research and product strategy for product agencies, big tech companies & start-ups.");
-  const [details, setDetails] = useState({ email: 'jakegyll@email.com', phone: '+44 1245 572 135', languages: 'English, French' });
-  const [socials, setSocials] = useState({ instagram: 'instagram.com/jakegyll', twitter: 'twitter.com/jakegyll', website: 'www.jakegyll.com' });
+  const [details, setDetails] = useState({ email: userEmail, phone: '+44 1245 572 135', languages: 'English, French' });
+  const [socials, setSocials] = useState({ instagram: 'instagram.com/user', twitter: 'twitter.com/user', website: 'www.user.com' });
   const [skills, setSkills]   = useState(['Communication', 'Analytics', 'Facebook Ads', 'Content Planning', 'Community Manager', 'Figma', 'Prototyping', 'User Research']);
   const [experiences, setExperiences] = useState(initExperiences);
   const [educations, setEducations]   = useState(initEducations);

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import DashTopBar from '../../components/DashTopBar';
 import ChatBot from '../../components/ChatBot';
+import { useAuth } from '../../context/AuthContext';
 
 const allArticles = [
   {
@@ -133,7 +134,7 @@ function ContactModal({ onClose }) {
                 <div>
                   <label className="text-xs font-medium text-gray-600 block mb-1">Your Name</label>
                   <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500" placeholder="Jake Gyll" />
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500" placeholder={user?.fullName || 'Your Name'} />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-600 block mb-1">Email</label>
@@ -205,6 +206,7 @@ function ArticleMenu({ articleId, onClose, onCopyLink, onReport }) {
 }
 
 export default function HelpCenter() {
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('Getting Started');
   const [sort, setSort] = useState('Most relevant');

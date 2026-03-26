@@ -11,7 +11,7 @@ export default function DropdownMenu({ items, onClose, position = 'right' }) {
 
   return (
     <div ref={ref}
-      className={`absolute z-50 top-8 ${position === 'left' ? 'left-0' : 'right-0'} bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-44`}>
+      className={`bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-44 max-w-48`}>
       {items.map((item, i) =>
         item === 'divider' ? (
           <div key={i} className="my-1 border-t border-gray-100" />

@@ -6,15 +6,16 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
+  const handleLogout = async () => {
+    await logout();
+    // Force navigation to home page after logout
+    navigate('/', { replace: true });
   };
 
   return (
     <nav className="bg-[#1a1a2e] text-white px-8 py-4 flex items-center justify-between sticky top-0 z-50">
       <div className="flex items-center gap-8">
-        <Link to="/" className="flex items-center gap-2 font-bold text-lg">
+        <Link to="/" className="flex items-center gap-2 font-bold text-lg" onClick={() => navigate('/', { replace: true })}>
           <span className="bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">J</span>
           JobHuntly
         </Link>
@@ -32,7 +33,7 @@ export default function Navbar() {
               Dashboard
             </Link>
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-gray-300">Hi, {user.name}</span>
+              <span className="text-gray-300">Hi, {user.fullName}</span>
               <button 
                 onClick={handleLogout}
                 className="text-gray-300 hover:text-white px-3 py-2 text-sm"
