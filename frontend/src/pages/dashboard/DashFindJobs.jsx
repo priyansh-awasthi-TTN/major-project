@@ -1,33 +1,13 @@
-import { useState, useMemo } from 'react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import DashTopBar from '../../components/DashTopBar';
+import apiService from '../../services/api';
 
-// Extended job dataset matching Figma
-const allJobs = [
+// Extended job dataset matching Figma — used as fallback only
+const fallbackJobs = [
   { id: 1,  title: 'Social Media Assistant',  company: 'Nomad',      location: 'Paris, France',        type: 'Full-Time',  categories: ['Marketing', 'Design'],       logo: 'N',  color: 'bg-emerald-500', level: 'Entry Level',  salary: 700,  applied: 5,  capacity: 10 },
   { id: 2,  title: 'Brand Designer',           company: 'Dropbox',    location: 'San Francisco, USA',   type: 'Full-Time',  categories: ['Design', 'Business'],        logo: 'D',  color: 'bg-blue-500',    level: 'Mid Level',    salary: 1200, applied: 2,  capacity: 8  },
   { id: 3,  title: 'Interactive Developer',    company: 'Terraform',  location: 'Hamburg, Germany',     type: 'Full-Time',  categories: ['Marketing', 'Design'],       logo: 'T',  color: 'bg-purple-500',  level: 'Senior Level', salary: 1500, applied: 7,  capacity: 12 },
-  { id: 4,  title: 'Email Marketing',          company: 'Revolut',    location: 'Madrid, Spain',        type: 'Full-Time',  categories: ['Marketing', 'Design'],       logo: 'R',  color: 'bg-red-500',     level: 'Entry Level',  salary: 800,  applied: 3,  capacity: 6  },
-  { id: 5,  title: 'Lead Engineer',            company: 'Canva',      location: 'Ankara, Turkey',       type: 'Full-Time',  categories: ['Business', 'Design'],        logo: 'Ca', color: 'bg-cyan-500',    level: 'Director',     salary: 2500, applied: 9,  capacity: 15 },
-  { id: 6,  title: 'Product Designer',         company: 'Classpass',  location: 'Berlin, Germany',      type: 'Full-Time',  categories: ['Business', 'Design'],        logo: 'Cp', color: 'bg-teal-500',    level: 'Mid Level',    salary: 1100, applied: 4,  capacity: 5  },
-  { id: 7,  title: 'Customer Manager',         company: 'Pitch',      location: 'Berlin, Germany',      type: 'Full-Time',  categories: ['Marketing', 'Design'],       logo: 'Pi', color: 'bg-gray-800',    level: 'Entry Level',  salary: 900,  applied: 1,  capacity: 4  },
-  { id: 8,  title: 'Visual Designer',          company: 'Minted',     location: 'Lyon, France',         type: 'Full-Time',  categories: ['Marketing', 'Design'],       logo: 'Mi', color: 'bg-orange-500',  level: 'Mid Level',    salary: 1300, applied: 6,  capacity: 10 },
-  { id: 9,  title: 'Java Developer',           company: 'Subtonify',  location: 'Gothenburg, Sweden',   type: 'Part-Time',  categories: ['Marketing', 'Design'],       logo: 'Su', color: 'bg-yellow-600',  level: 'Senior Level', salary: 1800, applied: 3,  capacity: 7  },
-  { id: 10, title: 'Social Media Assistant',   company: 'Nomad',      location: 'Paris, France',        type: 'Full-Time',  categories: ['Marketing', 'Design'],       logo: 'N',  color: 'bg-emerald-500', level: 'Entry Level',  salary: 700,  applied: 5,  capacity: 10 },
-  { id: 11, title: 'Brand Designer',           company: 'Dropbox',    location: 'San Francisco, USA',   type: 'Full-Time',  categories: ['Business', 'Design'],        logo: 'D',  color: 'bg-blue-500',    level: 'Mid Level',    salary: 1200, applied: 2,  capacity: 8  },
-  { id: 12, title: 'Interactive Developer',    company: 'Terraform',  location: 'Hamburg, Germany',     type: 'Full-Time',  categories: ['Marketing', 'Design'],       logo: 'T',  color: 'bg-purple-500',  level: 'Senior Level', salary: 1500, applied: 7,  capacity: 12 },
-  { id: 13, title: 'Email Marketing',          company: 'Revolut',    location: 'Madrid, Spain',        type: 'Internship', categories: ['Marketing', 'Design'],       logo: 'R',  color: 'bg-red-500',     level: 'Entry Level',  salary: 400,  applied: 3,  capacity: 6  },
-  { id: 14, title: 'Product Designer',         company: 'Classpass',  location: 'Berlin, Germany',      type: 'Full-Time',  categories: ['Business', 'Design'],        logo: 'Cp', color: 'bg-teal-500',    level: 'Director',     salary: 2200, applied: 4,  capacity: 5  },
-  { id: 15, title: 'Customer Manager',         company: 'Pitch',      location: 'Rome, Italy',          type: 'Full-Time',  categories: ['Marketing', 'Design'],       logo: 'Pi', color: 'bg-gray-800',    level: 'Entry Level',  salary: 950,  applied: 1,  capacity: 4  },
-  { id: 16, title: 'Visual Designer',          company: 'Minted',     location: 'Lyon, France',         type: 'Full-Time',  categories: ['Marketing', 'Design'],       logo: 'Mi', color: 'bg-orange-500',  level: 'Mid Level',    salary: 1300, applied: 6,  capacity: 10 },
-  { id: 17, title: 'Java Developer',           company: 'Subtonify',  location: 'Gothenburg, Sweden',   type: 'Remote',     categories: ['Marketing', 'Design'],       logo: 'Su', color: 'bg-yellow-600',  level: 'Senior Level', salary: 1800, applied: 3,  capacity: 7  },
-  { id: 18, title: 'Social Media Assistant',   company: 'Nomad',      location: 'Paris, France',        type: 'Full-Time',  categories: ['Marketing', 'Design'],       logo: 'N',  color: 'bg-emerald-500', level: 'Entry Level',  salary: 700,  applied: 5,  capacity: 10 },
-  { id: 19, title: 'Brand Designer',           company: 'Dropbox',    location: 'San Francisco, USA',   type: 'Full-Time',  categories: ['Business', 'Design'],        logo: 'D',  color: 'bg-blue-500',    level: 'Mid Level',    salary: 1200, applied: 2,  capacity: 8  },
-  { id: 20, title: 'Interactive Developer',    company: 'Terraform',  location: 'Hamburg, Germany',     type: 'Contract',   categories: ['Marketing', 'Design'],       logo: 'T',  color: 'bg-purple-500',  level: 'Senior Level', salary: 1500, applied: 7,  capacity: 12 },
-  { id: 21, title: 'Email Marketing',          company: 'Revolut',    location: 'Madrid, Spain',        type: 'Full-Time',  categories: ['Marketing', 'Design'],       logo: 'R',  color: 'bg-red-500',     level: 'VP or Above',  salary: 3000, applied: 3,  capacity: 6  },
-  { id: 22, title: 'Lead Engineer',            company: 'Canva',      location: 'Ankara, Turkey',       type: 'Full-Time',  categories: ['Business', 'Design'],        logo: 'Ca', color: 'bg-cyan-500',    level: 'Director',     salary: 2500, applied: 9,  capacity: 15 },
-  { id: 23, title: 'Product Designer',         company: 'Classpass',  location: 'Berlin, Germany',      type: 'Part-Time',  categories: ['Business', 'Design'],        logo: 'Cp', color: 'bg-teal-500',    level: 'Mid Level',    salary: 1100, applied: 4,  capacity: 5  },
-  { id: 24, title: 'Customer Manager',         company: 'Pitch',      location: 'Berlin, Germany',      type: 'Full-Time',  categories: ['Marketing', 'Design'],       logo: 'Pi', color: 'bg-gray-800',    level: 'Entry Level',  salary: 900,  applied: 1,  capacity: 4  },
 ];
 
 const EMPLOYMENT_TYPES = ['Full-Time', 'Part-Time', 'Remote', 'Internship', 'Contract'];
@@ -95,7 +75,7 @@ function ListJobCard({ job, viewParam }) {
             </Link>
           </div>
           <div className="flex flex-wrap gap-1.5 mt-2">
-            {job.categories.map(c => (
+            {(Array.isArray(job.categories) ? job.categories : (job.categories||'').split(',').map(s=>s.trim()).filter(Boolean)).map(c => (
               <span key={c} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded px-2 py-0.5">{c}</span>
             ))}
           </div>
@@ -133,7 +113,7 @@ function GridJobCard({ job, viewParam }) {
         <h3 className="font-semibold text-gray-900 text-sm hover:text-blue-600 mb-0.5">{job.title}</h3>
         <p className="text-xs text-gray-500 mb-2">{job.company} • {job.location}</p>
         <div className="flex flex-wrap gap-1 mb-3">
-          {job.categories.map(c => (
+          {(Array.isArray(job.categories) ? job.categories : (job.categories||'').split(',').map(s=>s.trim()).filter(Boolean)).map(c => (
             <span key={c} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded px-1.5 py-0.5">{c}</span>
           ))}
         </div>
@@ -153,9 +133,18 @@ export default function DashFindJobs() {
   const viewGrid = searchParams.get('view') === 'grid';
   const setViewGrid = (val) => setSearchParams(prev => { const p = new URLSearchParams(prev); p.set('view', val ? 'grid' : 'list'); return p; }, { replace: true });
   const [search, setSearch] = useState('');
-  const [location, setLocation] = useState('Florence, Italy');
+  const [location, setLocation] = useState('');
   const [sortBy, setSortBy] = useState('Most relevant');
   const [page, setPage] = useState(1);
+  const [allJobs, setAllJobs] = useState(fallbackJobs);
+  const [loadingJobs, setLoadingJobs] = useState(true);
+
+  useEffect(() => {
+    apiService.getJobs()
+      .then(data => { if (data?.length) setAllJobs(data); })
+      .catch(() => {})
+      .finally(() => setLoadingJobs(false));
+  }, []);
 
   // Filter state
   const [selTypes, setSelTypes]       = useState([]);
@@ -166,23 +155,29 @@ export default function DashFindJobs() {
   const toggle = (arr, setArr, val) =>
     setArr(prev => prev.includes(val) ? prev.filter(x => x !== val) : [...prev, val]);
 
-  // Compute counts dynamically
-  const typeCounts   = useMemo(() => Object.fromEntries(EMPLOYMENT_TYPES.map(t => [t, allJobs.filter(j => j.type === t).length])), []);
-  const catCounts    = useMemo(() => Object.fromEntries(CATEGORIES.map(c => [c, allJobs.filter(j => j.categories.includes(c)).length])), []);
-  const levelCounts  = useMemo(() => Object.fromEntries(JOB_LEVELS.map(l => [l, allJobs.filter(j => j.level === l).length])), []);
+  // Compute counts dynamically — depend on allJobs so they update after API load
+  const typeCounts  = useMemo(() => Object.fromEntries(EMPLOYMENT_TYPES.map(t => [t, allJobs.filter(j => j.type === t).length])), [allJobs]);
+  const catCounts   = useMemo(() => Object.fromEntries(CATEGORIES.map(c => [c, allJobs.filter(j => Array.isArray(j.categories) ? j.categories.includes(c) : (j.categories || '').includes(c)).length])), [allJobs]);
+  const levelCounts = useMemo(() => Object.fromEntries(JOB_LEVELS.map(l => [l, allJobs.filter(j => j.level === l).length])), [allJobs]);
 
   const filtered = useMemo(() => {
     let result = allJobs.filter(j => {
+      // normalize categories to array regardless of DB format
+      const cats = Array.isArray(j.categories)
+        ? j.categories
+        : (j.categories || '').split(',').map(s => s.trim()).filter(Boolean);
+
       const q = search.toLowerCase();
-      const matchSearch = !q || j.title.toLowerCase().includes(q) || j.company.toLowerCase().includes(q) || j.location.toLowerCase().includes(q);
+      const matchSearch = !q || j.title.toLowerCase().includes(q) || j.company.toLowerCase().includes(q) || (j.location || '').toLowerCase().includes(q);
       const matchType   = selTypes.length === 0 || selTypes.includes(j.type);
-      const matchCat    = selCats.length === 0  || selCats.some(c => j.categories.includes(c));
+      const matchCat    = selCats.length === 0  || selCats.some(c => cats.includes(c));
       const matchLevel  = selLevels.length === 0 || selLevels.includes(j.level);
+      const matchLoc    = !location.trim() || (j.location || '').toLowerCase().includes(location.toLowerCase());
       const matchSalary = selSalary.length === 0 || selSalary.some(r => {
         const range = SALARY_RANGES.find(s => s.label === r);
         return range && j.salary >= range.min && j.salary <= range.max;
       });
-      return matchSearch && matchType && matchCat && matchLevel && matchSalary;
+      return matchSearch && matchType && matchCat && matchLevel && matchLoc && matchSalary;
     });
 
     if (sortBy === 'Newest')           result = [...result].sort((a, b) => b.id - a.id);
@@ -191,7 +186,7 @@ export default function DashFindJobs() {
     else if (sortBy === 'Salary (Low-High)') result = [...result].sort((a, b) => a.salary - b.salary);
 
     return result;
-  }, [search, selTypes, selCats, selLevels, selSalary, sortBy]);
+  }, [search, location, selTypes, selCats, selLevels, selSalary, sortBy, allJobs]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -319,7 +314,11 @@ export default function DashFindJobs() {
           ) : null}
 
           {/* Job cards */}
-          {paginated.length === 0 ? (
+          {loadingJobs ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+            </div>
+          ) : paginated.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <span className="text-5xl mb-3">🔍</span>
               <p className="text-lg font-medium text-gray-500">No jobs found</p>

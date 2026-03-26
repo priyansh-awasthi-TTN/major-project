@@ -76,11 +76,12 @@ export function AuthProvider({ children }) {
     console.log('AuthContext logout called');
     // Clear user state immediately
     setUser(null);
-    
-    // Clear local storage immediately
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    
+
+    // Clear all app localStorage keys
+    ['accessToken', 'refreshToken', 'jh_readMessages', 'jh_blockedUsers', 'jh_messageMeta', 'jh_calendarDate'].forEach(k =>
+      localStorage.removeItem(k)
+    );
+
     try {
       console.log('Calling API logout');
       await apiService.logout();

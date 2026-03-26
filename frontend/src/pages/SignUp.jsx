@@ -18,13 +18,14 @@ export default function SignUp() {
     setError('');
 
     try {
-      await register({
+      const response = await register({
         fullName,
         email,
         password,
         userType: tab.toUpperCase()
       });
-      navigate('/dashboard');
+      const userType = response?.user?.userType || 'JOBSEEKER';
+      navigate(userType === 'COMPANY' ? '/company/dashboard' : '/dashboard');
     } catch (error) {
       setError(error.message || 'Registration failed');
     } finally {

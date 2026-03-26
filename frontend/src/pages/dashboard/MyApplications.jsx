@@ -1,25 +1,15 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DropdownMenu from '../../components/DropdownMenu';
 import { useAuth } from '../../context/AuthContext';
 import DashTopBar from '../../components/DashTopBar';
 import Toast from '../../components/Toast';
+import MessageRecruiterModal from '../../components/MessageRecruiterModal';
 import { messages } from '../../data/mockData';
+import { allApplications as baseApplications } from '../../data/applicationsData';
 
-const allApplications = [
-  { id: 1,  company: 'Nomad',        logo: 'N',  color: 'bg-emerald-500', location: 'Paris, France',        title: 'Social Media Assistant', dateApplied: '24 July 2021', status: 'In Review',    salary: '$75k-$85k', type: 'Full-Time', note: 'Application under review by the hiring team.' },
-  { id: 2,  company: 'Udacity',      logo: 'U',  color: 'bg-cyan-500',    location: 'New York, USA',         title: 'Social Media Assistant', dateApplied: '20 July 2021', status: 'In Review',    salary: '$60k-$70k', type: 'Full-Time', note: 'Recruiter viewed your profile.' },
-  { id: 3,  company: 'Dropbox',      logo: 'D',  color: 'bg-blue-600',    location: 'San Francisco, USA',    title: 'Brand Designer',         dateApplied: '18 July 2021', status: 'In Review',    salary: '$90k-$110k', type: 'Full-Time', note: 'Awaiting hiring manager decision.' },
-  { id: 4,  company: 'Stripe',       logo: 'S',  color: 'bg-indigo-600',  location: 'New York, USA',         title: 'Lead Engineer',          dateApplied: '15 July 2021', status: 'Interviewing', salary: '$120k-$140k', type: 'Full-Time', interviewDate: '28 July 2021, 10:00 AM', interviewer: 'Ally Wales', interviewerRole: 'Engineering Manager', round: 'Round 2 — Technical', note: 'Prepare system design questions.' },
-  { id: 5,  company: 'Divvy',        logo: 'Dv', color: 'bg-teal-500',    location: 'Salt Lake City, USA',   title: 'Social Media Assistant', dateApplied: '14 July 2021', status: 'Interviewing', salary: '$55k-$65k', type: 'Full-Time', interviewDate: '27 July 2021, 2:00 PM', interviewer: 'Joe Bartmann', interviewerRole: 'HR Manager', round: 'Round 1 — HR Screen', note: 'Bring portfolio samples.' },
-  { id: 6,  company: 'Terraform',    logo: 'T',  color: 'bg-purple-500',  location: 'Hamburg, Germany',      title: 'Interactive Developer',  dateApplied: '12 July 2021', status: 'Interviewing', salary: '$80k-$95k', type: 'Full-Time', interviewDate: '29 July 2021, 4:00 PM', interviewer: 'Ruben Culhane', interviewerRole: 'Tech Lead', round: 'Round 3 — Final', note: 'Final round with CTO.' },
-  { id: 7,  company: 'Coinbase',     logo: 'C',  color: 'bg-yellow-500',  location: 'London, UK',            title: 'Product Designer',       dateApplied: '10 July 2021', status: 'Assessment',   salary: '$95k-$115k', type: 'Part-Time', assessmentDue: '30 July 2021', assessmentType: 'Design Challenge', note: 'Create a mobile onboarding flow for a crypto wallet.' },
-  { id: 8,  company: 'Revolut',      logo: 'Rv', color: 'bg-red-500',     location: 'Madrid, Spain',         title: 'Email Marketing',        dateApplied: '8 July 2021',  status: 'Assessment',   salary: '$65k-$75k', type: 'Full-Time', assessmentDue: '31 July 2021', assessmentType: 'Marketing Case Study', note: 'Prepare a 30-day email campaign strategy.' },
-  { id: 9,  company: 'Packer',       logo: 'P',  color: 'bg-orange-500',  location: 'Madrid, Spain',         title: 'Visual Designer',        dateApplied: '5 July 2021',  status: 'Offered',      salary: '$70k-$80k', type: 'Full-Time', offerExpiry: '1 Aug 2021', offerBonus: '$5,000 signing bonus', note: 'Offer letter sent to your email.' },
-  { id: 10, company: 'Webflow',      logo: 'W',  color: 'bg-blue-700',    location: 'San Francisco, USA',    title: 'Brand Designer',         dateApplied: '2 July 2021',  status: 'Offered',      salary: '$85k-$100k', type: 'Full-Time', offerExpiry: '3 Aug 2021', offerBonus: 'Equity package included', note: 'Review benefits package before accepting.' },
-  { id: 11, company: 'Maze',         logo: 'M',  color: 'bg-pink-500',    location: 'Remote',                title: 'Product Designer',       dateApplied: '28 June 2021', status: 'Hired',        salary: '$90k', type: 'Full-Time', startDate: '2 Aug 2021', manager: 'Christina Johanson', note: 'Welcome aboard! Onboarding starts Aug 2.' },
-  { id: 12, company: 'DigitalOcean', logo: 'Do', color: 'bg-blue-500',    location: 'New York, USA',         title: 'Social Media Assistant', dateApplied: '25 June 2021', status: 'Unsuitable',   salary: '$50k', type: 'Full-Time', note: 'Position filled internally.' },
-];
+const LS_CAL = 'jh_calendarDate';
+const PAGE_SIZE = 11;
 
 const statusStyle = {
   'In Review':    'border border-yellow-400 text-yellow-600 bg-yellow-50',
@@ -32,18 +22,177 @@ const statusStyle = {
 };
 
 const tabs = [
-  { label: 'All',          filter: null },
-  { label: 'In Review',    filter: 'In Review' },
+  { label: 'All', filter: null },
+  { label: 'In Review', filter: 'In Review' },
   { label: 'Interviewing', filter: 'Interviewing' },
-  { label: 'Assessment',   filter: 'Assessment' },
-  { label: 'Offered',      filter: 'Offered' },
-  { label: 'Hired',        filter: 'Hired' },
+  { label: 'Assessment', filter: 'Assessment' },
+  { label: 'Offered', filter: 'Offered' },
+  { label: 'Hired', filter: 'Hired' },
 ];
 
 const sortOptions = ['Date Applied (Newest)', 'Date Applied (Oldest)', 'Company A-Z', 'Status'];
 
-function DetailDrawer({ app, onClose }) {
+// ── Calendar (same as Dashboard) ──────────────────────────────────────────────
+function Calendar({ selectedDate, onDateChange, onClose }) {
+  const ref = useRef(null);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [viewMode, setViewMode] = useState('days');
+  const today = new Date();
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  useEffect(() => {
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [onClose]);
+
+  const isToday    = (d) => d.toDateString() === today.toDateString();
+  const isCurMonth = (d) => d.getMonth() === month;
+  const isSelected = (d) => selectedDate && d.toDateString() === selectedDate.toDateString();
+
+  const days = () => {
+    const first = new Date(year, month, 1);
+    const start = new Date(first); start.setDate(start.getDate() - first.getDay());
+    return Array.from({ length: 42 }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d; });
+  };
+
+  return (
+    <div ref={ref} className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-4 w-80">
+      {viewMode === 'days' && (
+        <>
+          <div className="flex items-center justify-between mb-4">
+            <button onClick={() => setCurrentMonth(new Date(year, month - 1, 1))} className="p-1 hover:bg-gray-100 rounded">‹</button>
+            <button onClick={() => setViewMode('months')} className="font-semibold text-gray-900 hover:bg-gray-100 px-2 py-1 rounded text-sm">{monthNames[month]} {year}</button>
+            <button onClick={() => setCurrentMonth(new Date(year, month + 1, 1))} className="p-1 hover:bg-gray-100 rounded">›</button>
+          </div>
+          <div className="grid grid-cols-7 gap-1 mb-2">
+            {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => <div key={d} className="text-center text-xs font-medium text-gray-500 py-1">{d}</div>)}
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {days().map((d, i) => (
+              <button key={i} onClick={() => { onDateChange(d); onClose(); }}
+                className={`text-center py-1.5 text-xs rounded hover:bg-gray-100 transition ${!isCurMonth(d) ? 'text-gray-300' : 'text-gray-700'} ${isToday(d) ? 'bg-blue-100 text-blue-600 font-semibold' : ''} ${isSelected(d) ? 'bg-blue-600 text-white' : ''}`}>
+                {d.getDate()}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      {viewMode === 'months' && (
+        <>
+          <div className="flex items-center justify-between mb-4">
+            <button onClick={() => setCurrentMonth(new Date(year - 1, month, 1))} className="p-1 hover:bg-gray-100 rounded">‹</button>
+            <button onClick={() => setViewMode('years')} className="font-semibold text-gray-900 hover:bg-gray-100 px-2 py-1 rounded text-sm">{year}</button>
+            <button onClick={() => setCurrentMonth(new Date(year + 1, month, 1))} className="p-1 hover:bg-gray-100 rounded">›</button>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {monthNames.map((mn, i) => (
+              <button key={i} onClick={() => { setCurrentMonth(new Date(year, i, 1)); setViewMode('days'); }}
+                className={`text-center py-2 text-xs rounded hover:bg-gray-100 transition ${month === i ? 'bg-blue-600 text-white' : 'text-gray-700'}`}>
+                {mn.slice(0, 3)}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      {viewMode === 'years' && (
+        <>
+          <div className="flex items-center justify-between mb-4">
+            <button onClick={() => setCurrentMonth(new Date(Math.floor(year/10)*10 - 10, month, 1))} className="p-1 hover:bg-gray-100 rounded">‹</button>
+            <span className="font-semibold text-gray-900 text-sm">{Math.floor(year/10)*10} – {Math.floor(year/10)*10+9}</span>
+            <button onClick={() => setCurrentMonth(new Date(Math.floor(year/10)*10 + 10, month, 1))} className="p-1 hover:bg-gray-100 rounded">›</button>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {Array.from({ length: 12 }, (_, i) => Math.floor(year/10)*10 - 1 + i).map(y => (
+              <button key={y} onClick={() => { setCurrentMonth(new Date(y, month, 1)); setViewMode('months'); }}
+                className={`text-center py-2 text-xs rounded hover:bg-gray-100 transition ${year === y ? 'bg-blue-600 text-white' : 'text-gray-700'}`}>
+                {y}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      <div className="mt-3 pt-3 border-t border-gray-100">
+        <button onClick={() => { onDateChange(today); onClose(); }} className="w-full text-center text-xs text-blue-600 hover:text-blue-700 font-medium">Today</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Notes helpers ─────────────────────────────────────────────────────────────
+const LS_NOTES    = 'jh_appNotes';
+const LS_FOLLOWUP = 'jh_followups';
+const LS_ASSESS   = 'jh_assessments';
+function loadNotes() { try { return JSON.parse(localStorage.getItem(LS_NOTES)) || {}; } catch { return {}; } }
+function saveNotes(n) { localStorage.setItem(LS_NOTES, JSON.stringify(n)); }
+function loadLS(key) { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch { return {}; } }
+function saveLS(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+// ── Detail Drawer ─────────────────────────────────────────────────────────────
+function DetailDrawer({ app, onClose, onStatusChange, onToast }) {
+  const [input, setInput]             = useState('');
+  const [notes, setNotes]             = useState(() => (loadNotes()[app?.id] || []));
+  const [followupSent, setFollowupSent]   = useState(() => !!(loadLS(LS_FOLLOWUP)[app?.id]));
+  const [assessStarted, setAssessStarted] = useState(() => !!(loadLS(LS_ASSESS)[app?.id]));
+  const [confirmDecline, setConfirmDecline] = useState(false);
+
+  useEffect(() => {
+    setNotes(loadNotes()[app?.id] || []);
+    setInput('');
+    setFollowupSent(!!(loadLS(LS_FOLLOWUP)[app?.id]));
+    setAssessStarted(!!(loadLS(LS_ASSESS)[app?.id]));
+    setConfirmDecline(false);
+  }, [app?.id]);
+
   if (!app) return null;
+
+  const addNote = () => {
+    const text = input.trim(); if (!text) return;
+    const entry = { id: Date.now(), text, time: new Date().toLocaleString() };
+    const updated = [entry, ...notes];
+    setNotes(updated);
+    const all = loadNotes(); all[app.id] = updated; saveNotes(all);
+    setInput('');
+  };
+  const deleteNote = (id) => {
+    const updated = notes.filter(n => n.id !== id);
+    setNotes(updated);
+    const all = loadNotes(); all[app.id] = updated; saveNotes(all);
+  };
+
+  const handleFollowup = () => {
+    const map = loadLS(LS_FOLLOWUP);
+    map[app.id] = { sentAt: new Date().toISOString() };
+    saveLS(LS_FOLLOWUP, map);
+    setFollowupSent(true);
+    onToast('Follow-up request sent to the recruiter!', 'success');
+  };
+
+  const handleStartAssessment = () => {
+    const map = loadLS(LS_ASSESS);
+    map[app.id] = { startedAt: new Date().toISOString() };
+    saveLS(LS_ASSESS, map);
+    setAssessStarted(true);
+    onStatusChange(app.id, 'Interviewing');
+    onToast('Assessment started! Status updated to Interviewing.', 'success');
+    onClose();
+  };
+
+  const handleAccept = () => {
+    onStatusChange(app.id, 'Hired');
+    onToast(`Congratulations! You accepted the offer from ${app.company}.`, 'success');
+    onClose();
+  };
+
+  const handleDecline = () => {
+    onStatusChange(app.id, 'Unsuitable');
+    onToast(`Offer from ${app.company} declined.`, 'success');
+    setConfirmDecline(false);
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
       <div className="w-full max-w-md bg-white h-full shadow-2xl overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -52,7 +201,6 @@ function DetailDrawer({ app, onClose }) {
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
         </div>
         <div className="px-6 py-5 space-y-5">
-          {/* Company + role */}
           <div className="flex items-start gap-4">
             <div className={`${app.color} text-white rounded-xl w-14 h-14 flex items-center justify-center font-bold text-lg flex-shrink-0`}>{app.logo}</div>
             <div>
@@ -64,92 +212,150 @@ function DetailDrawer({ app, onClose }) {
               </div>
             </div>
           </div>
-
-          {/* Key info */}
           <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
             <div className="flex justify-between"><span className="text-gray-500">Date Applied</span><span className="font-medium">{app.dateApplied}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Salary Range</span><span className="font-medium">{app.salary}</span></div>
           </div>
 
-          {/* Status-specific content */}
           {app.status === 'In Review' && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-              <p className="text-sm font-semibold text-yellow-700 mb-1">⏳ Under Review</p>
-              <p className="text-xs text-gray-600">{app.note}</p>
-              <button className="mt-3 text-xs bg-yellow-500 text-white px-3 py-1.5 rounded-lg hover:bg-yellow-600">Request Follow-up</button>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-yellow-700">⏳ Under Review</p>
+                <p className="text-xs text-gray-500 mt-1">Your application is being reviewed. You can send one follow-up request to prompt the recruiter.</p>
+              </div>
+              {followupSent ? (
+                <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                  <span className="text-green-600 text-sm">✓</span>
+                  <p className="text-xs text-green-700 font-medium">Follow-up sent. The recruiter has been notified.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-gray-500">Sending a follow-up lets the recruiter know you are still interested.</p>
+                  <button onClick={handleFollowup} className="text-xs bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition font-medium">
+                    📨 Request Follow-up
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
           {app.status === 'Interviewing' && (
-            <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-3">
-              <p className="text-sm font-semibold text-orange-700">🎤 {app.round}</p>
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-orange-300 flex items-center justify-center text-white text-xs font-bold">
-                  {app.interviewer?.split(' ').map(n=>n[0]).join('')}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-800">{app.interviewer}</p>
-                  <p className="text-xs text-gray-500">{app.interviewerRole}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-gray-600">
-                <span>📅</span><span>{app.interviewDate}</span>
-              </div>
-              <p className="text-xs text-gray-500 italic">{app.note}</p>
-              <div className="flex gap-2">
-                <button className="text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600">Add to Calendar</button>
-                <button className="text-xs border border-orange-400 text-orange-600 px-3 py-1.5 rounded-lg hover:bg-orange-50">Reschedule</button>
+            <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-2">
+              <p className="text-sm font-semibold text-orange-700">🎤 Interview Scheduled</p>
+              <p className="text-xs text-gray-500">Prepare well — research the company and practice common interview questions.</p>
+              <div className="flex gap-2 pt-1">
+                <button onClick={() => onToast('Interview added to your calendar!', 'success')} className="text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600 transition">📅 Add to Calendar</button>
+                <button onClick={() => onToast('Reschedule request sent.', 'success')} className="text-xs border border-orange-400 text-orange-600 px-3 py-1.5 rounded-lg hover:bg-orange-50 transition">🔄 Reschedule</button>
               </div>
             </div>
           )}
 
           {app.status === 'Assessment' && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2">
-              <p className="text-sm font-semibold text-blue-700">📝 {app.assessmentType}</p>
-              <div className="flex items-center gap-2 text-xs text-gray-600">
-                <span>⏰</span><span>Due: {app.assessmentDue}</span>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-blue-700">📝 Assessment Pending</p>
+                <p className="text-xs text-gray-500 mt-1">Complete the assessment to move forward. Your status will update to Interviewing once started.</p>
               </div>
-              <p className="text-xs text-gray-600">{app.note}</p>
-              <button className="mt-1 text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700">Start Assessment</button>
+              {assessStarted ? (
+                <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                  <span className="text-green-600">✓</span>
+                  <p className="text-xs text-green-700 font-medium">Assessment in progress. Status updated to Interviewing.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="bg-white border border-blue-100 rounded-lg p-3 text-xs text-gray-600 space-y-1">
+                    <p>⏱ Estimated time: <span className="font-medium">60–90 minutes</span></p>
+                    <p>📋 Format: <span className="font-medium">Technical + Aptitude</span></p>
+                    <p>⚠️ Once started, the timer cannot be paused.</p>
+                  </div>
+                  <button onClick={handleStartAssessment} className="w-full text-sm bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium">
+                    🚀 Start Assessment
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
           {app.status === 'Offered' && (
-            <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 space-y-2">
-              <p className="text-sm font-semibold text-purple-700">🎉 Offer Received!</p>
-              <div className="flex justify-between text-xs"><span className="text-gray-500">Offer Expires</span><span className="font-medium text-red-500">{app.offerExpiry}</span></div>
-              <div className="flex justify-between text-xs"><span className="text-gray-500">Bonus</span><span className="font-medium">{app.offerBonus}</span></div>
-              <p className="text-xs text-gray-500">{app.note}</p>
-              <div className="flex gap-2 mt-2">
-                <button className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700">Accept Offer</button>
-                <button className="text-xs border border-red-400 text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50">Decline</button>
-                <button className="text-xs border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50">Negotiate</button>
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-purple-700">🎉 Offer Received!</p>
+                <p className="text-xs text-gray-500 mt-1">Review the offer carefully before accepting or declining.</p>
               </div>
+              <div className="bg-white border border-purple-100 rounded-lg p-3 space-y-1.5 text-xs">
+                <div className="flex justify-between"><span className="text-gray-500">Salary</span><span className="font-semibold text-gray-800">{app.salary}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="font-medium">{app.type}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Location</span><span className="font-medium">{app.location}</span></div>
+              </div>
+              {confirmDecline ? (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-2">
+                  <p className="text-xs font-semibold text-red-700">Are you sure you want to decline this offer?</p>
+                  <p className="text-xs text-gray-500">This action cannot be undone.</p>
+                  <div className="flex gap-2">
+                    <button onClick={handleDecline} className="text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 transition">Yes, Decline</button>
+                    <button onClick={() => setConfirmDecline(false)} className="text-xs border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition">Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <button onClick={handleAccept} className="flex-1 text-sm bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition font-medium">✅ Accept Offer</button>
+                  <button onClick={() => setConfirmDecline(true)} className="flex-1 text-sm border border-red-400 text-red-500 py-2 rounded-lg hover:bg-red-50 transition font-medium">❌ Decline</button>
+                  <button onClick={() => onToast('Negotiation request sent.', 'success')} className="flex-1 text-sm border border-gray-300 text-gray-600 py-2 rounded-lg hover:bg-gray-50 transition font-medium">💬 Negotiate</button>
+                </div>
+              )}
             </div>
           )}
 
           {app.status === 'Hired' && (
             <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-2">
-              <p className="text-sm font-semibold text-green-700">🚀 Congratulations! You're hired.</p>
-              <div className="flex justify-between text-xs"><span className="text-gray-500">Start Date</span><span className="font-medium">{app.startDate}</span></div>
-              <div className="flex justify-between text-xs"><span className="text-gray-500">Manager</span><span className="font-medium">{app.manager}</span></div>
-              <p className="text-xs text-gray-500">{app.note}</p>
-              <button className="mt-1 text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700">View Onboarding</button>
+              <p className="text-sm font-semibold text-green-700">🚀 Congratulations! You are hired.</p>
+              <p className="text-xs text-gray-500">Welcome to the team! Check your email for onboarding details.</p>
+              <button onClick={() => onToast('Onboarding details sent to your email!', 'success')} className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 transition">📧 View Onboarding</button>
             </div>
           )}
 
           {app.status === 'Unsuitable' && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2">
               <p className="text-sm font-semibold text-red-600">❌ Not Selected</p>
-              <p className="text-xs text-gray-600 mt-1">{app.note}</p>
-              <button className="mt-3 text-xs border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50">Find Similar Jobs</button>
+              <p className="text-xs text-gray-500">Unfortunately you were not selected. Keep applying!</p>
+              <button onClick={() => onToast('Searching for similar jobs...', 'success')} className="text-xs border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition">🔍 Find Similar Jobs</button>
             </div>
           )}
 
-          {/* Note */}
+          {app.status === 'Shortlisted' && (
+            <div className="bg-cyan-50 border border-cyan-200 rounded-xl p-4 space-y-2">
+              <p className="text-sm font-semibold text-cyan-700">✅ Shortlisted</p>
+              <p className="text-xs text-gray-500">You have been shortlisted. The recruiter will reach out soon with next steps.</p>
+            </div>
+          )}
+
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Your Notes</p>
-            <textarea rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400 resize-none" placeholder="Add a private note about this application..." />
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-3">Your Notes</p>
+            <div className="border border-gray-200 rounded-xl overflow-hidden focus-within:border-blue-400 transition">
+              <textarea rows={3} value={input} onChange={e => setInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) addNote(); }}
+                className="w-full px-3 py-2.5 text-sm outline-none resize-none text-gray-700 placeholder-gray-400"
+                placeholder="Add a private note... (Ctrl+Enter to save)" />
+              <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-t border-gray-100">
+                <span className="text-xs text-gray-400">{input.length} chars</span>
+                <button onClick={addNote} disabled={!input.trim()} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition disabled:opacity-40 disabled:cursor-not-allowed">Save Note</button>
+              </div>
+            </div>
+            {notes.length > 0 ? (
+              <div className="mt-3 space-y-2">
+                {notes.map(n => (
+                  <div key={n.id} className="bg-yellow-50 border border-yellow-100 rounded-lg px-3 py-2.5 group">
+                    <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{n.text}</p>
+                    <div className="flex items-center justify-between mt-1.5">
+                      <span className="text-xs text-gray-400">{n.time}</span>
+                      <button onClick={() => deleteNote(n.id)} className="text-xs text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition">Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 mt-2 text-center py-3">No notes yet. Add one above.</p>
+            )}
           </div>
         </div>
       </div>
@@ -157,131 +363,180 @@ function DetailDrawer({ app, onClose }) {
   );
 }
 
-const appMenuItems = (app, onRemove, navigate, user) => [
-  { 
-    icon: '👁️', 
-    label: 'View Details', 
-    action: () => navigate(`/dashboard/jobs/${app.id}`)
-  },
-  { 
-    icon: '📄', 
-    label: 'View Job Posting', 
-    action: () => navigate(`/dashboard/jobs/${app.id}`)
-  },
-  { 
-    icon: '✉️', 
-    label: 'Message Recruiter', 
+// ── Menu items ────────────────────────────────────────────────────────────────
+const buildMenuItems = (app, onRemove, navigate, onMessageRecruiter) => [
+  { icon: '👁️', label: 'View Details',    action: () => navigate(`/dashboard/jobs/${app.id}`) },
+  { icon: '📄', label: 'View Job Posting', action: () => navigate(`/dashboard/jobs/${app.id}`) },
+  {
+    icon: '✉️', label: 'Message Recruiter',
     action: () => {
-      // Find recruiter email from messages data
-      const recruiterMessage = messages.find(msg => 
-        msg.company.toLowerCase() === app.company.toLowerCase()
-      );
-      const recruiterEmail = recruiterMessage ? 
-        `${recruiterMessage.name.toLowerCase().replace(' ', '.')}@${app.company.toLowerCase()}.com` : 
-        `recruiter@${app.company.toLowerCase()}.com`;
-      
-      // Open default email client with compose window
-      const subject = encodeURIComponent(`Regarding ${app.title} Position`);
-      const body = encodeURIComponent(`Dear Hiring Manager,\n\nI hope this email finds you well. I am writing to follow up on my application for the ${app.title} position at ${app.company}.\n\nI am very excited about this opportunity and would love to discuss how my skills and experience align with your team's needs.\n\nThank you for your time and consideration.\n\nBest regards,\n${user?.fullName || 'Applicant'}`);
-      
-      window.location.href = `mailto:${recruiterEmail}?subject=${subject}&body=${body}`;
-    }
+      const match = messages.find(m => m.company.toLowerCase() === app.company.toLowerCase());
+      const email = match
+        ? `${match.name.toLowerCase().replace(' ', '.')}@${app.company.toLowerCase()}.com`
+        : `recruiter@${app.company.toLowerCase()}.com`;
+      onMessageRecruiter({ email, name: match?.name || null, jobTitle: app.title, company: app.company });
+    },
   },
   'divider',
-  { 
-    icon: '🗑️', 
-    label: 'Remove Application', 
-    action: () => onRemove(app.id), 
-    danger: true 
-  },
+  { icon: '🗑️', label: 'Remove Application', action: () => onRemove(app.id), danger: true },
 ];
 
+// ── Pagination helper ─────────────────────────────────────────────────────────
+function Pagination({ current, total, onChange }) {
+  if (total <= 1) return null;
+  const pages = [];
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (current > 3) pages.push('...');
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.push(i);
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
+  }
+  return (
+    <div className="flex justify-center items-center gap-1 px-6 py-4">
+      <button onClick={() => onChange(current - 1)} disabled={current === 1}
+        className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-100 rounded disabled:opacity-30">‹</button>
+      {pages.map((p, i) =>
+        p === '...'
+          ? <span key={`e${i}`} className="w-8 h-8 flex items-center justify-center text-gray-400 text-sm">…</span>
+          : <button key={p} onClick={() => onChange(p)}
+              className={`w-8 h-8 rounded text-sm font-medium ${p === current ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>{p}</button>
+      )}
+      <button onClick={() => onChange(current + 1)} disabled={current === total}
+        className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-100 rounded disabled:opacity-30">›</button>
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 export default function MyApplications() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const firstName = (user?.fullName || 'Jake').split(' ')[0];
-  const [activeTab, setActiveTab] = useState(0);
-  const [showNotice, setShowNotice] = useState(true);
-  const [search, setSearch] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
-  const [showFilter, setShowFilter] = useState(false);
-  const [sortBy, setSortBy] = useState(sortOptions[0]);
-  const [filterType, setFilterType] = useState('');
-  const [selectedApp, setSelectedApp] = useState(null);
-  const [openMenu, setOpenMenu] = useState(null);
-  const [applications, setApplications] = useState(allApplications);
-  const [toast, setToast] = useState(null);
 
+  // Calendar — same localStorage key as Dashboard
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [selectedDateRange, setSelectedDateRange] = useState(() => {
+    try {
+      const saved = localStorage.getItem(LS_CAL);
+      if (saved) {
+        const start = new Date(JSON.parse(saved));
+        const end = new Date(start); end.setDate(end.getDate() + 6);
+        return { start, end };
+      }
+    } catch {}
+    return { start: new Date(2024, 6, 19), end: new Date(2024, 6, 25) };
+  });
+
+  const handleDateChange = (date) => {
+    const end = new Date(date); end.setDate(end.getDate() + 6);
+    setSelectedDateRange({ start: date, end });
+    localStorage.setItem(LS_CAL, JSON.stringify(date.toISOString()));
+  };
+
+  const fmt = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const dateLabel = `${fmt(selectedDateRange.start)} - ${fmt(selectedDateRange.end)}`;
+
+  const [activeTab, setActiveTab]       = useState(0);
+  const [showNotice, setShowNotice]     = useState(true);
+  const [search, setSearch]             = useState('');
+  const [showSearch, setShowSearch]     = useState(false);
+  const [showFilter, setShowFilter]     = useState(false);
+  const [sortBy, setSortBy]             = useState(sortOptions[0]);
+  const [filterType, setFilterType]     = useState('');
+  const [selectedApp, setSelectedApp]   = useState(null);
+  const [openMenu, setOpenMenu]         = useState(null);
+  const [applications, setApplications] = useState(baseApplications);
+  const [toast, setToast]               = useState(null);
+  const [recruiterModal, setRecruiterModal] = useState(null);
+  const [page, setPage]                 = useState(1);
+
+  const handleStatusChange = (id, newStatus) => {
+    setApplications(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
+    setSelectedApp(prev => prev?.id === id ? { ...prev, status: newStatus } : prev);
+  };
+
+  const handleToast = (message, type = 'success') => setToast({ message, type });
   const handleRemove = (id) => {
-    if (confirm('Are you sure you want to remove this application?')) {
-      setApplications(prev => prev.filter(a => a.id !== id));
-      setToast({ message: 'Application removed successfully', type: 'success' });
-    }
+    if (!confirm('Remove this application?')) return;
+    setApplications(prev => prev.filter(a => a.id !== id));
+    setToast({ message: 'Application removed', type: 'success' });
   };
 
   const tabFilter = tabs[activeTab].filter;
-
   let filtered = applications.filter(app => {
-    const matchesTab = !tabFilter || app.status === tabFilter;
-    const matchesSearch = !search ||
-      app.company.toLowerCase().includes(search.toLowerCase()) ||
-      app.title.toLowerCase().includes(search.toLowerCase());
-    const matchesType = !filterType || app.type === filterType;
-    return matchesTab && matchesSearch && matchesType;
+    const matchTab    = !tabFilter || app.status === tabFilter;
+    const matchSearch = !search || app.company.toLowerCase().includes(search.toLowerCase()) || app.title.toLowerCase().includes(search.toLowerCase());
+    const matchType   = !filterType || app.type === filterType;
+    return matchTab && matchSearch && matchType;
   });
 
-  // Sort
-  if (sortBy === 'Company A-Z') filtered = [...filtered].sort((a,b) => a.company.localeCompare(b.company));
-  else if (sortBy === 'Date Applied (Oldest)') filtered = [...filtered].sort((a,b) => a.id - b.id);
-  else if (sortBy === 'Status') filtered = [...filtered].sort((a,b) => a.status.localeCompare(b.status));
+  if (sortBy === 'Company A-Z')           filtered = [...filtered].sort((a, b) => a.company.localeCompare(b.company));
+  else if (sortBy === 'Date Applied (Oldest)') filtered = [...filtered].sort((a, b) => a.id - b.id);
+  else if (sortBy === 'Status')           filtered = [...filtered].sort((a, b) => a.status.localeCompare(b.status));
 
-  const counts = tabs.map(t => t.filter ? applications.filter(a => a.status === t.filter).length : applications.length);
+  const totalPages  = Math.ceil(filtered.length / PAGE_SIZE);
+  const safePage    = Math.min(page, totalPages || 1);
+  const paginated   = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const counts      = tabs.map(t => t.filter ? applications.filter(a => a.status === t.filter).length : applications.length);
+
+  // Reset to page 1 when filters change
+  const handleTabChange = (i) => { setActiveTab(i); setPage(1); };
+  const handleSearch    = (v) => { setSearch(v); setPage(1); };
 
   return (
     <div className="flex-1 flex flex-col h-full bg-white">
       <DashTopBar title="My Applications" />
-
       <div className="overflow-y-auto flex-1 px-8 py-6">
-        {/* Greeting */}
+
+        {/* Header */}
         <div className="flex justify-between items-start mb-5">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Keep it up, {firstName} 💪</h2>
-            <p className="text-sm text-gray-500 mt-0.5">Here is job applications status from July 19 - July 25.</p>
+            <p className="text-sm text-gray-500 mt-0.5">Here is job applications status from {dateLabel}.</p>
           </div>
-          <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 bg-white">
-            <span>Jul 19 - Jul 25</span><span>📅</span>
+          <div className="relative">
+            <button onClick={() => setShowCalendar(v => !v)}
+              className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 bg-white hover:bg-gray-50 transition">
+              <span>{dateLabel}</span><span>📅</span>
+            </button>
+            {showCalendar && (
+              <Calendar selectedDate={selectedDateRange.start} onDateChange={handleDateChange} onClose={() => setShowCalendar(false)} />
+            )}
           </div>
         </div>
 
-        {/* New Notices */}
+        {/* Notice */}
         {showNotice && (
           <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-4 mb-6">
             <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white text-lg flex-shrink-0">📋</div>
             <div className="flex-1">
               <p className="font-semibold text-blue-700 text-sm">New Notices</p>
-              <p className="text-xs text-gray-500 mt-0.5">You can request a follow-up 7 days after applying for a job if the application status is in review. Only one follow-up is allowed per job.</p>
+              <p className="text-xs text-gray-500 mt-0.5">You can request a follow-up 7 days after applying if the status is In Review. Only one follow-up per job.</p>
             </div>
-            <button onClick={() => setShowNotice(false)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
+            <button onClick={() => setShowNotice(false)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
           </div>
         )}
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-200 mb-6">
+        <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
           {tabs.map((tab, i) => (
-            <button key={tab.label} onClick={() => setActiveTab(i)}
+            <button key={tab.label} onClick={() => handleTabChange(i)}
               className={`px-4 py-2.5 text-sm font-medium border-b-2 transition whitespace-nowrap ${activeTab === i ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
               {tab.label} ({counts[i]})
             </button>
           ))}
         </div>
 
-        {/* Table card */}
+        {/* Table */}
         <div className="bg-white rounded-xl border border-gray-200">
           <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100">
             <h3 className="font-semibold text-gray-900">Applications History</h3>
             <div className="flex gap-2 items-center">
               {showSearch && (
-                <input autoFocus value={search} onChange={e => setSearch(e.target.value)}
+                <input autoFocus value={search} onChange={e => handleSearch(e.target.value)}
                   className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-blue-400 w-48"
                   placeholder="Search company or role..." />
               )}
@@ -296,28 +551,24 @@ export default function MyApplications() {
             </div>
           </div>
 
-          {/* Filter panel */}
           {showFilter && (
             <div className="px-6 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-6 flex-wrap">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-500 font-medium">Sort by:</span>
-                <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+                <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }}
                   className="border border-gray-200 rounded-lg px-2 py-1 text-xs outline-none text-gray-700">
                   {sortOptions.map(o => <option key={o}>{o}</option>)}
                 </select>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-500 font-medium">Job Type:</span>
-                <select value={filterType} onChange={e => setFilterType(e.target.value)}
+                <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1); }}
                   className="border border-gray-200 rounded-lg px-2 py-1 text-xs outline-none text-gray-700">
                   <option value="">All Types</option>
-                  <option>Full-Time</option>
-                  <option>Part-Time</option>
-                  <option>Remote</option>
-                  <option>Contract</option>
+                  <option>Full-Time</option><option>Part-Time</option><option>Remote</option><option>Contract</option>
                 </select>
               </div>
-              <button onClick={() => { setSortBy(sortOptions[0]); setFilterType(''); setSearch(''); }}
+              <button onClick={() => { setSortBy(sortOptions[0]); setFilterType(''); setSearch(''); setPage(1); }}
                 className="text-xs text-red-500 hover:underline">Clear filters</button>
             </div>
           )}
@@ -334,9 +585,9 @@ export default function MyApplications() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((app, idx) => (
+              {paginated.map((app, idx) => (
                 <tr key={app.id} className="border-b border-gray-100 hover:bg-gray-50 transition cursor-pointer" onClick={() => setSelectedApp(app)}>
-                  <td className="px-6 py-4 text-gray-400">{idx + 1}</td>
+                  <td className="px-6 py-4 text-gray-400">{(safePage - 1) * PAGE_SIZE + idx + 1}</td>
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
                       <div className={`${app.color} text-white rounded-xl w-10 h-10 flex items-center justify-center text-xs font-bold flex-shrink-0`}>{app.logo}</div>
@@ -354,37 +605,34 @@ export default function MyApplications() {
                         className="text-gray-400 hover:text-gray-600 text-lg px-1">•••</button>
                       {openMenu === app.id && (
                         <div className="absolute right-0 top-8 z-50">
-                          <DropdownMenu items={appMenuItems(app, handleRemove, navigate, user)} onClose={() => setOpenMenu(null)} />
+                          <DropdownMenu items={buildMenuItems(app, handleRemove, navigate, setRecruiterModal)} onClose={() => setOpenMenu(null)} />
                         </div>
                       )}
                     </div>
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && (
+              {paginated.length === 0 && (
                 <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-400 text-sm">No applications found</td></tr>
               )}
             </tbody>
           </table>
 
-          <div className="flex justify-center items-center gap-1 px-6 py-4">
-            <button className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-100 rounded">‹</button>
-            {[1,2,3,4,5].map(p => (
-              <button key={p} className={`w-8 h-8 rounded text-sm font-medium ${p === 1 ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>{p}</button>
-            ))}
-            <span className="text-gray-400 text-sm px-1">...</span>
-            <button className="w-8 h-8 rounded text-sm text-gray-600 hover:bg-gray-100">33</button>
-            <button className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-100 rounded">›</button>
-          </div>
+          <Pagination current={safePage} total={totalPages} onChange={setPage} />
         </div>
       </div>
 
-      <DetailDrawer app={selectedApp} onClose={() => setSelectedApp(null)} />
-      {toast && (
-        <Toast 
-          message={toast.message} 
-          type={toast.type} 
-          onClose={() => setToast(null)} 
+      <DetailDrawer app={selectedApp} onClose={() => setSelectedApp(null)} onStatusChange={handleStatusChange} onToast={handleToast} />
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {recruiterModal && (
+        <MessageRecruiterModal
+          recruiterEmail={recruiterModal.email}
+          recruiterName={recruiterModal.name}
+          jobTitle={recruiterModal.jobTitle}
+          company={recruiterModal.company}
+          senderName={user?.fullName}
+          onClose={() => setRecruiterModal(null)}
+          onSuccess={() => setToast({ message: 'Email client opened!', type: 'success' })}
         />
       )}
     </div>

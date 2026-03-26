@@ -81,6 +81,44 @@ class ApiService {
   async verifyToken() {
     return this.request('/auth/verify');
   }
+
+  // Application endpoints
+  async getApplications() {
+    return this.request('/applications');
+  }
+
+  async getDashboardStats() {
+    return this.request('/applications/stats');
+  }
+
+  async createApplication(data) {
+    return this.request('/applications', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async updateApplicationStatus(id, status) {
+    return this.request(`/applications/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
+  }
+
+  async deleteApplication(id) {
+    return this.request(`/applications/${id}`, { method: 'DELETE' });
+  }
+
+  // Job endpoints
+  async getJobs() {
+    return this.request('/jobs');
+  }
+
+  async getJob(id) {
+    return this.request(`/jobs/${id}`);
+  }
+
+  async createJob(data) {
+    return this.request('/jobs', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async deleteJob(id) {
+    return this.request(`/jobs/${id}`, { method: 'DELETE' });
+  }
 }
 
 export default new ApiService();

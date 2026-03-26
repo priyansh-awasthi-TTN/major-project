@@ -1,16 +1,44 @@
-import { useState } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { jobs } from '../../data/mockData';
+import { useState, useEffect } from 'react';
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import ApplicationModal from '../../components/ApplicationModal';
 import DashTopBar from '../../components/DashTopBar';
+import Toast from '../../components/Toast';
+import apiService from '../../services/api';
 
 export default function DashJobDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const fromView = searchParams.get('from') || 'list';
   const backTo = `/dashboard/find-jobs?view=${fromView}`;
-  const job = jobs.find(j => j.id === Number(id)) || jobs[0];
+
+  const [job, setJob] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [applied, setApplied] = useState(false);
+
+  useEffect(() => {
+    apiService.getJob(id)
+      .then(data => setJob(data))
+      .catch(() => setJob(null))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading) return (
+    <div className="flex-1 flex items-center justify-center bg-gray-50">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+    </div>
+  );
+
+  if (!job) return (
+    <div className="flex-1 flex items-center justify-center bg-gray-50">
+      <div className="text-center text-gray-400">
+        <p className="text-lg font-medium">Job not found</p>
+        <Link to={backTo} className="text-blue-600 text-sm hover:underline mt-2 block">← Back to jobs</Link>
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex-1 flex flex-col h-full bg-gray-50">
@@ -29,13 +57,17 @@ export default function DashJobDetail() {
               <h1 className="text-xl font-bold text-gray-900">{job.title}</h1>
               <p className="text-gray-500 text-sm">{job.company} • {job.location} • {job.type}</p>
               <div className="flex gap-2 mt-2">
-                {job.categories.map(c => <span key={c} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded px-2 py-0.5">{c}</span>)}
+                {(job.categories || []).map(c => <span key={c} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded px-2 py-0.5">{c}</span>)}
               </div>
             </div>
           </div>
           <div className="flex gap-3">
             <button className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">🔗</button>
-            <button onClick={() => setShowModal(true)} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700">Apply</button>
+            {applied ? (
+              <span className="bg-green-100 text-green-700 px-6 py-2 rounded-lg text-sm font-medium flex items-center gap-1">✓ Applied</span>
+            ) : (
+              <button onClick={() => setShowModal(true)} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700">Apply</button>
+            )}
           </div>
         </div>
 
@@ -113,7 +145,7 @@ export default function DashJobDetail() {
               <div className="mt-4">
                 <p className="text-xs text-gray-500 mb-2">Categories</p>
                 <div className="flex flex-wrap gap-2">
-                  {job.categories.map(c => <span key={c} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded px-2 py-0.5">{c}</span>)}
+                  {(job.categories || []).map(c => <span key={c} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded px-2 py-0.5">{c}</span>)}
                 </div>
               </div>
               <div className="mt-4">
@@ -129,7 +161,18 @@ export default function DashJobDetail() {
         </div>
       </div>
       </div>
-      {showModal && <ApplicationModal job={job} onClose={() => setShowModal(false)} />}
+      {showModal && (
+        <ApplicationModal
+          job={job}
+          onClose={() => setShowModal(false)}
+          onSuccess={() => {
+            setApplied(true);
+            setShowModal(false);
+            setToast({ message: `Application for ${job.title} at ${job.company} submitted!`, type: 'success' });
+          }}
+        />
+      )}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 }
