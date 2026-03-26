@@ -3,7 +3,7 @@ import { useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import DashboardSidebar from './components/DashboardSidebar';
-import ProtectedRoute from './components/ProtectedRoute';
+import ProtectedRoute, { JobseekerRoute, CompanyRoute } from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
 
 import Home from './pages/Home';
@@ -100,33 +100,33 @@ export default function App() {
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
 
-        {/* Dashboard */}
-        <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout><DashboardHome /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/dashboard/messages" element={<ProtectedRoute><DashboardLayout><Messages /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/dashboard/applications" element={<ProtectedRoute><DashboardLayout><MyApplications /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/dashboard/find-jobs" element={<ProtectedRoute><DashboardLayout><DashFindJobs /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/dashboard/companies" element={<ProtectedRoute><DashboardLayout><DashCompanies /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/dashboard/companies/:id" element={<ProtectedRoute><DashboardLayout><DashCompanyProfile /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/dashboard/profile" element={<ProtectedRoute><DashboardLayout><Profile /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/dashboard/profile/:userId" element={<ProtectedRoute><DashboardLayout><UserProfile /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/dashboard/settings" element={<ProtectedRoute><DashboardLayout><Settings /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/dashboard/help" element={<ProtectedRoute><DashboardLayout><HelpCenter /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/dashboard/notifications" element={<ProtectedRoute><DashboardLayout><Notifications /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/dashboard/jobs/:id" element={<ProtectedRoute><DashboardLayout><DashJobDetail /></DashboardLayout></ProtectedRoute>} />
+        {/* Dashboard — jobseeker only */}
+        <Route path="/dashboard" element={<JobseekerRoute><DashboardLayout><DashboardHome /></DashboardLayout></JobseekerRoute>} />
+        <Route path="/dashboard/messages" element={<JobseekerRoute><DashboardLayout><Messages /></DashboardLayout></JobseekerRoute>} />
+        <Route path="/dashboard/applications" element={<JobseekerRoute><DashboardLayout><MyApplications /></DashboardLayout></JobseekerRoute>} />
+        <Route path="/dashboard/find-jobs" element={<JobseekerRoute><DashboardLayout><DashFindJobs /></DashboardLayout></JobseekerRoute>} />
+        <Route path="/dashboard/companies" element={<JobseekerRoute><DashboardLayout><DashCompanies /></DashboardLayout></JobseekerRoute>} />
+        <Route path="/dashboard/companies/:id" element={<JobseekerRoute><DashboardLayout><DashCompanyProfile /></DashboardLayout></JobseekerRoute>} />
+        <Route path="/dashboard/profile" element={<JobseekerRoute><DashboardLayout><Profile /></DashboardLayout></JobseekerRoute>} />
+        <Route path="/dashboard/profile/:userId" element={<JobseekerRoute><DashboardLayout><UserProfile /></DashboardLayout></JobseekerRoute>} />
+        <Route path="/dashboard/settings" element={<JobseekerRoute><DashboardLayout><Settings /></DashboardLayout></JobseekerRoute>} />
+        <Route path="/dashboard/help" element={<JobseekerRoute><DashboardLayout><HelpCenter /></DashboardLayout></JobseekerRoute>} />
+        <Route path="/dashboard/notifications" element={<JobseekerRoute><DashboardLayout><Notifications /></DashboardLayout></JobseekerRoute>} />
+        <Route path="/dashboard/jobs/:id" element={<JobseekerRoute><DashboardLayout><DashJobDetail /></DashboardLayout></JobseekerRoute>} />
 
-        {/* Company Dashboard */}
-        <Route path="/company/dashboard" element={<ProtectedRoute><CompanyLayout><CompanyDashboard /></CompanyLayout></ProtectedRoute>} />
-        <Route path="/company/messages" element={<ProtectedRoute><CompanyLayout><CompanyMessages /></CompanyLayout></ProtectedRoute>} />
-        <Route path="/company/profile" element={<ProtectedRoute><CompanyLayout><CompanyProfilePage /></CompanyLayout></ProtectedRoute>} />
-        <Route path="/company/applicants" element={<ProtectedRoute><CompanyLayout><AllApplicants /></CompanyLayout></ProtectedRoute>} />
-        <Route path="/company/applicants/:id" element={<ProtectedRoute><CompanyLayout><ApplicantProfile /></CompanyLayout></ProtectedRoute>} />
-        <Route path="/company/jobs" element={<ProtectedRoute><CompanyLayout><JobListing /></CompanyLayout></ProtectedRoute>} />
-        <Route path="/company/jobs/post" element={<ProtectedRoute><CompanyLayout><PostJob /></CompanyLayout></ProtectedRoute>} />
-        <Route path="/company/jobs/:id/applicants" element={<ProtectedRoute><CompanyLayout><JobApplicantsKanban /></CompanyLayout></ProtectedRoute>} />
-        <Route path="/company/jobs/:id/detail" element={<ProtectedRoute><CompanyLayout><CompanyDashJobDetail /></CompanyLayout></ProtectedRoute>} />
-        <Route path="/company/jobs/:id/analytics" element={<ProtectedRoute><CompanyLayout><Analytics /></CompanyLayout></ProtectedRoute>} />
-        <Route path="/company/schedule" element={<ProtectedRoute><CompanyLayout><MySchedule /></CompanyLayout></ProtectedRoute>} />
-        <Route path="/company/settings" element={<ProtectedRoute><CompanyLayout><CompanySettings /></CompanyLayout></ProtectedRoute>} />
+        {/* Company Dashboard — company only */}
+        <Route path="/company/dashboard" element={<CompanyRoute><CompanyLayout><CompanyDashboard /></CompanyLayout></CompanyRoute>} />
+        <Route path="/company/messages" element={<CompanyRoute><CompanyLayout><CompanyMessages /></CompanyLayout></CompanyRoute>} />
+        <Route path="/company/profile" element={<CompanyRoute><CompanyLayout><CompanyProfilePage /></CompanyLayout></CompanyRoute>} />
+        <Route path="/company/applicants" element={<CompanyRoute><CompanyLayout><AllApplicants /></CompanyLayout></CompanyRoute>} />
+        <Route path="/company/applicants/:id" element={<CompanyRoute><CompanyLayout><ApplicantProfile /></CompanyLayout></CompanyRoute>} />
+        <Route path="/company/jobs" element={<CompanyRoute><CompanyLayout><JobListing /></CompanyLayout></CompanyRoute>} />
+        <Route path="/company/jobs/post" element={<CompanyRoute><CompanyLayout><PostJob /></CompanyLayout></CompanyRoute>} />
+        <Route path="/company/jobs/:id/applicants" element={<CompanyRoute><CompanyLayout><JobApplicantsKanban /></CompanyLayout></CompanyRoute>} />
+        <Route path="/company/jobs/:id/detail" element={<CompanyRoute><CompanyLayout><CompanyDashJobDetail /></CompanyLayout></CompanyRoute>} />
+        <Route path="/company/jobs/:id/analytics" element={<CompanyRoute><CompanyLayout><Analytics /></CompanyLayout></CompanyRoute>} />
+        <Route path="/company/schedule" element={<CompanyRoute><CompanyLayout><MySchedule /></CompanyLayout></CompanyRoute>} />
+        <Route path="/company/settings" element={<CompanyRoute><CompanyLayout><CompanySettings /></CompanyLayout></CompanyRoute>} />
       </Routes>
     </BrowserRouter>
   );

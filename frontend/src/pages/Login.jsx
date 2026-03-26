@@ -17,12 +17,13 @@ export default function Login() {
     setError('');
 
     try {
-      await login({
+      const response = await login({
         email,
         password,
         userType: tab.toUpperCase()
       });
-      navigate('/dashboard');
+      const userType = response?.user?.userType || 'JOBSEEKER';
+      navigate(userType === 'COMPANY' ? '/company/dashboard' : '/dashboard');
     } catch (error) {
       setError(error.message || 'Login failed');
     } finally {
