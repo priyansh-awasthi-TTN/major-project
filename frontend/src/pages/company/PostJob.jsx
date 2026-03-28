@@ -66,6 +66,7 @@ export default function PostJob() {
 
   // Step 0
   const [title, setTitle]           = useState('');
+  const [location, setLocation]     = useState('');
   const [selTypes, setSelTypes]     = useState([]);
   const [salaryMin, setSalaryMin]   = useState(5000);
   const [salaryMax, setSalaryMax]   = useState(22000);
@@ -101,27 +102,34 @@ export default function PostJob() {
 
   const handleSubmit = async () => {
     if (!title.trim()) { setError('Job title is required.'); return; }
+    if (!location.trim()) { setError('Location is required.'); return; }
     setSubmitting(true); setError('');
     try {
-      await apiService.createJob({
+      const result = await apiService.createJob({
         title,
-        type: selTypes[0] || 'Full-Time',
+        location,
+        type: selTypes.length ? selTypes.join(',') : 'Full-Time',
         categories: selCats.join(','),
         salary: salaryMin,
+        salaryMax,
+        level: 'Mid Level',
+        logo: title.substring(0, 2).toUpperCase(),
+        color: 'bg-indigo-600',
+        capacity: 10,
         description: [
           desc && `Description:\n${desc}`,
           resp && `Responsibilities:\n${resp}`,
           who  && `Who You Are:\n${who}`,
           nice && `Nice-To-Haves:\n${nice}`,
-          selPerks.length && `Perks: ${selPerks.map(id => PERKS.find(p => p.id === id)?.label).join(', ')}`,
+          skills.length && `Required Skills: ${skills.join(', ')}`,
+          selPerks.length && `Perks: ${selPerks.map(id => PERKS.find(p => p.id === id)?.label).filter(Boolean).join(', ')}`,
         ].filter(Boolean).join('\n\n'),
-        logo: title.substring(0, 2).toUpperCase(),
-        color: 'bg-indigo-600',
-        capacity: 10,
       });
+      console.log('Job posted successfully:', result);
       setDone(true);
     } catch (e) {
-      setError(e.message || 'Failed to post job.');
+      console.error('Post job error:', e);
+      setError(e.message || 'Failed to post job. Make sure you are logged in as a company.');
     } finally {
       setSubmitting(false);
     }
@@ -139,7 +147,7 @@ export default function PostJob() {
           <h2 className="text-xl font-bold text-gray-900 mb-2">Job Posted Successfully!</h2>
           <p className="text-sm text-gray-500 mb-6">Your job listing is now live and visible to all job seekers.</p>
           <div className="flex gap-3 justify-center">
-            <button onClick={() => { setDone(false); setStep(0); setTitle(''); setSelTypes([]); setSelCats([]); setDesc(''); setResp(''); setWho(''); setNice(''); setSelPerks(['healthcare','vacation','skills']); }}
+            <button onClick={() => { setDone(false); setStep(0); setTitle(''); setLocation(''); setSelTypes([]); setSelCats([]); setDesc(''); setResp(''); setWho(''); setNice(''); setSelPerks(['healthcare','vacation','skills']); }}
               className="border border-gray-300 text-gray-600 px-5 py-2 rounded-lg text-sm hover:bg-gray-50">Post Another</button>
             <button onClick={() => navigate('/company/jobs')}
               className="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-indigo-700">View Listings</button>
@@ -151,7 +159,7 @@ export default function PostJob() {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-white">
-      <CompanyTopBar title="Post a Job" />
+      <CompanyTopBar title="" />
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
@@ -160,8 +168,8 @@ export default function PostJob() {
           {/* Page title */}
           <div className="flex items-center gap-3 mb-8">
             <button onClick={() => step > 0 ? setStep(s => s - 1) : navigate('/company/jobs')}
-              className="text-gray-500 hover:text-gray-800 flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 transition">
-              <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
+              className="text-gray-500 hover:text-gray-800 transition">
+              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
                 <path d="M19 12H5M12 5l-7 7 7 7" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
@@ -198,6 +206,11 @@ export default function PostJob() {
                     className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200"
                     placeholder="e.g. Software Engineer" />
                   <p className="text-xs text-gray-400 mt-1">At least 80 characters</p>
+                </FormRow>
+                <FormRow label="Location" hint="City, country or Remote">
+                  <input value={location} onChange={e => setLocation(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200"
+                    placeholder="e.g. Bangalore, India" />
                 </FormRow>
                 <FormRow label="Type of Employment" hint="You can select multiple type of employment">
                   <div className="space-y-3">
@@ -354,7 +367,13 @@ export default function PostJob() {
       </div>
 
       {/* Sticky bottom action bar */}
-      <div className="flex-shrink-0 flex items-center justify-between px-10 py-4 border-t border-gray-200 bg-white">
+      <div className="flex-shrink-0 border-t border-gray-200 bg-white">
+        {error && (
+          <div className="px-10 py-3 bg-red-50 border-b border-red-200 text-red-600 text-sm flex items-center gap-2">
+            <span>⚠️</span> {error}
+          </div>
+        )}
+        <div className="flex items-center justify-between px-10 py-4">
         <div>
           {step > 0 && (
             <button onClick={() => setStep(s => s - 1)}
@@ -379,6 +398,7 @@ export default function PostJob() {
             </button>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

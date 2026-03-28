@@ -41,6 +41,7 @@ import Analytics from './pages/company/Analytics';
 import MySchedule from './pages/company/MySchedule';
 import PostJob from './pages/company/PostJob';
 import CompanySettings from './pages/company/CompanySettings';
+import SeekerProfile from './pages/company/SeekerProfile';
 
 function PublicLayout({ children }) {
   return (
@@ -127,6 +128,7 @@ export default function App() {
         <Route path="/company/jobs/:id/analytics" element={<CompanyRoute><CompanyLayout><Analytics /></CompanyLayout></CompanyRoute>} />
         <Route path="/company/schedule" element={<CompanyRoute><CompanyLayout><MySchedule /></CompanyLayout></CompanyRoute>} />
         <Route path="/company/settings" element={<CompanyRoute><CompanyLayout><CompanySettings /></CompanyLayout></CompanyRoute>} />
+        <Route path="/company/seeker/:seekerId" element={<CompanyRoute><CompanyLayout><SeekerProfile /></CompanyLayout></CompanyRoute>} />
       </Routes>
     </BrowserRouter>
   );
