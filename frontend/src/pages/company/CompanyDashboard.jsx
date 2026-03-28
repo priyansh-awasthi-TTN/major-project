@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import NotificationPanel from '../../components/NotificationPanel';
 import { useNotifications } from '../../context/NotificationContext';
+import { useAuth } from '../../context/AuthContext';
 
 const allJobUpdates = [
   {
@@ -145,100 +146,328 @@ const mockData = {
   }
 };
 
+// Helper functions for date management
+const formatDate = (date) => {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[date.getMonth()]} ${date.getDate()}`;
+};
+
+const formatFullDate = (date) => {
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  return `${months[date.getMonth()]} ${date.getDate()}`;
+};
+
+const getStoredDateRange = () => {
+  const stored = localStorage.getItem('company_dashboard_date_range');
+  if (stored) {
+    const parsed = JSON.parse(stored);
+    return {
+      start: new Date(parsed.start),
+      end: new Date(parsed.end)
+    };
+  }
+  // Default to last 7 days
+  const end = new Date();
+  const start = new Date();
+  start.setDate(end.getDate() - 6);
+  return { start, end };
+};
+
+const storeDateRange = (dateRange) => {
+  localStorage.setItem('company_dashboard_date_range', JSON.stringify({
+    start: dateRange.start.toISOString(),
+    end: dateRange.end.toISOString()
+  }));
+};
+
+function Calendar({ isOpen, onClose, onDateSelect, selectedRange }) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectingStart, setSelectingStart] = useState(true);
+  const [tempRange, setTempRange] = useState(selectedRange);
+
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const daysOfWeek = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+
+    const days = [];
+    
+    // Add days from previous month
+    const prevMonth = new Date(year, month - 1, 0);
+    const prevMonthDays = prevMonth.getDate();
+    for (let i = startingDayOfWeek - 1; i >= 0; i--) {
+      days.push({
+        date: new Date(year, month - 1, prevMonthDays - i),
+        isCurrentMonth: false
+      });
+    }
+    
+    // Add all days of current month
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push({
+        date: new Date(year, month, day),
+        isCurrentMonth: true
+      });
+    }
+    
+    // Add days from next month to fill the grid
+    const remainingCells = 42 - days.length; // 6 rows × 7 days
+    for (let day = 1; day <= remainingCells; day++) {
+      days.push({
+        date: new Date(year, month + 1, day),
+        isCurrentMonth: false
+      });
+    }
+    
+    return days;
+  };
+
+  const handleDateClick = (dateObj) => {
+    const date = dateObj.date;
+    if (selectingStart) {
+      setTempRange({ start: date, end: date });
+      setSelectingStart(false);
+    } else {
+      const newRange = {
+        start: date < tempRange.start ? date : tempRange.start,
+        end: date > tempRange.start ? date : tempRange.start
+      };
+      setTempRange(newRange);
+      onDateSelect(newRange);
+      onClose();
+      setSelectingStart(true);
+    }
+  };
+
+  const isDateInRange = (date) => {
+    if (!tempRange.start || !tempRange.end) return false;
+    return date >= tempRange.start && date <= tempRange.end;
+  };
+
+  const isDateSelected = (date) => {
+    if (!tempRange.start) return false;
+    if (selectingStart) return date.getTime() === tempRange.start.getTime();
+    return date.getTime() === tempRange.start.getTime() || date.getTime() === tempRange.end.getTime();
+  };
+
+  const isToday = (date) => {
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  };
+
+  const navigateMonth = (direction) => {
+    const newDate = new Date(currentDate);
+    newDate.setMonth(currentDate.getMonth() + direction);
+    setCurrentDate(newDate);
+  };
+
+  const goToToday = () => {
+    const today = new Date();
+    setCurrentDate(today);
+    const endDate = new Date(today);
+    endDate.setDate(today.getDate() + 6);
+    const newRange = { start: today, end: endDate };
+    onDateSelect(newRange);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 p-0 w-80 overflow-hidden z-50">
+      {/* Header with selected range */}
+      <div className="bg-gray-50 px-4 py-3 border-b border-gray-100">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200">
+            <span className="text-sm font-medium text-gray-700">
+              {formatDate(tempRange.start)} - {formatDate(tempRange.end)}
+            </span>
+            <div className="w-4 h-4 bg-red-100 rounded flex items-center justify-center">
+              <svg className="w-3 h-3 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+              </svg>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Calendar */}
+      <div className="p-4">
+        {/* Month/Year Navigation */}
+        <div className="flex justify-between items-center mb-4">
+          <button onClick={() => navigateMonth(-1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <h3 className="text-base font-semibold text-gray-900">
+            {months[currentDate.getMonth()]} {currentDate.getFullYear()}
+          </h3>
+          <button onClick={() => navigateMonth(1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Days of week header */}
+        <div className="grid grid-cols-7 gap-1 mb-2">
+          {daysOfWeek.map(day => (
+            <div key={day} className="text-center text-xs font-medium text-gray-500 py-1">
+              {day}
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar grid */}
+        <div className="grid grid-cols-7 gap-1">
+          {getDaysInMonth(currentDate).map((dateObj, index) => {
+            const { date, isCurrentMonth } = dateObj;
+            const selected = isDateSelected(date);
+            const inRange = isDateInRange(date);
+            const today = isToday(date);
+            
+            return (
+              <button
+                key={index}
+                onClick={() => handleDateClick(dateObj)}
+                className={`
+                  h-8 text-xs rounded-lg transition-all duration-200 font-medium
+                  ${!isCurrentMonth ? 'text-gray-300' : 'text-gray-700'}
+                  ${selected ? 'bg-blue-500 text-white shadow-md' : ''}
+                  ${inRange && !selected ? 'bg-blue-100 text-blue-700' : ''}
+                  ${today && !selected && !inRange ? 'bg-blue-50 text-blue-600 border border-blue-200' : ''}
+                  ${!selected && !inRange && !today ? 'hover:bg-gray-100' : ''}
+                `}
+              >
+                {date.getDate()}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Today button */}
+        <div className="mt-4 flex justify-center">
+          <button
+            onClick={goToToday}
+            className="text-blue-600 font-medium text-sm hover:text-blue-700 transition-colors"
+          >
+            Today
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DateRangePicker({ dateRange, onDateRangeChange }) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const dropdownRef = useRef(null);
-  
-  const presets = [
-    { label: 'Last 7 days', start: 'Jul 19', end: 'Jul 25' },
-    { label: 'Last 30 days', start: 'Jun 26', end: 'Jul 25' },
-    { label: 'Last 3 months', start: 'Apr 26', end: 'Jul 25' },
-    { label: 'This year', start: 'Jan 1', end: 'Jul 25' }
-  ];
 
   // Close dropdown when clicking outside
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isCalendarOpen) return;
     
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
+        setIsCalendarOpen(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
-  const handlePresetClick = (preset, e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onDateRangeChange({ start: preset.start, end: preset.end });
-    setIsOpen(false);
-  };
-
+  }, [isCalendarOpen]);
+  
   return (
     <div className="relative" ref={dropdownRef}>
       <button 
         type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setIsOpen(!isOpen);
-        }}
+        onClick={() => setIsCalendarOpen(!isCalendarOpen)}
         className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
       >
-        <span>{dateRange.start} - {dateRange.end}</span>
+        <span>{formatDate(dateRange.start)} - {formatDate(dateRange.end)}</span>
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
       </button>
       
-      {isOpen && (
-        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-48">
-          {presets.map((preset, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={(e) => handlePresetClick(preset, e)}
-              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg transition-colors focus:outline-none focus:bg-gray-50"
-            >
-              <div className="font-medium">{preset.label}</div>
-              <div className="text-xs text-gray-500">{preset.start} - {preset.end}</div>
-            </button>
-          ))}
-        </div>
+      {isCalendarOpen && (
+        <Calendar
+          isOpen={isCalendarOpen}
+          onClose={() => setIsCalendarOpen(false)}
+          onDateSelect={(range) => {
+            onDateRangeChange(range);
+            storeDateRange(range);
+          }}
+          selectedRange={dateRange}
+        />
       )}
     </div>
   );
 }
 
 export default function CompanyDashboard() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Week');
   const [statsTab, setStatsTab] = useState('Overview');
   const [showAllJobs, setShowAllJobs] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
-  const [dateRange, setDateRange] = useState({ start: 'Jul 19', end: 'Jul 25' });
+  const [dateRange, setDateRange] = useState(getStoredDateRange);
   const { unreadCount } = useNotifications();
+  const { user } = useAuth();
 
   const currentData = mockData[activeTab];
   const displayedJobs = showAllJobs ? allJobUpdates : allJobUpdates.slice(0, 4);
 
   const getDateRangeText = () => {
-    const ranges = {
-      'Jul 19 - Jul 25': 'July 19 - July 25',
-      'Jun 26 - Jul 25': 'June 26 - July 25', 
-      'Apr 26 - Jul 25': 'April 26 - July 25',
-      'Jan 1 - Jul 25': 'January 1 - July 25'
-    };
-    const key = `${dateRange.start} - ${dateRange.end}`;
-    return ranges[key] || `${dateRange.start} - ${dateRange.end}`;
+    return `${formatFullDate(dateRange.start)} - ${formatFullDate(dateRange.end)}`;
+  };
+
+  const handleDateRangeChange = (newRange) => {
+    setDateRange(newRange);
+    storeDateRange(newRange);
   };
 
   return (
     <div className="flex-1 flex flex-col h-full bg-gray-50">
-      {/* Top Bar */}
-      <div className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between flex-shrink-0">
+      <style jsx>{`
+        @keyframes ring {
+          0%, 20%, 50%, 80%, 100% {
+            transform: rotate(0deg);
+          }
+          10% {
+            transform: rotate(10deg);
+          }
+          30% {
+            transform: rotate(-10deg);
+          }
+          40% {
+            transform: rotate(8deg);
+          }
+          60% {
+            transform: rotate(-8deg);
+          }
+          70% {
+            transform: rotate(5deg);
+          }
+          90% {
+            transform: rotate(-5deg);
+          }
+        }
+      `}</style>
+      {/* Top Bar - Fixed */}
+      <div className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between flex-shrink-0 fixed top-0 right-0 z-20" style={{ left: '240px' }}>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
             N
@@ -254,12 +483,16 @@ export default function CompanyDashboard() {
         <div className="flex items-center gap-3">
           <div className="relative">
             <button
-              onClick={() => setBellOpen(!bellOpen)}
-              className={`relative p-2 rounded-full transition ${bellOpen ? 'bg-indigo-50' : 'hover:bg-gray-100'}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setBellOpen(!bellOpen);
+              }}
+              aria-label="notifications"
+              className={`notification-bell relative p-2 rounded-full transition-all duration-200 ${bellOpen ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-100 text-gray-700'}`}
             >
               <svg
-                className="w-5 h-5 text-gray-700"
-                style={{ animation: 'ring 2s ease-in-out infinite', transformOrigin: 'top center' }}
+                className="w-5 h-5"
+                style={{ animation: unreadCount > 0 ? 'ring 2s ease-in-out infinite' : 'none', transformOrigin: 'top center' }}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -269,25 +502,32 @@ export default function CompanyDashboard() {
                 />
               </svg>
               {unreadCount > 0 && (
-                <span className="absolute top-0.5 right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+                <span className="absolute top-0.5 right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse" />
               )}
             </button>
             <NotificationPanel open={bellOpen} onClose={() => setBellOpen(false)} />
           </div>
-          <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-indigo-700">
-            <span>+</span> Post a job
+          <button 
+            onClick={() => navigate('/company/jobs/post')}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-indigo-700 transition-all duration-200 shadow-sm hover:shadow-md"
+          >
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Post a job
           </button>
         </div>
       </div>
 
-      <div className="overflow-y-auto flex-1 p-8">
+      <div className="overflow-y-auto flex-1 p-8" style={{ marginTop: '80px' }}>
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Good morning, Maria</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Good morning, {user?.fullName || 'User'}</h2>
             <p className="text-gray-500 text-sm">Here is your job listings statistic report from {getDateRangeText()}.</p>
           </div>
-          <DateRangePicker dateRange={dateRange} onDateRangeChange={setDateRange} />
+          <DateRangePicker dateRange={dateRange} onDateRangeChange={handleDateRangeChange} />
         </div>
 
         {/* Stats Cards */}
@@ -367,80 +607,204 @@ export default function CompanyDashboard() {
             </div>
 
             {/* Chart Area */}
-            <div className="h-64 flex items-end justify-between gap-2 mb-4">
-              {currentData.chartData.map((item, i) => {
-                const maxValue = Math.max(...currentData.chartData.map(d => Math.max(d.jobView, d.jobApplied)));
-                const jobViewHeight = (item.jobView / maxValue) * 100;
-                const jobAppliedHeight = (item.jobApplied / maxValue) * 100;
-                
-                return (
-                  <div key={item.day} className="flex-1 flex flex-col items-center">
-                    <div className="w-full flex flex-col justify-end h-48 gap-1">
-                      <div 
-                        className="bg-yellow-400 rounded-t"
-                        style={{ height: `${jobViewHeight}%` }}
-                      />
-                      <div 
-                        className="bg-indigo-600 rounded-b relative"
-                        style={{ height: `${jobAppliedHeight}%` }}
-                      >
-                        {i === 2 && (
-                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded">
-                            {item.jobApplied}
-                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-800" />
-                          </div>
-                        )}
+            {statsTab === 'Overview' && (
+              <div className="h-64 flex items-end justify-between gap-2 mb-4">
+                {currentData.chartData.map((item, i) => {
+                  const maxValue = Math.max(...currentData.chartData.map(d => Math.max(d.jobView, d.jobApplied)));
+                  const jobViewHeight = (item.jobView / maxValue) * 100;
+                  const jobAppliedHeight = (item.jobApplied / maxValue) * 100;
+                  
+                  return (
+                    <div key={item.day} className="flex-1 flex flex-col items-center">
+                      <div className="w-full flex flex-col justify-end h-48 gap-1">
+                        <div 
+                          className="bg-yellow-400 rounded-t"
+                          style={{ height: `${jobViewHeight}%` }}
+                        />
+                        <div 
+                          className="bg-indigo-600 rounded-b relative"
+                          style={{ height: `${jobAppliedHeight}%` }}
+                        >
+                          {i === 2 && (
+                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded">
+                              {item.jobView}
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-800" />
+                            </div>
+                          )}
+                        </div>
                       </div>
+                      <span className="text-xs text-gray-500 mt-2">{item.day}</span>
                     </div>
-                    <span className="text-xs text-gray-500 mt-2">{item.day}</span>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
 
-            <div className="flex gap-6 text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-yellow-400 rounded" />
-                <span className="text-gray-600">Job View</span>
+            {statsTab === 'Jobs View' && (
+              <div className="h-64 flex items-end justify-between gap-2 mb-4">
+                {currentData.chartData.map((item, i) => {
+                  const maxValue = Math.max(...currentData.chartData.map(d => d.jobView));
+                  const jobViewHeight = (item.jobView / maxValue) * 100;
+                  
+                  return (
+                    <div key={item.day} className="flex-1 flex flex-col items-center">
+                      <div className="w-full flex flex-col justify-end h-48">
+                        <div 
+                          className="bg-yellow-400 rounded relative"
+                          style={{ height: `${jobViewHeight}%` }}
+                        >
+                          {i === 3 && (
+                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded">
+                              122
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-800" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-500 mt-2">{item.day}</span>
+                    </div>
+                  );
+                })}
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-indigo-600 rounded" />
-                <span className="text-gray-600">Job Applied</span>
+            )}
+
+            {statsTab === 'Jobs Applied' && (
+              <div className="h-64 flex items-end justify-between gap-2 mb-4">
+                {currentData.chartData.map((item, i) => {
+                  const maxValue = Math.max(...currentData.chartData.map(d => d.jobApplied));
+                  const jobAppliedHeight = (item.jobApplied / maxValue) * 100;
+                  
+                  return (
+                    <div key={item.day} className="flex-1 flex flex-col items-center">
+                      <div className="w-full flex flex-col justify-end h-48">
+                        <div 
+                          className="bg-indigo-600 rounded relative"
+                          style={{ height: `${jobAppliedHeight}%` }}
+                        >
+                          {i === 3 && (
+                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded">
+                              34
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-800" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-500 mt-2">{item.day}</span>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
+            )}
+
+            {/* Legend */}
+            {statsTab === 'Overview' && (
+              <div className="flex gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-yellow-400 rounded" />
+                  <span className="text-gray-600">Job View</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-indigo-600 rounded" />
+                  <span className="text-gray-600">Job Applied</span>
+                </div>
+              </div>
+            )}
+
+            {statsTab === 'Jobs View' && (
+              <div className="flex gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-yellow-400 rounded" />
+                  <span className="text-gray-600">Job View</span>
+                </div>
+              </div>
+            )}
+
+            {statsTab === 'Jobs Applied' && (
+              <div className="flex gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-indigo-600 rounded" />
+                  <span className="text-gray-600">Job Applied</span>
+                </div>
+              </div>
+            )}
 
             {/* Stats Cards Row */}
-            <div className="grid grid-cols-2 gap-4 mt-6">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                    <span className="text-yellow-600 text-sm">👁</span>
+            {statsTab === 'Overview' && (
+              <div className="grid grid-cols-2 gap-4 mt-6">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                      <span className="text-yellow-600 text-sm">👁</span>
+                    </div>
+                    <span className="text-sm text-gray-600">Job Views</span>
                   </div>
-                  <span className="text-sm text-gray-600">Job Views</span>
+                  <div className="text-2xl font-bold text-gray-900">{currentData.jobViews.toLocaleString()}</div>
+                  <div className="text-xs text-gray-500">
+                    This {activeTab} <span className={currentData.jobViewsChange > 0 ? 'text-green-500' : 'text-red-500'}>
+                      {currentData.jobViewsChange > 0 ? '+' : ''}{currentData.jobViewsChange}% {currentData.jobViewsChange > 0 ? '↗' : '↘'}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">{currentData.jobViews.toLocaleString()}</div>
-                <div className="text-xs text-gray-500">
-                  This {activeTab} <span className={currentData.jobViewsChange > 0 ? 'text-green-500' : 'text-red-500'}>
-                    {currentData.jobViewsChange > 0 ? '+' : ''}{currentData.jobViewsChange}% {currentData.jobViewsChange > 0 ? '↗' : '↘'}
-                  </span>
-                </div>
-              </div>
 
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                    <span className="text-indigo-600 text-sm">📄</span>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                      <span className="text-indigo-600 text-sm">📄</span>
+                    </div>
+                    <span className="text-sm text-gray-600">Job Applied</span>
                   </div>
-                  <span className="text-sm text-gray-600">Job Applied</span>
-                </div>
-                <div className="text-2xl font-bold text-gray-900">{currentData.jobApplied.toLocaleString()}</div>
-                <div className="text-xs text-gray-500">
-                  This {activeTab} <span className={currentData.jobAppliedChange > 0 ? 'text-green-500' : 'text-red-500'}>
-                    {currentData.jobAppliedChange > 0 ? '+' : ''}{currentData.jobAppliedChange}% {currentData.jobAppliedChange > 0 ? '↗' : '↘'}
-                  </span>
+                  <div className="text-2xl font-bold text-gray-900">{currentData.jobApplied.toLocaleString()}</div>
+                  <div className="text-xs text-gray-500">
+                    This {activeTab} <span className={currentData.jobAppliedChange > 0 ? 'text-green-500' : 'text-red-500'}>
+                      {currentData.jobAppliedChange > 0 ? '+' : ''}{currentData.jobAppliedChange}% {currentData.jobAppliedChange > 0 ? '↗' : '↘'}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {statsTab === 'Jobs View' && (
+              <div className="flex justify-end mt-6">
+                <div className="bg-gray-50 rounded-lg p-6 w-80">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    </div>
+                    <span className="text-lg font-medium text-gray-900">Job Views</span>
+                  </div>
+                  <div className="text-4xl font-bold text-gray-900 mb-2">{currentData.jobViews.toLocaleString()}</div>
+                  <div className="text-sm text-gray-500">
+                    This {activeTab} <span className={currentData.jobViewsChange > 0 ? 'text-blue-500' : 'text-red-500'}>
+                      {currentData.jobViewsChange}% {currentData.jobViewsChange > 0 ? '▲' : '▼'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {statsTab === 'Jobs Applied' && (
+              <div className="flex justify-end mt-6">
+                <div className="bg-gray-50 rounded-lg p-6 w-80">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <span className="text-lg font-medium text-gray-900">Job Applied</span>
+                  </div>
+                  <div className="text-4xl font-bold text-gray-900 mb-2">{currentData.jobApplied.toLocaleString()}</div>
+                  <div className="text-sm text-gray-500">
+                    This {activeTab} <span className={currentData.jobAppliedChange > 0 ? 'text-blue-500' : 'text-red-500'}>
+                      {currentData.jobAppliedChange}% {currentData.jobAppliedChange > 0 ? '▲' : '▼'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Sidebar */}

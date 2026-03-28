@@ -16,7 +16,7 @@ const INITIAL = [
     name: 'Jan Mayer', 
     role: 'Designer Candidate', 
     time: '12 mins ago', 
-    avatar: 'JM', 
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face', 
     color: 'bg-orange-400', 
     unread: true, 
     pinned: false, 
@@ -36,7 +36,7 @@ const INITIAL = [
     name: 'Joe Bartmann', 
     role: 'HR Manager Candidate', 
     time: '3:40 PM', 
-    avatar: 'JB', 
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face', 
     color: 'bg-blue-500', 
     unread: false, 
     pinned: false, 
@@ -56,7 +56,7 @@ const INITIAL = [
     name: 'Ally Wales', 
     role: 'Recruiter Candidate', 
     time: '3:40 PM', 
-    avatar: 'AW', 
+    avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face', 
     color: 'bg-green-500', 
     unread: false, 
     pinned: false, 
@@ -76,7 +76,7 @@ const INITIAL = [
     name: 'James Gardner', 
     role: 'Manager Candidate', 
     time: '3:40 PM', 
-    avatar: 'JG', 
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face', 
     color: 'bg-yellow-500', 
     unread: false, 
     pinned: false, 
@@ -96,7 +96,7 @@ const INITIAL = [
     name: 'Allison Geidt', 
     role: 'UX Designer', 
     time: '3:40 PM', 
-    avatar: 'AG', 
+    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face', 
     color: 'bg-blue-600', 
     unread: false, 
     pinned: false, 
@@ -116,7 +116,7 @@ const INITIAL = [
     name: 'Ruben Culhane', 
     role: 'Frontend Developer', 
     time: '3:40 PM', 
-    avatar: 'RC', 
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face', 
     color: 'bg-purple-500', 
     unread: false, 
     pinned: false, 
@@ -136,7 +136,7 @@ const INITIAL = [
     name: 'Lydia Diaz', 
     role: 'Marketing Specialist', 
     time: '3:40 PM', 
-    avatar: 'LD', 
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face', 
     color: 'bg-red-500', 
     unread: false, 
     pinned: false, 
@@ -156,7 +156,7 @@ const INITIAL = [
     name: 'James Dokidis', 
     role: 'Backend Developer', 
     time: '3:40 PM', 
-    avatar: 'JD', 
+    avatar: 'https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?w=150&h=150&fit=crop&crop=face', 
     color: 'bg-gray-700', 
     unread: false, 
     pinned: false, 
@@ -176,7 +176,7 @@ const INITIAL = [
     name: 'Angelina Swann', 
     role: 'Data Analyst', 
     time: '3:40 PM', 
-    avatar: 'AS', 
+    avatar: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=150&h=150&fit=crop&crop=face', 
     color: 'bg-pink-500', 
     unread: false, 
     pinned: false, 
@@ -312,15 +312,42 @@ export default function CompanyMessages() {
     .filter(m => m.name.toLowerCase().includes((search || '').toLowerCase()) || m.role.toLowerCase().includes((search || '').toLowerCase()))
     .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-white">
-      <CompanyTopBar title="Messages" />
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden ml-60">
+        {/* Messages Sidebar */}
+        <div className="w-80 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
+          {/* Top Header */}
+          <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">J</span>
+                </div>
+                <span className="font-bold text-gray-900">JobHuntly</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <button className="p-2 text-gray-400 hover:text-gray-600">
+                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                  <path d="M13.73 21a2 2 0 01-3.46 0"/>
+                </svg>
+              </button>
+              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition flex items-center gap-2">
+                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Post a job
+              </button>
+            </div>
+          </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <div className="w-80 border-r border-gray-200 flex flex-col bg-white flex-shrink-0">
-          <div className="p-4 border-b border-gray-100 space-y-2">
+          {/* Messages Header */}
+          <div className="p-6 border-b border-gray-200">
+            <h1 className="text-xl font-bold text-gray-900 mb-4">Messages</h1>
             <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-gray-50">
-              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-gray-400 flex-shrink-0">
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-gray-400 flex-shrink-0">
                 <circle cx="11" cy="11" r="8"/>
                 <path d="M21 21l-4.35-4.35"/>
               </svg>
@@ -331,22 +358,22 @@ export default function CompanyMessages() {
                 placeholder="Search messages" 
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 mt-3">
               <button 
                 onClick={() => setShowArchived(false)}
-                className={`flex-1 text-xs py-1.5 rounded-lg transition ${!showArchived ? 'bg-blue-100 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-100'}`}
+                className={`flex-1 text-xs py-2 px-3 rounded-lg transition ${!showArchived ? 'bg-blue-100 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-100'}`}
               >
                 Inbox ({msgs.filter(m => !m.archived && !blocked.some(b => b.id === m.id)).length})
               </button>
               <button 
                 onClick={() => setShowArchived(true)}
-                className={`flex-1 text-xs py-1.5 rounded-lg transition ${showArchived ? 'bg-blue-100 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-100'}`}
+                className={`flex-1 text-xs py-2 px-3 rounded-lg transition ${showArchived ? 'bg-blue-100 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-100'}`}
               >
                 Archived ({msgs.filter(m => m.archived).length})
               </button>
             </div>
           </div>
-
+          <div className="p-4 border-b border-gray-100 space-y-2">
           <div className="flex-1 overflow-y-auto">
             {filtered.map(msg => (
               <div 
@@ -370,8 +397,17 @@ export default function CompanyMessages() {
                     </svg>
                   </div>
                 )}
-                <div className={`w-10 h-10 rounded-full ${msg.color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
-                  {msg.avatar}
+                <img 
+                  src={msg.avatar} 
+                  alt={msg.name}
+                  className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+                <div className={`w-10 h-10 rounded-full ${msg.color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0 hidden`}>
+                  {msg.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center mb-0.5">
@@ -431,8 +467,17 @@ export default function CompanyMessages() {
                 className="flex items-center gap-3 hover:opacity-80 transition" 
                 onClick={() => navigate(`/company/seeker/${sel.seekerId}`)}
               >
-                <div className={`w-10 h-10 rounded-full ${sel.color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
-                  {sel.avatar}
+                <img 
+                  src={sel.avatar} 
+                  alt={sel.name}
+                  className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+                <div className={`w-10 h-10 rounded-full ${sel.color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0 hidden`}>
+                  {sel.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
                 <div className="text-left">
                   <p className="font-semibold text-gray-900 text-sm">
@@ -471,8 +516,17 @@ export default function CompanyMessages() {
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
               <div className="flex flex-col items-center mb-4">
-                <div className={`w-16 h-16 rounded-full ${sel.color} flex items-center justify-center text-white text-xl font-bold mb-3`}>
-                  {sel.avatar}
+                <img 
+                  src={sel.avatar} 
+                  alt={sel.name}
+                  className="w-20 h-20 rounded-full object-cover mb-4"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+                <div className={`w-20 h-20 rounded-full ${sel.color} flex items-center justify-center text-white text-2xl font-bold mb-4 hidden`}>
+                  {sel.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
                 <p className="font-bold text-gray-900 text-lg">{sel.name}</p>
                 <p className="text-sm text-gray-500">{sel.role}</p>
@@ -488,12 +542,23 @@ export default function CompanyMessages() {
               {sel.chat.map((msg, i) => (
                 <div key={i} className={`flex items-end gap-3 ${msg.from === 'me' ? 'flex-row-reverse' : ''}`}>
                   {msg.from === 'them' ? (
-                    <div className={`w-8 h-8 rounded-full ${sel.color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
-                      {sel.avatar}
-                    </div>
+                    <img 
+                      src={sel.avatar} 
+                      alt={sel.name}
+                      className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-700 text-xs font-bold flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                       {initials}
+                    </div>
+                  )}
+                  {msg.from === 'them' && (
+                    <div className={`w-10 h-10 rounded-full ${sel.color} flex items-center justify-center text-white text-sm font-bold flex-shrink-0 hidden`}>
+                      {sel.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                     </div>
                   )}
                   <div className={`max-w-sm flex flex-col ${msg.from === 'me' ? 'items-end' : 'items-start'}`}>
@@ -587,6 +652,7 @@ export default function CompanyMessages() {
             </div>
           </div>
         )}
+        </div>
       </div>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>

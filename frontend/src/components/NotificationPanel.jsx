@@ -77,7 +77,14 @@ export default function NotificationPanel({ open, onClose }) {
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target)) onClose();
+      // Don't close if clicking on the bell button or its children
+      const bellButton = e.target.closest('button[aria-label="notifications"]') || 
+                        e.target.closest('.notification-bell');
+      if (bellButton) return;
+      
+      if (panelRef.current && !panelRef.current.contains(e.target)) {
+        onClose();
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);

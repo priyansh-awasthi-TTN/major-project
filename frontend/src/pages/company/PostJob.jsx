@@ -139,9 +139,9 @@ export default function PostJob() {
   const stepLabels = ['Job Information', 'Job Description', 'Perks & Benefit'];
 
   if (done) return (
-    <div className="flex-1 flex flex-col bg-white min-h-screen">
+    <div className="flex-1 flex flex-col bg-white h-screen">
       <CompanyTopBar title="Post a Job" />
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center" style={{ marginTop: '60px' }}>
         <div className="text-center bg-white rounded-2xl p-12 border border-gray-200 shadow-sm max-w-md">
           <div className="text-5xl mb-4">🎉</div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">Job Posted Successfully!</h2>
@@ -162,7 +162,7 @@ export default function PostJob() {
       <CompanyTopBar title="" />
 
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" style={{ marginTop: '60px' }}>
         <div className="px-10 py-8 w-full">
 
           {/* Page title */}

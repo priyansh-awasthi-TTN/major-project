@@ -33,7 +33,7 @@ export default function CompanySidebar() {
   const initials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <aside className="w-60 min-h-screen bg-white border-r border-gray-200 flex flex-col justify-between py-6 px-4 flex-shrink-0">
+    <aside className="w-60 h-screen bg-white border-r border-gray-200 flex flex-col justify-between py-6 px-4 flex-shrink-0 fixed left-0 top-0 z-10">
       <div>
         <Link to="/" className="flex items-center gap-2 font-bold text-lg mb-6 px-2">
           <span className="bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">J</span>
@@ -47,7 +47,7 @@ export default function CompanySidebar() {
           <span className="text-gray-400 text-xs">▼</span>
         </div>
 
-        <nav className="space-y-1">
+        <nav className="space-y-1 overflow-y-auto flex-1">
           {NAV.map(item => (
             <Link key={item.path} to={item.path}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${pathname.startsWith(item.path) ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}>

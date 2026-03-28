@@ -6,7 +6,7 @@ export default function CompanyProfilePage() {
   return (
     <div className="flex-1 flex flex-col bg-gray-50 min-h-screen">
       <CompanyTopBar title="Company Profile" />
-      <div className="p-8 max-w-5xl">
+      <div className="p-8 max-w-5xl" style={{ marginTop: '60px' }}>
         {/* Header */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
           <div className="h-24 bg-gradient-to-r from-emerald-400 to-teal-500" />

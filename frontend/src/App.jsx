@@ -67,9 +67,11 @@ function DashboardLayout({ children }) {
 
 function CompanyLayout({ children }) {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen overflow-hidden">
       <CompanySidebar />
-      {children}
+      <div className="flex-1 flex flex-col overflow-hidden ml-60">
+        {children}
+      </div>
     </div>
   );
 }
