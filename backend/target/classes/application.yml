@@ -1,15 +1,15 @@
 server:
-  port: 8081
+  port: 8080
 
 spring:
   application:
     name: jobhuntly-backend
   
   datasource:
-    url: jdbc:mysql://localhost:3310/jobhuntly
+    url: jdbc:mysql://localhost:3306/jobhuntly
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
-    password: root
+    password: Meghajaiswal@97
   
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
@@ -26,7 +26,7 @@ jwt:
   refresh-token-expiration: 604800000 # 7 days in milliseconds
 
 cors:
-  allowed-origins: http://localhost:5173,http://localhost:3000
+  allowed-origins: http://localhost:5173,http://localhost:5174,http://localhost:3000
   allowed-methods: GET,POST,PUT,DELETE,OPTIONS
   allowed-headers: "*"
   allow-credentials: true
