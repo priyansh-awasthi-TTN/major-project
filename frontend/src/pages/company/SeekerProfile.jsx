@@ -54,9 +54,9 @@ export default function SeekerProfile() {
   );
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-gray-50">
+    <div className="flex-1 flex flex-col bg-gray-50 min-h-screen">
       <CompanyTopBar title="" />
-      <div className="overflow-y-auto flex-1 px-8 py-6">
+      <div className="overflow-y-auto flex-1 px-8 py-6" style={{ marginTop: '60px' }}>
         <div className="max-w-2xl mx-auto space-y-5">
 
           {/* Back */}

@@ -6,7 +6,7 @@ export default function JobListing() {
   return (
     <div className="flex-1 flex flex-col bg-gray-50 min-h-screen">
       <CompanyTopBar title="Job Listing" subtitle="Here is your jobs listing status from July 19 - July 25." />
-      <div className="p-8">
+      <div className="p-8" style={{ marginTop: '60px' }}>
         <div className="bg-white rounded-xl border border-gray-200">
           <div className="flex justify-between items-center p-4 border-b border-gray-100">
             <p className="font-semibold text-gray-900">Job List</p>
