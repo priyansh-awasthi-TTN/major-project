@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
-import { Stomp } from '@stomp/stompjs';
+import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
 const MessagingContext = createContext(null);
@@ -42,7 +42,7 @@ export function MessagingProvider({ children }) {
     const fetchUsers = async () => {
       try {
         const token = sessionStorage.getItem('accessToken');
-        const res = await fetch('http://localhost:8081/api/network/users', {
+        const res = await fetch('http://localhost:8080/api/network/users', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -62,38 +62,43 @@ export function MessagingProvider({ children }) {
     const token = sessionStorage.getItem('accessToken');
     
     // Connect to WebSocket
-    const socket = new SockJS(`http://localhost:8081/ws?token=${token}`);
-    const client = Stomp.over(socket);
-    client.debug = () => {}; // Disable debug logs
-    
-    client.connect({ Authorization: `Bearer ${token}` }, () => {
-      // Subscribe to my queue
-      client.subscribe(`/user/queue/messages`, (msg) => {
-        const dto = JSON.parse(msg.body);
-        // It's from them (senderId is the other user)
-        const dateObj = new Date(dto.timestamp);
-        const incomingEntry = {
-          from: 'them',
-          text: dto.content,
-          time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          date: dateObj
-        };
-        const otherUserId = dto.senderId;
-        
-        setChatMap(prev => ({
-          ...prev,
-          [otherUserId]: [...(prev[otherUserId] || []), incomingEntry]
-        }));
-        setReadMap(prev => ({ ...prev, [otherUserId]: false }));
-      });
-    }, (error) => {
-      console.error('STOMP Error:', error);
+    const client = new Client({
+      webSocketFactory: () => new SockJS(`http://localhost:8080/ws?token=${token}`),
+      connectHeaders: {
+        Authorization: `Bearer ${token}`
+      },
+      debug: () => {}, // Disable debug logs
+      onConnect: () => {
+        // Subscribe to my queue
+        client.subscribe(`/user/queue/messages`, (msg) => {
+          const dto = JSON.parse(msg.body);
+          // It's from them (senderId is the other user)
+          const dateObj = new Date(dto.timestamp);
+          const incomingEntry = {
+            from: 'them',
+            text: dto.content,
+            time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            date: dateObj
+          };
+          const otherUserId = dto.senderId;
+          
+          setChatMap(prev => ({
+            ...prev,
+            [otherUserId]: [...(prev[otherUserId] || []), incomingEntry]
+          }));
+          setReadMap(prev => ({ ...prev, [otherUserId]: false }));
+        });
+      },
+      onStompError: (error) => {
+        console.error('STOMP Error:', error);
+      }
     });
-
+    
+    client.activate();
     stompClient.current = client;
 
     return () => {
-      if (stompClient.current) stompClient.current.disconnect();
+      if (stompClient.current) stompClient.current.deactivate();
     };
   }, [user]);
 
@@ -101,7 +106,7 @@ export function MessagingProvider({ children }) {
     if (historyLoaded[userId]) return;
     try {
       const token = sessionStorage.getItem('accessToken');
-      const res = await fetch(`http://localhost:8081/api/messages/${userId}`, {
+      const res = await fetch(`http://localhost:8080/api/messages/${userId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -162,9 +167,9 @@ export function MessagingProvider({ children }) {
   }, []);
 
   const sendMessage = useCallback((recipientId, text) => {
-    if (stompClient.current && stompClient.current.connected) {
+    if (stompClient.current && stompClient.current.active) {
       const payload = { recipientId: recipientId, content: text };
-      stompClient.current.send('/app/chat', {}, JSON.stringify(payload));
+      stompClient.current.publish({ destination: '/app/chat', body: JSON.stringify(payload) });
       
       const outgoingEntry = {
         from: 'me',
