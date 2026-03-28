@@ -14,4 +14,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
     
     Optional<User> findByEmailAndIsActiveTrue(String email);
+
+    java.util.List<User> findByUserTypeAndIdNot(com.jobhuntly.backend.entity.User.UserType userType, Long currentUserId);
 }

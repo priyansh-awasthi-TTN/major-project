@@ -21,6 +21,7 @@ import MyApplications from './pages/dashboard/MyApplications';
 import DashFindJobs from './pages/dashboard/DashFindJobs';
 import DashCompanies from './pages/dashboard/DashCompanies';
 import DashCompanyProfile from './pages/dashboard/DashCompanyProfile';
+import DashNetwork from './pages/dashboard/DashNetwork';
 import Profile from './pages/dashboard/Profile';
 import Settings from './pages/dashboard/Settings';
 import HelpCenter from './pages/dashboard/HelpCenter';
@@ -104,6 +105,7 @@ export default function App() {
         {/* Dashboard — jobseeker only */}
         <Route path="/dashboard" element={<JobseekerRoute><DashboardLayout><DashboardHome /></DashboardLayout></JobseekerRoute>} />
         <Route path="/dashboard/messages" element={<JobseekerRoute><DashboardLayout><Messages /></DashboardLayout></JobseekerRoute>} />
+        <Route path="/dashboard/network" element={<JobseekerRoute><DashboardLayout><DashNetwork /></DashboardLayout></JobseekerRoute>} />
         <Route path="/dashboard/applications" element={<JobseekerRoute><DashboardLayout><MyApplications /></DashboardLayout></JobseekerRoute>} />
         <Route path="/dashboard/find-jobs" element={<JobseekerRoute><DashboardLayout><DashFindJobs /></DashboardLayout></JobseekerRoute>} />
         <Route path="/dashboard/companies" element={<JobseekerRoute><DashboardLayout><DashCompanies /></DashboardLayout></JobseekerRoute>} />

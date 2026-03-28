@@ -5,7 +5,7 @@ const LS_KEY = 'jh_company_messages';
 
 function getUnreadCount() {
   try {
-    const msgs = JSON.parse(localStorage.getItem(LS_KEY)) || [];
+    const msgs = JSON.parse(sessionStorage.getItem(LS_KEY)) || [];
     return msgs.filter(m => m.unread).length;
   } catch { return 0; }
 }

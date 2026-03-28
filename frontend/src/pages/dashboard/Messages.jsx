@@ -9,7 +9,7 @@ import Toast from '../../components/Toast';
 export default function Messages() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { messages, markRead, updateMeta, sendMessage, blockUser } = useMessaging();
+  const { messages, markRead, updateMeta, sendMessage, blockUser, loadHistoryForUser } = useMessaging();
 
   const [selected, setSelected]       = useState(null);
   const [search, setSearch]           = useState('');
@@ -24,7 +24,7 @@ export default function Messages() {
       const found = messages.find(m => m.id === parseInt(userId));
       if (found) setSelected(found);
     }
-  }, [searchParams]); // intentionally only on mount / param change
+  }, [searchParams, messages]); // intentionally only on param change / first load
 
   // Keep selected in sync when messages update (e.g. new chat message sent)
   useEffect(() => {
@@ -32,7 +32,14 @@ export default function Messages() {
       const updated = messages.find(m => m.id === selected.id);
       if (updated) setSelected(updated);
     }
-  }, [messages]);
+  }, [messages, selected?.id]);
+
+  useEffect(() => {
+    if (selected && typeof loadHistoryForUser === 'function') {
+      // Call Context method to fetch real history from backend if not fetched
+      loadHistoryForUser(selected.id);
+    }
+  }, [selected?.id, loadHistoryForUser]);
 
   const handleSelect = (msg) => {
     setSelected(msg);
