@@ -4,6 +4,7 @@ import { useMessaging } from '../context/MessagingContext';
 
 const navItems = [
   { label: 'Dashboard',       icon: '🏠', path: '/dashboard',             match: (p) => p === '/dashboard' },
+  { label: 'Network',         icon: '🌐', path: '/dashboard/network',     match: (p) => p.startsWith('/dashboard/network') },
   { label: 'Messages',        icon: '💬', path: '/dashboard/messages',    match: (p) => p.startsWith('/dashboard/messages') || p.startsWith('/dashboard/profile/') },
   { label: 'My Applications', icon: '📄', path: '/dashboard/applications',match: (p) => p.startsWith('/dashboard/applications') },
   { label: 'Find Jobs',       icon: '🔍', path: '/dashboard/find-jobs',   match: (p) => p.startsWith('/dashboard/find-jobs') || p.startsWith('/dashboard/jobs/') },

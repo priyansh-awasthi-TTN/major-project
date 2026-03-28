@@ -262,10 +262,10 @@ export default function DashboardHome() {
   const [toast, setToast] = useState(null);
   const [recruiterModal, setRecruiterModal] = useState(null); // { email, name, jobTitle, company }
 
-  // Calendar date — persisted to localStorage
+  // Calendar date — persisted to sessionStorage
   const [selectedDateRange, setSelectedDateRange] = useState(() => {
     try {
-      const saved = localStorage.getItem(LS_CAL);
+      const saved = sessionStorage.getItem(LS_CAL);
       if (saved) {
         const start = new Date(JSON.parse(saved));
         const end = new Date(start);
@@ -281,7 +281,7 @@ export default function DashboardHome() {
     endDate.setDate(endDate.getDate() + 6);
     const range = { start: date, end: endDate };
     setSelectedDateRange(range);
-    localStorage.setItem(LS_CAL, JSON.stringify(date.toISOString()));
+    sessionStorage.setItem(LS_CAL, JSON.stringify(date.toISOString()));
   };
 
   const formatDateRange = (start, end) => {

@@ -125,10 +125,10 @@ function Calendar({ selectedDate, onDateChange, onClose }) {
 const LS_NOTES    = 'jh_appNotes';
 const LS_FOLLOWUP = 'jh_followups';
 const LS_ASSESS   = 'jh_assessments';
-function loadNotes() { try { return JSON.parse(localStorage.getItem(LS_NOTES)) || {}; } catch { return {}; } }
-function saveNotes(n) { localStorage.setItem(LS_NOTES, JSON.stringify(n)); }
-function loadLS(key) { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch { return {}; } }
-function saveLS(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+function loadNotes() { try { return JSON.parse(sessionStorage.getItem(LS_NOTES)) || {}; } catch { return {}; } }
+function saveNotes(n) { sessionStorage.setItem(LS_NOTES, JSON.stringify(n)); }
+function loadLS(key) { try { return JSON.parse(sessionStorage.getItem(key)) || {}; } catch { return {}; } }
+function saveLS(key, val) { sessionStorage.setItem(key, JSON.stringify(val)); }
 
 // ── Detail Drawer ─────────────────────────────────────────────────────────────
 function DetailDrawer({ app, onClose, onStatusChange, onToast }) {
@@ -416,11 +416,11 @@ export default function MyApplications() {
   const navigate = useNavigate();
   const firstName = (user?.fullName || 'Jake').split(' ')[0];
 
-  // Calendar — same localStorage key as Dashboard
+  // Calendar — same sessionStorage key as Dashboard
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState(() => {
     try {
-      const saved = localStorage.getItem(LS_CAL);
+      const saved = sessionStorage.getItem(LS_CAL);
       if (saved) {
         const start = new Date(JSON.parse(saved));
         const end = new Date(start); end.setDate(end.getDate() + 6);
@@ -433,7 +433,7 @@ export default function MyApplications() {
   const handleDateChange = (date) => {
     const end = new Date(date); end.setDate(end.getDate() + 6);
     setSelectedDateRange({ start: date, end });
-    localStorage.setItem(LS_CAL, JSON.stringify(date.toISOString()));
+    sessionStorage.setItem(LS_CAL, JSON.stringify(date.toISOString()));
   };
 
   const fmt = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });

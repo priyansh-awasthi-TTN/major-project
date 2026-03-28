@@ -195,7 +195,7 @@ const INITIAL = [
 // Helper functions
 function loadMsgs() { 
   try { 
-    const s = JSON.parse(localStorage.getItem(LS_KEY)); 
+    const s = JSON.parse(sessionStorage.getItem(LS_KEY)); 
     return s?.length ? s : INITIAL; 
   } catch { 
     return INITIAL; 
@@ -203,19 +203,19 @@ function loadMsgs() {
 }
 
 function saveMsgs(d) { 
-  localStorage.setItem(LS_KEY, JSON.stringify(d)); 
+  sessionStorage.setItem(LS_KEY, JSON.stringify(d)); 
 }
 
 function loadBlocked() { 
   try { 
-    return JSON.parse(localStorage.getItem(LS_BLOCKED)) || []; 
+    return JSON.parse(sessionStorage.getItem(LS_BLOCKED)) || []; 
   } catch { 
     return []; 
   } 
 }
 
 function saveBlocked(d) { 
-  localStorage.setItem(LS_BLOCKED, JSON.stringify(d)); 
+  sessionStorage.setItem(LS_BLOCKED, JSON.stringify(d)); 
 }
 export default function CompanyMessages() {
   const { user } = useAuth();

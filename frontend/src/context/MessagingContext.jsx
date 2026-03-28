@@ -1,47 +1,152 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { messages as mockMessages } from '../data/mockData';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { useAuth } from './AuthContext';
+import { Stomp } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 
 const MessagingContext = createContext(null);
 
 const LS_READ    = 'jh_readMessages';
 const LS_BLOCKED = 'jh_blockedUsers';
-const LS_META    = 'jh_messageMeta'; // pinned, starred, muted, archived per id
+const LS_META    = 'jh_messageMeta';
 
 function loadLS(key, fallback) {
-  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+  try { return JSON.parse(sessionStorage.getItem(key)) ?? fallback; }
   catch { return fallback; }
 }
-
 function saveLS(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
+  sessionStorage.setItem(key, JSON.stringify(value));
 }
 
+const colors = ['bg-orange-400', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-red-500'];
+
 export function MessagingProvider({ children }) {
-  // { [id]: true }
-  const [readMap, setReadMap]     = useState(() => loadLS(LS_READ, {}));
-  // [id, id, ...]
+  const { user } = useAuth();
+  
+  const [networkUsers, setNetworkUsers] = useState([]);
+  const [chatMap, setChatMap] = useState({}); // { [userId]: [{from, text, time, date}] }
+  const [historyLoaded, setHistoryLoaded] = useState({}); // { [userId]: boolean }
+
+  const [readMap, setReadMap] = useState(() => loadLS(LS_READ, {}));
   const [blockedIds, setBlockedIds] = useState(() => loadLS(LS_BLOCKED, []));
-  // { [id]: { isPinned, isStarred, isMuted, isArchived } }
-  const [metaMap, setMetaMap]     = useState(() => loadLS(LS_META, {}));
-  // extra chat messages sent by user: { [id]: [{from,text,time}] }
-  const [chatMap, setChatMap]     = useState({});
+  const [metaMap, setMetaMap] = useState(() => loadLS(LS_META, {}));
 
-  // Persist to localStorage whenever state changes
-  useEffect(() => { saveLS(LS_READ,    readMap);    }, [readMap]);
+  const stompClient = useRef(null);
+
+  useEffect(() => { saveLS(LS_READ, readMap); }, [readMap]);
   useEffect(() => { saveLS(LS_BLOCKED, blockedIds); }, [blockedIds]);
-  useEffect(() => { saveLS(LS_META,    metaMap);    }, [metaMap]);
+  useEffect(() => { saveLS(LS_META, metaMap); }, [metaMap]);
 
-  // Derive full message list by merging mock data with persisted state
-  const messages = mockMessages.map(msg => ({
-    ...msg,
-    isRead:     readMap[msg.id]    ?? !msg.unread,
-    isPinned:   metaMap[msg.id]?.isPinned   ?? false,
-    isStarred:  metaMap[msg.id]?.isStarred  ?? false,
-    isMuted:    metaMap[msg.id]?.isMuted    ?? false,
-    isArchived: metaMap[msg.id]?.isArchived ?? false,
-    chat: [...msg.chat, ...(chatMap[msg.id] ?? [])],
-  }));
+  // Load Network Users
+  useEffect(() => {
+    if (!user) return;
+    const fetchUsers = async () => {
+      try {
+        const token = sessionStorage.getItem('accessToken');
+        const res = await fetch('http://localhost:8081/api/network/users', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setNetworkUsers(data);
+        }
+      } catch (e) {
+        console.error('Failed to fetch network users', e);
+      }
+    };
+    fetchUsers();
+  }, [user]);
 
+  // Handle STOMP connection
+  useEffect(() => {
+    if (!user) return;
+    const token = sessionStorage.getItem('accessToken');
+    
+    // Connect to WebSocket
+    const socket = new SockJS(`http://localhost:8081/ws?token=${token}`);
+    const client = Stomp.over(socket);
+    client.debug = () => {}; // Disable debug logs
+    
+    client.connect({ Authorization: `Bearer ${token}` }, () => {
+      // Subscribe to my queue
+      client.subscribe(`/user/queue/messages`, (msg) => {
+        const dto = JSON.parse(msg.body);
+        // It's from them (senderId is the other user)
+        const dateObj = new Date(dto.timestamp);
+        const incomingEntry = {
+          from: 'them',
+          text: dto.content,
+          time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          date: dateObj
+        };
+        const otherUserId = dto.senderId;
+        
+        setChatMap(prev => ({
+          ...prev,
+          [otherUserId]: [...(prev[otherUserId] || []), incomingEntry]
+        }));
+        setReadMap(prev => ({ ...prev, [otherUserId]: false }));
+      });
+    }, (error) => {
+      console.error('STOMP Error:', error);
+    });
+
+    stompClient.current = client;
+
+    return () => {
+      if (stompClient.current) stompClient.current.disconnect();
+    };
+  }, [user]);
+
+  const loadHistoryForUser = useCallback(async (userId) => {
+    if (historyLoaded[userId]) return;
+    try {
+      const token = sessionStorage.getItem('accessToken');
+      const res = await fetch(`http://localhost:8081/api/messages/${userId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const historyData = await res.json();
+        const mappedChats = historyData.map(dto => {
+          const dateObj = new Date(dto.timestamp);
+          return {
+            from: dto.senderId === user.id ? 'me' : 'them',
+            text: dto.content,
+            time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            date: dateObj
+          };
+        });
+        setChatMap(prev => ({ ...prev, [userId]: mappedChats }));
+        setHistoryLoaded(prev => ({ ...prev, [userId]: true }));
+      }
+    } catch (e) {
+      console.error('Failed to load history', e);
+    }
+  }, [user, historyLoaded]);
+
+  const messages = networkUsers.map((u, i) => {
+    const userChats = chatMap[u.id] || [];
+    const lastChat = userChats[userChats.length - 1];
+    
+    return {
+      id: u.id,
+      name: u.fullName,
+      role: 'Jobseeker',
+      company: 'Platform',
+      avatar: u.fullName.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase(),
+      avatarColor: colors[u.id % colors.length],
+      isRead: readMap[u.id] ?? true,
+      time: lastChat ? lastChat.time : '',
+      preview: lastChat ? lastChat.text : 'Click to start chatting...',
+      isPinned:   metaMap[u.id]?.isPinned   ?? false,
+      isStarred:  metaMap[u.id]?.isStarred  ?? false,
+      isMuted:    metaMap[u.id]?.isMuted    ?? false,
+      isArchived: metaMap[u.id]?.isArchived ?? false,
+      chat: userChats
+    };
+  });
+
+  // Since we create conversations for ALL network users, we might want to sort them 
+  // or only show users we actually have chats with, but for now we list all.
   const visibleMessages  = messages.filter(m => !blockedIds.includes(m.id));
   const blockedMessages  = messages.filter(m =>  blockedIds.includes(m.id));
 
@@ -56,13 +161,21 @@ export function MessagingProvider({ children }) {
     }));
   }, []);
 
-  const sendMessage = useCallback((id, text) => {
-    const entry = {
-      from: 'me',
-      text,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-    setChatMap(prev => ({ ...prev, [id]: [...(prev[id] ?? []), entry] }));
+  const sendMessage = useCallback((recipientId, text) => {
+    if (stompClient.current && stompClient.current.connected) {
+      const payload = { recipientId: recipientId, content: text };
+      stompClient.current.send('/app/chat', {}, JSON.stringify(payload));
+      
+      const outgoingEntry = {
+        from: 'me',
+        text,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date: new Date()
+      };
+      setChatMap(prev => ({ ...prev, [recipientId]: [...(prev[recipientId] || []), outgoingEntry] }));
+    } else {
+      console.error('STOMP client is not connected');
+    }
   }, []);
 
   const blockUser = useCallback((id) => {
@@ -83,6 +196,7 @@ export function MessagingProvider({ children }) {
       sendMessage,
       blockUser,
       unblockUser,
+      loadHistoryForUser,
     }}>
       {children}
     </MessagingContext.Provider>

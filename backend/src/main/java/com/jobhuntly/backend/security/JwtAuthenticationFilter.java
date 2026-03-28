@@ -33,18 +33,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         
-        final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        final String userEmail;
+        String authHeader = request.getHeader("Authorization");
+        String jwt = null;
+        String userEmail = null;
         
         // Check if Authorization header is present and starts with "Bearer "
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            jwt = authHeader.substring(7);
+        } else if (request.getRequestURI().startsWith("/ws") && request.getParameter("token") != null) {
+            jwt = request.getParameter("token");
+        }
+        
+        if (jwt == null) {
             filterChain.doFilter(request, response);
             return;
         }
         
-        // Extract JWT token
-        jwt = authHeader.substring(7);
         
         try {
             // Extract user email from JWT

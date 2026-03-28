@@ -10,7 +10,7 @@ export function AuthProvider({ children }) {
   // Check if user is already logged in on app start
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem('accessToken');
+      const token = sessionStorage.getItem('accessToken');
       if (token) {
         try {
           const response = await apiService.getCurrentUser();
@@ -19,8 +19,8 @@ export function AuthProvider({ children }) {
           }
         } catch (error) {
           console.error('Auth check failed:', error);
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
+          sessionStorage.removeItem('accessToken');
+          sessionStorage.removeItem('refreshToken');
           setUser(null);
         }
       }
@@ -36,8 +36,8 @@ export function AuthProvider({ children }) {
       
       if (response && response.accessToken && response.user) {
         // Store tokens
-        localStorage.setItem('accessToken', response.accessToken);
-        localStorage.setItem('refreshToken', response.refreshToken);
+        sessionStorage.setItem('accessToken', response.accessToken);
+        sessionStorage.setItem('refreshToken', response.refreshToken);
         
         // Set user
         setUser(response.user);
@@ -59,8 +59,8 @@ export function AuthProvider({ children }) {
       console.log('Registration successful:', response);
       
       // Store tokens
-      localStorage.setItem('accessToken', response.accessToken);
-      localStorage.setItem('refreshToken', response.refreshToken);
+      sessionStorage.setItem('accessToken', response.accessToken);
+      sessionStorage.setItem('refreshToken', response.refreshToken);
       
       // Set user
       setUser(response.user);
@@ -77,9 +77,9 @@ export function AuthProvider({ children }) {
     // Clear user state immediately
     setUser(null);
 
-    // Clear all app localStorage keys
+    // Clear all app sessionStorage keys
     ['accessToken', 'refreshToken', 'jh_readMessages', 'jh_blockedUsers', 'jh_messageMeta', 'jh_calendarDate'].forEach(k =>
-      localStorage.removeItem(k)
+      sessionStorage.removeItem(k)
     );
 
     try {
