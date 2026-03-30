@@ -10,4 +10,5 @@ import java.util.List;
 public interface JobRepository extends JpaRepository<Job, Long> {
     boolean existsByTitleAndCompany(String title, String company);
     List<Job> findAllByOrderByCreatedAtDesc();
+    List<Job> findByPostedByUserId(Long postedByUserId);
 }

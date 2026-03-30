@@ -49,6 +49,12 @@ public class Application {
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 
+    @Column(name = "resume_url")
+    private String resumeUrl;
+
+    @Column(name = "cover_letter", columnDefinition = "TEXT")
+    private String coverLetter;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -95,6 +101,10 @@ public class Application {
     public void setSalary(String salary) { this.salary = salary; }
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }
+    public String getResumeUrl() { return resumeUrl; }
+    public void setResumeUrl(String resumeUrl) { this.resumeUrl = resumeUrl; }
+    public String getCoverLetter() { return coverLetter; }
+    public void setCoverLetter(String coverLetter) { this.coverLetter = coverLetter; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 }

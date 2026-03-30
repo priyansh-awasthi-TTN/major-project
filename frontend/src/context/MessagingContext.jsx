@@ -42,7 +42,7 @@ export function MessagingProvider({ children }) {
     const fetchUsers = async () => {
       try {
         const token = sessionStorage.getItem('accessToken');
-        const res = await fetch('http://localhost:8080/api/network/users', {
+        const res = await fetch('http://localhost:8081/api/network/users', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -63,7 +63,7 @@ export function MessagingProvider({ children }) {
     
     // Connect to WebSocket
     const client = new Client({
-      webSocketFactory: () => new SockJS(`http://localhost:8080/ws?token=${token}`),
+      webSocketFactory: () => new SockJS(`http://localhost:8081/ws?token=${token}`),
       connectHeaders: {
         Authorization: `Bearer ${token}`
       },
@@ -106,7 +106,7 @@ export function MessagingProvider({ children }) {
     if (historyLoaded[userId]) return;
     try {
       const token = sessionStorage.getItem('accessToken');
-      const res = await fetch(`http://localhost:8080/api/messages/${userId}`, {
+      const res = await fetch(`http://localhost:8081/api/messages/${userId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {

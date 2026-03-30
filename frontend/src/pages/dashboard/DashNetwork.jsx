@@ -15,7 +15,7 @@ export default function DashNetwork() {
     const fetchUsers = async () => {
       try {
         const token = sessionStorage.getItem('accessToken');
-        const res = await fetch('http://localhost:8080/api/network/users', {
+        const res = await fetch('http://localhost:8081/api/network/users', {
           headers: {
             'Authorization': `Bearer ${token}`
           }

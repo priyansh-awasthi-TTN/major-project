@@ -6,7 +6,7 @@ import DashTopBar from '../../components/DashTopBar';
 import Toast from '../../components/Toast';
 import MessageRecruiterModal from '../../components/MessageRecruiterModal';
 import { messages } from '../../data/mockData';
-import { allApplications as baseApplications } from '../../data/applicationsData';
+import apiService from '../../services/api';
 
 const LS_CAL = 'jh_calendarDate';
 const PAGE_SIZE = 11;
@@ -365,8 +365,8 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast }) {
 
 // ── Menu items ────────────────────────────────────────────────────────────────
 const buildMenuItems = (app, onRemove, navigate, onMessageRecruiter) => [
-  { icon: '👁️', label: 'View Details',    action: () => navigate(`/dashboard/jobs/${app.id}`) },
-  { icon: '📄', label: 'View Job Posting', action: () => navigate(`/dashboard/jobs/${app.id}`) },
+  { icon: '👁️', label: 'View Details',    action: () => navigate(`/dashboard/jobs/${app.jobId}`) },
+  { icon: '📄', label: 'View Job Posting', action: () => navigate(`/dashboard/jobs/${app.jobId}`) },
   {
     icon: '✉️', label: 'Message Recruiter',
     action: () => {
@@ -448,10 +448,18 @@ export default function MyApplications() {
   const [filterType, setFilterType]     = useState('');
   const [selectedApp, setSelectedApp]   = useState(null);
   const [openMenu, setOpenMenu]         = useState(null);
-  const [applications, setApplications] = useState(baseApplications);
+  const [applications, setApplications] = useState([]);
   const [toast, setToast]               = useState(null);
   const [recruiterModal, setRecruiterModal] = useState(null);
   const [page, setPage]                 = useState(1);
+  const [loading, setLoading]           = useState(true);
+
+  useEffect(() => {
+    apiService.getApplications()
+      .then(data => setApplications(data || []))
+      .catch(() => setApplications([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleStatusChange = (id, newStatus) => {
     setApplications(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
@@ -459,10 +467,15 @@ export default function MyApplications() {
   };
 
   const handleToast = (message, type = 'success') => setToast({ message, type });
-  const handleRemove = (id) => {
-    if (!confirm('Remove this application?')) return;
-    setApplications(prev => prev.filter(a => a.id !== id));
-    setToast({ message: 'Application removed', type: 'success' });
+  const handleRemove = async (id) => {
+    if (!window.confirm('Remove this application?')) return;
+    try {
+      await apiService.deleteApplication(id);
+      setApplications(prev => prev.filter(a => a.id !== id));
+      setToast({ message: 'Application removed', type: 'success' });
+    } catch(e) {
+      setToast({ message: 'Failed to remove application', type: 'error' });
+    }
   };
 
   const tabFilter = tabs[activeTab].filter;
@@ -473,9 +486,10 @@ export default function MyApplications() {
     return matchTab && matchSearch && matchType;
   });
 
-  if (sortBy === 'Company A-Z')           filtered = [...filtered].sort((a, b) => a.company.localeCompare(b.company));
-  else if (sortBy === 'Date Applied (Oldest)') filtered = [...filtered].sort((a, b) => a.id - b.id);
-  else if (sortBy === 'Status')           filtered = [...filtered].sort((a, b) => a.status.localeCompare(b.status));
+  if (sortBy === 'Company A-Z')           filtered = [...filtered].sort((a, b) => (a.company || '').localeCompare(b.company || ''));
+  else if (sortBy === 'Date Applied (Oldest)') filtered = [...filtered].sort((a, b) => new Date(a.dateApplied) - new Date(b.dateApplied));
+  else if (sortBy === 'Date Applied (Newest)') filtered = [...filtered].sort((a, b) => new Date(b.dateApplied) - new Date(a.dateApplied));
+  else if (sortBy === 'Status')           filtered = [...filtered].sort((a, b) => (a.status || '').localeCompare(b.status || ''));
 
   const totalPages  = Math.ceil(filtered.length / PAGE_SIZE);
   const safePage    = Math.min(page, totalPages || 1);
@@ -589,12 +603,16 @@ export default function MyApplications() {
                 <tr key={app.id} className="border-b border-gray-100 hover:bg-gray-50 transition cursor-pointer" onClick={() => setSelectedApp(app)}>
                   <td className="px-6 py-4 text-gray-400">{(safePage - 1) * PAGE_SIZE + idx + 1}</td>
                   <td className="px-4 py-4">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 cursor-pointer hover:bg-gray-100 p-1 rounded transition" 
+                         onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/companies/${app.companyId || app.company}`); }}>
                       <div className={`${app.color} text-white rounded-xl w-10 h-10 flex items-center justify-center text-xs font-bold flex-shrink-0`}>{app.logo}</div>
                       <p className="font-semibold text-gray-900">{app.company}</p>
                     </div>
                   </td>
-                  <td className="px-4 py-4 text-gray-600">{app.title}</td>
+                  <td className="px-4 py-4 text-gray-600 cursor-pointer hover:text-blue-600 hover:underline"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/jobs/${app.jobId}`); }}>
+                    {app.title}
+                  </td>
                   <td className="px-4 py-4 text-gray-500">{app.dateApplied}</td>
                   <td className="px-4 py-4">
                     <span className={`text-xs px-3 py-1 rounded-full font-medium ${statusStyle[app.status] || 'border border-gray-300 text-gray-500'}`}>{app.status}</span>
@@ -612,7 +630,14 @@ export default function MyApplications() {
                   </td>
                 </tr>
               ))}
-              {paginated.length === 0 && (
+              {loading && (
+                <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-400 text-sm">
+                   <div className="flex items-center justify-center">
+                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                   </div>
+                </td></tr>
+              )}
+              {!loading && paginated.length === 0 && (
                 <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-400 text-sm">No applications found</td></tr>
               )}
             </tbody>

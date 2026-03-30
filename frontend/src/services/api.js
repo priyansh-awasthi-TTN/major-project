@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'http://localhost:8081/api';
 
 class ApiService {
   constructor() {
@@ -24,7 +24,7 @@ class ApiService {
     try {
       console.log('Making API request to:', url, 'with config:', config);
       const response = await fetch(url, config);
-      
+
       let data;
       try {
         data = await response.json();
@@ -82,6 +82,20 @@ class ApiService {
     return this.request('/auth/verify');
   }
 
+  async uploadFile(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const token = sessionStorage.getItem('accessToken');
+    const response = await fetch(`${this.baseURL}/upload`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'Upload failed');
+    return data;
+  }
+
   // Application endpoints
   async getApplications() {
     return this.request('/applications');
@@ -89,6 +103,10 @@ class ApiService {
 
   async getDashboardStats() {
     return this.request('/applications/stats');
+  }
+
+  async checkApplicationStatus(jobId) {
+    return this.request(`/applications/check/${jobId}`);
   }
 
   async createApplication(data) {
@@ -101,6 +119,15 @@ class ApiService {
 
   async deleteApplication(id) {
     return this.request(`/applications/${id}`, { method: 'DELETE' });
+  }
+
+  // Company endpoints
+  async getCompanyApplications() {
+    return this.request('/company/applications');
+  }
+
+  async updateCompanyApplicationStatus(id, status) {
+    return this.request(`/company/applications/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
   }
 
   // Job endpoints

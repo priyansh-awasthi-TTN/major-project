@@ -14,6 +14,8 @@ public class ApplicationRequest {
     private String status;
     private String salary;
     private String note;
+    private String resumeUrl;
+    private String coverLetter;
 
     public Long getJobId() { return jobId; }
     public void setJobId(Long jobId) { this.jobId = jobId; }
@@ -37,4 +39,8 @@ public class ApplicationRequest {
     public void setSalary(String salary) { this.salary = salary; }
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }
+    public String getResumeUrl() { return resumeUrl; }
+    public void setResumeUrl(String resumeUrl) { this.resumeUrl = resumeUrl; }
+    public String getCoverLetter() { return coverLetter; }
+    public void setCoverLetter(String coverLetter) { this.coverLetter = coverLetter; }
 }

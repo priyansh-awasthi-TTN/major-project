@@ -17,9 +17,13 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
 
     List<Application> findTop5ByUserOrderByDateAppliedDesc(User user);
 
+    List<Application> findByJobIdInOrderByDateAppliedDesc(List<Long> jobIds);
+
     long countByUser(User user);
 
     long countByUserAndStatus(User user, String status);
+
+    boolean existsByUserAndJobId(User user, Long jobId);
 
     @Query("SELECT a FROM Application a WHERE a.user = :user AND a.dateApplied BETWEEN :start AND :end ORDER BY a.dateApplied DESC")
     List<Application> findByUserAndDateRange(@Param("user") User user,
