@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { companies, jobs } from '../../data/mockData';
+import apiService from '../../services/api';
 import DashTopBar from '../../components/DashTopBar';
 
 const companyJobs = {
@@ -35,9 +37,26 @@ const avatarColors = ['bg-blue-400', 'bg-purple-400', 'bg-pink-400', 'bg-indigo-
 export default function DashCompanyProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const company = companies.find(c => c.id === Number(id)) || companies[0];
-  const openJobIds = companyJobs[company.id] || [1, 2];
-  const openJobs = openJobIds.map(jid => jobs.find(j => j.id === jid)).filter(Boolean);
+  let company = companies.find(c => c.id === Number(id) || String(c.name).toLowerCase() === String(id).toLowerCase());
+  
+  if (!company) {
+    company = {
+      id: id,
+      name: String(id),
+      logo: String(id).substring(0, 1).toUpperCase(),
+      color: 'bg-indigo-500',
+      description: '',
+      industry: 'Technology',
+      jobs: 0
+    };
+  }
+
+  const [realJobs, setRealJobs] = useState([]);
+  useEffect(() => {
+    apiService.getJobs().then(data => {
+      if (data) setRealJobs(data.filter(j => (j.company || '').toLowerCase() === company.name.toLowerCase()));
+    }).catch(console.error);
+  }, [company.name]);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-gray-50">
@@ -82,10 +101,7 @@ export default function DashCompanyProfile() {
               <div className="bg-white rounded-xl p-6 border border-gray-200">
                 <h2 className="font-bold text-gray-900 mb-3">Company Profile</h2>
                 <p className="text-sm text-gray-600 leading-relaxed mb-4">
-                  {company.description} {company.name} is a technology company that builds economic infrastructure for the internet.
-                  Businesses of every size—from new startups to public companies—use our software to accept payments and manage their businesses online.
-                  We believe that growing the GDP of the internet is a problem rooted in code and design, not finance.
-                  We obsessively seek out elegant, composable abstractions that enable robust, scalable, flexible integrations.
+                  {company.description || `${company.name} is dedicated to building modern solutions that impact millions daily.`} {company.name} remains at the forefront of digital innovation, helping businesses of all sizes scale gracefully and safely on the web. We are building elegant abstractions to push technology boundaries.
                 </p>
                 <h3 className="font-semibold text-gray-900 text-sm mb-3">Contact</h3>
                 <div className="flex gap-3 flex-wrap">
@@ -140,39 +156,70 @@ export default function DashCompanyProfile() {
                 </div>
               </div>
 
+              {/* Reviews */}
+              <div className="bg-white rounded-xl p-6 border border-gray-200">
+                <div className="flex justify-between items-center mb-5">
+                   <h2 className="font-bold text-gray-900">Company Reviews</h2>
+                   <span className="text-sm font-bold text-green-600 px-3 py-1 bg-green-50 rounded-full">★ 4.8 Average</span>
+                </div>
+                <div className="space-y-4">
+                  <div className="border-b border-gray-100 pb-4">
+                     <p className="font-semibold text-gray-800 text-sm">"Great work-life balance and supportive team"</p>
+                     <div className="flex items-center gap-2 mt-1 mb-2 text-xs text-gray-500">
+                        <span className="text-yellow-400">★★★★☆</span>
+                        <span>• Current Employee</span>
+                        <span>• 2 months ago</span>
+                     </div>
+                     <p className="text-xs text-gray-600 leading-relaxed">The management is very transparent and genuinely cares about your growth. Flexible remote options are honored without micro-management.</p>
+                  </div>
+                  <div>
+                     <p className="font-semibold text-gray-800 text-sm">"Fast paced but highly rewarding"</p>
+                     <div className="flex items-center gap-2 mt-1 mb-2 text-xs text-gray-500">
+                        <span className="text-yellow-400">★★★★★</span>
+                        <span>• Former Employee</span>
+                        <span>• 10 months ago</span>
+                     </div>
+                     <p className="text-xs text-gray-600 leading-relaxed">You will learn a lot in a short amount of time. The benefits are top-tier and the compensation reviews occur bi-annually.</p>
+                  </div>
+                  <button className="text-blue-600 text-xs font-medium hover:underline w-full text-center mt-2">See all 142 reviews</button>
+                </div>
+              </div>
+
               {/* Open Jobs */}
               <div>
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex justify-between items-center mb-4 mt-2">
                   <h2 className="text-xl font-bold text-gray-900">Open Jobs</h2>
                   <Link to="/dashboard/find-jobs" className="text-blue-600 text-sm hover:underline">Show all jobs →</Link>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  {openJobs.map(job => (
-                    <Link key={job.id} to={`/dashboard/jobs/${job.id}`}
-                      className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition block">
-                      <div className="flex items-start gap-3 mb-3">
-                        <div className={`${job.color} text-white rounded-xl w-10 h-10 flex items-center justify-center font-bold flex-shrink-0`}>{job.logo}</div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900 text-sm">{job.title}</h3>
-                          <p className="text-xs text-gray-500 mt-0.5">{job.company} • {job.location}</p>
+                  {realJobs.length === 0 ? (
+                    <div className="col-span-2 bg-white rounded-xl p-8 border border-gray-200 text-center">
+                       <p className="text-gray-500 text-sm font-medium">No open positions currently available</p>
+                    </div>
+                  ) : (
+                    realJobs.map(job => (
+                      <Link key={job.id} to={`/dashboard/jobs/${job.id}`}
+                        className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition block">
+                        <div className="flex items-start gap-3 mb-3">
+                          <div className={`${job.color || 'bg-blue-500'} text-white rounded-xl w-10 h-10 flex items-center justify-center font-bold flex-shrink-0`}>{job.logo || company.logo}</div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900 text-sm">{job.title}</h3>
+                            <p className="text-xs text-gray-500 mt-0.5">{job.company} • {job.location}</p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        <span className="text-xs border border-green-500 text-green-600 rounded px-2 py-0.5">{job.type}</span>
-                        {job.categories.map(c => (
-                          <span key={c} className={`text-xs rounded px-2 py-0.5 border ${
-                            c === 'Design' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                            c === 'Business' ? 'bg-green-50 text-green-700 border-green-200' :
-                            'bg-orange-50 text-orange-600 border-orange-200'
-                          }`}>{c}</span>
-                        ))}
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-1.5 mb-1">
-                        <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${(job.applied / job.capacity) * 100}%` }} />
-                      </div>
-                      <p className="text-xs text-gray-400"><span className="font-medium text-gray-600">{job.applied} applied</span> of {job.capacity} capacity</p>
-                    </Link>
-                  ))}
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          <span className="text-xs border border-green-500 text-green-600 rounded px-2 py-0.5">{job.type}</span>
+                          {((typeof job.categories === 'string' ? job.categories.split(',') : (job.categories || []))).map(c => (
+                            <span key={c} className={`text-xs rounded px-2 py-0.5 border bg-orange-50 text-orange-600 border-orange-200`}>{c}</span>
+                          ))}
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-1.5 mb-1">
+                          <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${Math.min(((job.applied || 0) / (job.capacity || 10)) * 100, 100)}%` }} />
+                        </div>
+                        <p className="text-xs text-gray-400"><span className="font-medium text-gray-600">{job.applied || 0} applied</span> of {job.capacity || 10} capacity</p>
+                      </Link>
+                    ))
+                  )}
                 </div>
               </div>
 

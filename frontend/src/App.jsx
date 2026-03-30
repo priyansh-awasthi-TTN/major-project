@@ -14,6 +14,8 @@ import CompanyProfile from './pages/CompanyProfile';
 import CompanyJobDetail from './pages/CompanyJobDetail';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
+import TermsOfService from './pages/TermsOfService';
+import PrivacyPolicy from './pages/SitePrivacy';
 
 import DashboardHome from './pages/dashboard/DashboardHome';
 import Messages from './pages/dashboard/Messages';
@@ -103,6 +105,8 @@ export default function App() {
         <Route path="/companies/:companyId/jobs/:jobId" element={<PublicLayout><CompanyJobDetail /></PublicLayout>} />
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
+        <Route path="/terms" element={<PublicLayout><TermsOfService /></PublicLayout>} />
+        <Route path="/privacy" element={<PublicLayout><PrivacyPolicy /></PublicLayout>} />
 
         {/* Dashboard — jobseeker only */}
         <Route path="/dashboard" element={<JobseekerRoute><DashboardLayout><DashboardHome /></DashboardLayout></JobseekerRoute>} />

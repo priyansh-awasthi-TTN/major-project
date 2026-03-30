@@ -1,6 +1,7 @@
+import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import CompanyTopBar from '../../components/CompanyTopBar';
-import { applicants } from '../../data/companyMockData';
+import apiService from '../../services/api';
 
 const stages = ['In Review', 'Shortlisted', 'Interview', 'Hired'];
 const stageColor = {
@@ -10,15 +11,45 @@ const stageColor = {
   'Hired': 'bg-green-100 text-green-600',
 };
 
+const ALL_STAGES = ['In Review', 'Interviewing', 'Assessment', 'Offered', 'Shortlisted', 'Hired', 'Unsuitable'];
+
 export default function JobApplicantsKanban() {
   const { id } = useParams();
+  const [apps, setApps] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiService.getCompanyApplications()
+      .then(data => {
+        const filtered = (data || []).filter(a => String(a.jobId) === String(id));
+        setApps(filtered);
+      })
+      .catch(() => setApps([]))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  const handleStatusChange = async (appId, newStatus) => {
+    try {
+      await apiService.updateCompanyApplicationStatus(appId, newStatus);
+      setApps(prev => prev.map(a => a.id === appId ? { ...a, status: newStatus } : a));
+    } catch (e) {
+      alert('Failed to update status');
+    }
+  };
+
   const grouped = stages.reduce((acc, s) => {
-    acc[s] = applicants.filter(a => {
-      if (s === 'Interview') return a.stage === 'Interviewing';
-      return a.stage === s;
+    acc[s] = apps.filter(a => {
+      if (s === 'Interview') return a.status === 'Interviewing' || a.status === 'Assessment';
+      return a.status === s;
     });
     return acc;
   }, {});
+
+  const getInitials = (n) => n ? n.split(' ').map(x=>x[0]).join('').substring(0,2).toUpperCase() : 'U';
+  const getColor = (n) => {
+    const cols = ['bg-blue-500', 'bg-red-500', 'bg-green-500', 'bg-purple-500'];
+    return n ? cols[n.charCodeAt(0) % cols.length] : cols[0];
+  };
 
   return (
     <div className="flex-1 flex flex-col bg-gray-50 min-h-screen">
@@ -45,7 +76,12 @@ export default function JobApplicantsKanban() {
       </div>
 
       <div className="p-8">
-        <p className="text-sm text-gray-500 mb-4">Total Applicants: 10</p>
+        <p className="text-sm text-gray-500 mb-4">Total Applicants: {apps.length}</p>
+        {loading ? (
+             <div className="flex items-center justify-center p-20">
+               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+             </div>
+        ) : (
         <div className="grid grid-cols-4 gap-4">
           {stages.map(stage => (
             <div key={stage} className="bg-white rounded-xl border border-gray-200 p-4">
@@ -53,27 +89,38 @@ export default function JobApplicantsKanban() {
                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${stageColor[stage]}`}>{stage}</span>
                 <span className="text-xs text-gray-400">{grouped[stage]?.length || 0}</span>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-3 mt-3">
                 {(grouped[stage] || []).map(a => (
-                  <Link key={a.id} to={`/company/applicants/${a.id}`} className="block bg-gray-50 rounded-xl p-3 hover:shadow-sm transition">
+                  <div key={a.id} className="block bg-gray-50 rounded-xl p-3 border border-gray-200 shadow-sm mt-3 relative">
                     <div className="flex items-center gap-2 mb-2">
-                      <div className={`${a.color} text-white rounded-full w-8 h-8 flex items-center justify-center text-xs font-bold`}>{a.avatar}</div>
+                      <div className={`${getColor(a.candidateName)} text-white rounded-full w-8 h-8 flex items-center justify-center text-xs font-bold`}>{getInitials(a.candidateName)}</div>
                       <div>
-                        <p className="text-xs font-medium text-gray-800">{a.name}</p>
-                        <p className="text-xs text-gray-400">{a.role}</p>
+                        <p className="text-sm font-semibold text-gray-800 leading-tight">{a.candidateName}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{a.title}</p>
                       </div>
                     </div>
-                    <p className="text-xs text-gray-400">Applied: {a.applied}</p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <span className="text-yellow-400 text-xs">★</span>
-                      <span className="text-xs text-gray-600">{a.rating}</span>
+                    <p className="text-xs text-gray-400 mb-3 mt-3 flex items-center gap-1">📅 Applied: {a.dateApplied}</p>
+                    
+                    <div className="mt-2 border-t border-gray-100 pt-2 flex items-center justify-between">
+                       <select 
+                         value={a.status} 
+                         onChange={(e) => handleStatusChange(a.id, e.target.value)}
+                         className="text-xs border border-gray-300 rounded px-2 py-1 outline-none focus:border-blue-500 bg-white"
+                       >
+                         {ALL_STAGES.map(st => <option key={st} value={st}>{st}</option>)}
+                       </select>
+                       {a.resumeUrl && <a href={a.resumeUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline font-medium">View CV</a>}
                     </div>
-                  </Link>
+                  </div>
                 ))}
+                {(!grouped[stage] || grouped[stage].length === 0) && (
+                   <div className="text-xs text-gray-400 text-center py-6 border-2 border-dashed border-gray-200 rounded-xl mt-3">Drag applicants here</div>
+                )}
               </div>
             </div>
           ))}
         </div>
+        )}
       </div>
     </div>
   );

@@ -47,7 +47,7 @@ function CheckItem({ label, checked, onChange }) {
 }
 
 // Compact job card for list view
-function ListJobCard({ job, viewParam }) {
+function ListJobCard({ job, viewParam, isApplied }) {
   return (
     <Link to={`/dashboard/jobs/${job.id}?from=${viewParam}`} className="block">
       <div className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-blue-200 transition flex items-start gap-4">
@@ -69,10 +69,14 @@ function ListJobCard({ job, viewParam }) {
               <h3 className="font-semibold text-gray-900 text-sm hover:text-blue-600">{job.title}</h3>
               <p className="text-xs text-gray-500 mt-0.5">{job.company} • {job.location}</p>
             </div>
-            <Link to={`/dashboard/jobs/${job.id}?from=${viewParam}`}
-              className="bg-blue-50 text-blue-600 text-xs px-4 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition flex-shrink-0 font-medium">
-              Apply
-            </Link>
+            {isApplied ? (
+               <span className="bg-green-100 text-green-700 text-xs px-4 py-1.5 rounded-lg flex-shrink-0 font-medium">Applied</span>
+            ) : (
+               <Link to={`/dashboard/jobs/${job.id}?from=${viewParam}`}
+                 className="bg-blue-50 text-blue-600 text-xs px-4 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition flex-shrink-0 font-medium">
+                 Apply
+               </Link>
+            )}
           </div>
           <div className="flex flex-wrap gap-1.5 mt-2">
             {(Array.isArray(job.categories) ? job.categories : (job.categories||'').split(',').map(s=>s.trim()).filter(Boolean)).map(c => (
@@ -138,11 +142,16 @@ export default function DashFindJobs() {
   const [page, setPage] = useState(1);
   const [allJobs, setAllJobs] = useState(fallbackJobs);
   const [loadingJobs, setLoadingJobs] = useState(true);
+  const [appliedJobsIds, setAppliedJobsIds] = useState([]);
 
   useEffect(() => {
-    apiService.getJobs()
-      .then(data => { if (data?.length) setAllJobs(data); })
-      .catch(() => {})
+    Promise.all([
+      apiService.getJobs(),
+      apiService.getApplications()
+    ]).then(([jobsData, appsData]) => {
+      if (jobsData?.length) setAllJobs(jobsData);
+      if (appsData?.length) setAppliedJobsIds(appsData.map(a => Number(a.jobId)));
+    }).catch(() => {})
       .finally(() => setLoadingJobs(false));
   }, []);
 
@@ -331,7 +340,7 @@ export default function DashFindJobs() {
             </div>
           ) : (
             <div className="space-y-3">
-              {paginated.map(job => <ListJobCard key={job.id} job={job} viewParam={viewGrid ? 'grid' : 'list'} />)}
+              {paginated.map(job => <ListJobCard key={job.id} job={job} viewParam={viewGrid ? 'grid' : 'list'} isApplied={appliedJobsIds.includes(Number(job.id))} />)}
             </div>
           )}
 

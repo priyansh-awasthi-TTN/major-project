@@ -52,6 +52,8 @@ public class ApplicationController {
         m.put("status", a.getStatus());
         m.put("salary", a.getSalary());
         m.put("note", a.getNote());
+        m.put("resumeUrl", a.getResumeUrl());
+        m.put("coverLetter", a.getCoverLetter());
         return m;
     }
 
@@ -103,11 +105,25 @@ public class ApplicationController {
         }
     }
 
-    // POST /api/applications — create
+    // GET /api/applications/check/{jobId}
+    @GetMapping("/check/{jobId}")
+    public ResponseEntity<?> checkStatus(@PathVariable Long jobId, HttpServletRequest request) {
+        try {
+            User user = resolveUser(request);
+            boolean applied = applicationRepository.existsByUserAndJobId(user, jobId);
+            return ResponseEntity.ok(Map.of("applied", applied));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
     @PostMapping
     public ResponseEntity<?> create(@RequestBody ApplicationRequest req, HttpServletRequest request) {
         try {
             User user = resolveUser(request);
+            if (req.getJobId() != null && applicationRepository.existsByUserAndJobId(user, req.getJobId())) {
+                return ResponseEntity.badRequest().body(Map.of("message", "You have already applied for this job."));
+            }
             Application app = new Application();
             app.setUser(user);
             app.setJobId(req.getJobId());
@@ -121,6 +137,8 @@ public class ApplicationController {
             app.setStatus(req.getStatus() != null ? req.getStatus() : "In Review");
             app.setSalary(req.getSalary());
             app.setNote(req.getNote());
+            app.setResumeUrl(req.getResumeUrl());
+            app.setCoverLetter(req.getCoverLetter());
             Application saved = applicationRepository.save(app);
 
             // Increment applied count on the job

@@ -19,10 +19,19 @@ export default function DashJobDetail() {
   const [applied, setApplied] = useState(false);
 
   useEffect(() => {
-    apiService.getJob(id)
-      .then(data => setJob(data))
-      .catch(() => setJob(null))
-      .finally(() => setLoading(false));
+    setLoading(true);
+    Promise.all([
+      apiService.getJob(id),
+      apiService.checkApplicationStatus(id).catch(() => ({ applied: false }))
+    ])
+    .then(([jobData, statusData]) => {
+      setJob(jobData);
+      if (statusData && statusData.applied) {
+        setApplied(true);
+      }
+    })
+    .catch(() => setJob(null))
+    .finally(() => setLoading(false));
   }, [id]);
 
   if (loading) return (
@@ -35,7 +44,7 @@ export default function DashJobDetail() {
     <div className="flex-1 flex items-center justify-center bg-gray-50">
       <div className="text-center text-gray-400">
         <p className="text-lg font-medium">Job not found</p>
-        <Link to={backTo} className="text-blue-600 text-sm hover:underline mt-2 block">← Back to jobs</Link>
+        <button onClick={() => navigate(-1)} className="text-blue-600 text-sm hover:underline mt-2 block mx-auto">← Back</button>
       </div>
     </div>
   );
@@ -44,7 +53,7 @@ export default function DashJobDetail() {
     <div className="flex-1 flex flex-col h-full bg-gray-50">
       <DashTopBar>
         <div className="flex items-center gap-2 text-sm text-gray-500">
-          <Link to={backTo} className="hover:text-blue-600">← Job Description</Link>
+          <button onClick={() => navigate(-1)} className="hover:text-blue-600">← Back</button>
         </div>
       </DashTopBar>
       <div className="overflow-y-auto flex-1">

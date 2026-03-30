@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import CompanyTopBar from '../../components/CompanyTopBar';
-import { applicants } from '../../data/companyMockData';
+import apiService from '../../services/api';
 
 const statusColor = {
   'In Review': 'bg-blue-100 text-blue-600',
@@ -11,7 +11,29 @@ const statusColor = {
 };
 
 export default function AllApplicants() {
-  const [view, setView] = useState('table'); // table | pipeline | kanban
+  const [view, setView] = useState('table'); // table | pipeline
+  const [apps, setApps] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiService.getCompanyApplications()
+      .then(data => setApps(data || []))
+      .catch(() => setApps([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Compute initials for avatar
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+  };
+  
+  // Predict color loosely based on char code
+  const getColor = (name) => {
+    const colors = ['bg-blue-500', 'bg-red-500', 'bg-green-500', 'bg-yellow-500', 'bg-teal-500', 'bg-purple-500'];
+    if (!name) return colors[0];
+    return colors[name.charCodeAt(0) % colors.length];
+  };
 
   return (
     <div className="flex-1 flex flex-col bg-gray-50 min-h-screen">
@@ -33,7 +55,7 @@ export default function AllApplicants() {
       </div>
 
       <div className="p-8">
-        <p className="text-sm text-gray-500 mb-4">Total Applicants: 10</p>
+        <p className="text-sm text-gray-500 mb-4">Total Applicants: {apps.length}</p>
 
         {/* TABLE VIEW */}
         {view === 'table' && (
@@ -50,30 +72,37 @@ export default function AllApplicants() {
                 </tr>
               </thead>
               <tbody>
-                {applicants.map(a => (
+                {apps.map(a => (
                   <tr key={a.id} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className={`${a.color} text-white rounded-full w-9 h-9 flex items-center justify-center text-xs font-bold`}>{a.avatar}</div>
-                        <p className="font-medium text-gray-800">{a.name}</p>
+                        <div className={`${getColor(a.candidateName)} text-white rounded-full w-9 h-9 flex items-center justify-center text-xs font-bold`}>{getInitials(a.candidateName)}</div>
+                        <p className="font-medium text-gray-800">{a.candidateName}</p>
                       </div>
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-1">
                         <span className="text-yellow-400">★</span>
-                        <span className="text-gray-700">{a.rating}</span>
+                        <span className="text-gray-700">0.0</span>
                       </div>
                     </td>
                     <td className="p-4">
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusColor[a.stage]}`}>{a.stage}</span>
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusColor[a.status] || 'bg-gray-100 text-gray-600'}`}>{a.status}</span>
                     </td>
-                    <td className="p-4 text-gray-500">{a.applied}</td>
-                    <td className="p-4 text-gray-600">{a.status}</td>
+                    <td className="p-4 text-gray-500">{a.dateApplied}</td>
+                    <td className="p-4 text-gray-600">{a.title}</td>
                     <td className="p-4">
-                      <Link to={`/company/applicants/${a.id}`} className="bg-blue-50 text-blue-600 text-xs px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition">See Application</Link>
+                      {a.resumeUrl ? (
+                         <a href={a.resumeUrl} target="_blank" rel="noreferrer" className="bg-blue-50 text-blue-600 text-xs px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition">View CV</a>
+                      ) : (
+                         <span className="text-xs text-gray-400">No CV</span>
+                      )}
                     </td>
                   </tr>
                 ))}
+                {apps.length === 0 && (
+                  <tr><td colSpan={6} className="text-center text-gray-400 p-8 text-sm">No applicants found</td></tr>
+                )}
               </tbody>
             </table>
             <div className="flex justify-between items-center p-4">
@@ -91,7 +120,7 @@ export default function AllApplicants() {
         {view === 'pipeline' && (
           <div className="grid grid-cols-4 gap-4">
             {['In Review', 'Shortlisted', 'Interviewing', 'Declined'].map(stage => {
-              const stageApplicants = applicants.filter(a => a.stage === stage);
+              const stageApplicants = apps.filter(a => a.status === stage);
               const colColor = {
                 'In Review': 'bg-blue-100 text-blue-600',
                 'Shortlisted': 'bg-yellow-100 text-yellow-700',
@@ -99,27 +128,27 @@ export default function AllApplicants() {
                 'Declined': 'bg-red-100 text-red-600',
               };
               return (
-                <div key={stage} className="bg-white rounded-xl border border-gray-200 p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${colColor[stage]}`}>{stage}</span>
-                    <span className="text-xs text-gray-400">{stageApplicants.length}</span>
+                <div key={stage} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm pb-10 h-[70vh] overflow-y-auto">
+                  <div className="flex items-center justify-between mb-4 sticky top-0 bg-white pb-2 z-10 border-b border-gray-100">
+                    <span className={`text-xs px-3 py-1.5 rounded-full font-semibold ${colColor[stage] || 'bg-gray-100 text-gray-600'}`}>{stage}</span>
+                    <span className="text-xs font-bold text-gray-400">{stageApplicants.length}</span>
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-3 mt-4">
                     {stageApplicants.map(a => (
-                      <Link key={a.id} to={`/company/applicants/${a.id}`} className="block bg-gray-50 rounded-xl p-3 hover:shadow-sm transition">
+                      <div key={a.id} className="block bg-gray-50 rounded-xl p-3 border border-gray-200 hover:border-blue-400 hover:shadow-md transition">
                         <div className="flex items-center gap-2 mb-2">
-                          <div className={`${a.color} text-white rounded-full w-8 h-8 flex items-center justify-center text-xs font-bold`}>{a.avatar}</div>
+                          <div className={`${getColor(a.candidateName)} text-white rounded-full w-8 h-8 flex items-center justify-center text-xs font-bold shadow-sm`}>{getInitials(a.candidateName)}</div>
                           <div>
-                            <p className="text-xs font-medium text-gray-800">{a.name}</p>
-                            <p className="text-xs text-gray-400">{a.role}</p>
+                            <p className="text-sm font-semibold text-gray-800 leading-tight">{a.candidateName}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{a.title}</p>
                           </div>
                         </div>
-                        <p className="text-xs text-gray-400">Applied: {a.applied}</p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <span className="text-yellow-400 text-xs">★</span>
-                          <span className="text-xs text-gray-600">{a.rating}</span>
+                        <p className="text-xs text-gray-400 mb-2 mt-3 flex items-center gap-1">📅 Applied {a.dateApplied}</p>
+                        <div className="flex gap-2">
+                          {a.resumeUrl && <a href={a.resumeUrl} target="_blank" rel="noreferrer" className="flex-1 text-center bg-white border border-gray-300 text-gray-700 text-xs px-2 py-1.5 rounded hover:bg-gray-50 transition shadow-sm font-medium">CV</a>}
+                          <a href={`mailto:${a.candidateEmail}`} className="flex-1 text-center bg-blue-50 text-blue-600 text-xs px-2 py-1.5 rounded border border-blue-100 hover:bg-blue-100 transition font-medium">Email</a>
                         </div>
-                      </Link>
+                      </div>
                     ))}
                     {stageApplicants.length === 0 && (
                       <p className="text-xs text-gray-400 text-center py-4">No applicants</p>
