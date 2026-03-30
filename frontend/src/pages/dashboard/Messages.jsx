@@ -30,9 +30,12 @@ export default function Messages() {
   useEffect(() => {
     if (selected) {
       const updated = messages.find(m => m.id === selected.id);
-      if (updated) setSelected(updated);
+      if (updated) {
+        setSelected(updated);
+        if (!updated.isRead) markRead(updated.id); // Auto clear blue dot if chat is open!
+      }
     }
-  }, [messages, selected?.id]);
+  }, [messages, selected?.id, markRead]);
 
   useEffect(() => {
     if (selected && typeof loadHistoryForUser === 'function') {

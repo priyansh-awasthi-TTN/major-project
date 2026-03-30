@@ -119,7 +119,8 @@ export default function DashCompanies() {
       const matchSearch = !q || c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q) || c.tags.some(t => t.toLowerCase().includes(q));
       const matchIndustry = selIndustry.length === 0 || selIndustry.includes(c.industry);
       const matchSize     = selSize.length === 0     || selSize.includes(c.size);
-      return matchSearch && matchIndustry && matchSize;
+      const matchLoc      = !location.trim() || (c.location || c.description).toLowerCase().includes(location.trim().toLowerCase());
+      return matchSearch && matchIndustry && matchSize && matchLoc;
     });
 
     if (sortBy === 'Most jobs') result = [...result].sort((a, b) => b.jobs - a.jobs);

@@ -45,7 +45,11 @@ export default function JobDetail() {
           </div>
           <div className="flex gap-3">
             <button className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">🔗</button>
-            <button onClick={handleApply} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700">Apply</button>
+            {job.applied >= job.capacity ? (
+              <span className="bg-red-100 text-red-700 px-6 py-2 rounded-lg text-sm font-medium flex items-center gap-1">✕ Out of Capacity</span>
+            ) : (
+              <button onClick={handleApply} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700">Apply</button>
+            )}
           </div>
         </div>
 

@@ -1,49 +1,26 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import apiService from '../services/api';
 
-const allJobs = [
-  { id: 1, title: 'Social Media Assistant', company: 'Nomad', location: 'Paris, France', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'N', color: 'bg-emerald-500', applied: 5, capacity: 10 },
-  { id: 2, title: 'Brand Designer', company: 'Dropbox', location: 'San Francisco, USA', type: 'Full-Time', categories: ['Design', 'Business'], logo: 'D', color: 'bg-blue-500', applied: 2, capacity: 8 },
-  { id: 3, title: 'Interactive Developer', company: 'Terraform', location: 'Hamburg, Germany', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'T', color: 'bg-indigo-500', applied: 3, capacity: 12 },
-  { id: 4, title: 'Email Marketing', company: 'Revolut', location: 'Madrid, Spain', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'R', color: 'bg-red-500', applied: 0, capacity: 6 },
-  { id: 5, title: 'Lead Engineer', company: 'Canva', location: 'Ankara, Turkey', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'C', color: 'bg-teal-500', applied: 5, capacity: 15 },
-  { id: 6, title: 'Product Designer', company: 'ClassPass', location: 'Berlin, Germany', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'C', color: 'bg-purple-500', applied: 5, capacity: 10 },
-  { id: 7, title: 'Customer Manager', company: 'Pitch', location: 'Berlin, Germany', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'P', color: 'bg-gray-800', applied: 5, capacity: 10 },
+const fallbackJobs = [
+  { id: 1, title: 'Social Media Assistant', company: 'Nomad', location: 'Paris, France', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'N', color: 'bg-emerald-500', applied: 5, capacity: 10, salary: 700, level: 'Entry Level' },
+  { id: 2, title: 'Brand Designer', company: 'Dropbox', location: 'San Francisco, USA', type: 'Full-Time', categories: ['Design', 'Business'], logo: 'D', color: 'bg-blue-500', applied: 2, capacity: 8, salary: 1200, level: 'Mid Level' },
+  { id: 3, title: 'Interactive Developer', company: 'Terraform', location: 'Hamburg, Germany', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'T', color: 'bg-indigo-500', applied: 3, capacity: 12, salary: 1800, level: 'Senior Level' },
+  { id: 4, title: 'Email Marketing', company: 'Revolut', location: 'Madrid, Spain', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'R', color: 'bg-red-500', applied: 0, capacity: 6, salary: 900, level: 'Entry Level' },
+  { id: 5, title: 'Lead Engineer', company: 'Canva', location: 'Ankara, Turkey', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'C', color: 'bg-teal-500', applied: 5, capacity: 15, salary: 3500, level: 'Director' },
+  { id: 6, title: 'Product Designer', company: 'ClassPass', location: 'Berlin, Germany', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'C', color: 'bg-purple-500', applied: 5, capacity: 10, salary: 1600, level: 'Senior Level' },
+  { id: 7, title: 'Customer Manager', company: 'Pitch', location: 'Berlin, Germany', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'P', color: 'bg-gray-800', applied: 5, capacity: 10, salary: 1100, level: 'Mid Level' },
 ];
 
-const employmentTypes = [
-  { label: 'Full-Time', count: 3 },
-  { label: 'Part-Time', count: 5 },
-  { label: 'Remote', count: 2 },
-  { label: 'Internship', count: 24 },
-  { label: 'Contract', count: 3 },
-];
-
-const categoryFilters = [
-  { label: 'Design', count: 24 },
-  { label: 'Sales', count: 3 },
-  { label: 'Marketing', count: 7 },
-  { label: 'Business', count: 3, checked: true },
-  { label: 'Human Resource', count: 6 },
-  { label: 'Finance', count: 4 },
-  { label: 'Engineering', count: 4 },
-  { label: 'Technology', count: 5, checked: true },
-];
-
-const jobLevels = [
-  { label: 'Entry Level', count: 57 },
-  { label: 'Mid Level', count: 3 },
-  { label: 'Senior Level', count: 5 },
-  { label: 'Director', count: 12 },
-  { label: 'VP or Above', count: 3 },
-];
-
-const salaryRanges = [
-  { label: '$700 - $1000', count: 4 },
-  { label: '$100 - $1500', count: 6 },
-  { label: '$1500 - $2000', count: 10 },
-  { label: '$3000 or above', count: 4, checked: true },
+const EMPLOYMENT_TYPES = ['Full-Time', 'Part-Time', 'Remote', 'Internship', 'Contract'];
+const CATEGORIES = ['Design', 'Sales', 'Marketing', 'Business', 'Human Resource', 'Finance', 'Engineering', 'Technology'];
+const JOB_LEVELS = ['Entry Level', 'Mid Level', 'Senior Level', 'Director', 'VP or Above'];
+const SALARY_RANGES = [
+  { label: '$700 - $1000', min: 700, max: 1000 },
+  { label: '$1000 - $1500', min: 1000, max: 1500 },
+  { label: '$1500 - $2000', min: 1500, max: 2000 },
+  { label: '$3000 or above', min: 3000, max: Infinity },
 ];
 
 export default function FindJobs() {
@@ -58,12 +35,47 @@ export default function FindJobs() {
   };
 
   const [search, setSearch] = useState('');
+  const [location, setLocation] = useState('');
   const [viewGrid, setViewGrid] = useState(false);
+  const [allJobs, setAllJobs] = useState(fallbackJobs);
 
-  const filtered = allJobs.filter(j =>
-    j.title.toLowerCase().includes(search.toLowerCase()) ||
-    j.company.toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => {
+    apiService.getJobs()
+      .then(jobsData => {
+        if (jobsData?.length) setAllJobs(jobsData);
+      })
+      .catch(() => {});
+  }, []);
+
+  const [selTypes, setSelTypes] = useState([]);
+  const [selCats, setSelCats] = useState([]);
+  const [selLevels, setSelLevels] = useState([]);
+  const [selSalary, setSelSalary] = useState([]);
+
+  const toggle = (arr, setArr, val) =>
+    setArr(prev => prev.includes(val) ? prev.filter(x => x !== val) : [...prev, val]);
+
+  const typeCounts = useMemo(() => Object.fromEntries(EMPLOYMENT_TYPES.map(t => [t, allJobs.filter(j => j.type === t).length])), [allJobs]);
+  const catCounts = useMemo(() => Object.fromEntries(CATEGORIES.map(c => [c, allJobs.filter(j => Array.isArray(j.categories) ? j.categories.includes(c) : (j.categories || '').includes(c)).length])), [allJobs]);
+  const levelCounts = useMemo(() => Object.fromEntries(JOB_LEVELS.map(l => [l, allJobs.filter(j => j.level === l).length])), [allJobs]);
+
+  const filtered = useMemo(() => {
+    let result = allJobs.filter(j => {
+      const cats = Array.isArray(j.categories) ? j.categories : (j.categories || '').split(',').map(s => s.trim()).filter(Boolean);
+      const q = search.toLowerCase();
+      const matchSearch = !q || j.title.toLowerCase().includes(q) || j.company.toLowerCase().includes(q);
+      const matchLoc    = !location.trim() || (j.location || '').toLowerCase().includes(location.trim().toLowerCase());
+      const matchType   = selTypes.length === 0 || selTypes.includes(j.type);
+      const matchCat    = selCats.length === 0  || selCats.some(c => cats.includes(c));
+      const matchLevel  = selLevels.length === 0 || selLevels.includes(j.level);
+      const matchSalary = selSalary.length === 0 || selSalary.some(r => {
+        const range = SALARY_RANGES.find(s => s.label === r);
+        return range && j.salary >= range.min && j.salary <= range.max;
+      });
+      return matchSearch && matchType && matchCat && matchLevel && matchSalary && matchLoc;
+    });
+    return result;
+  }, [search, location, selTypes, selCats, selLevels, selSalary, allJobs]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -82,7 +94,7 @@ export default function FindJobs() {
           <div className="w-px bg-gray-200 my-2" />
           <div className="flex items-center gap-2 flex-1 px-4 py-3">
             <span className="text-gray-400">📍</span>
-            <input className="flex-1 text-gray-800 text-sm outline-none" placeholder="Florence, Italy" />
+            <input value={location} onChange={e => setLocation(e.target.value)} className="flex-1 text-gray-800 text-sm outline-none" placeholder="Florence, Italy" />
             <span className="text-gray-400 text-xs">▼</span>
           </div>
           <button className="bg-blue-600 text-white text-sm px-6 py-3 hover:bg-blue-700 font-medium">Search</button>
@@ -99,11 +111,11 @@ export default function FindJobs() {
               <h3 className="font-semibold text-gray-900 text-sm">Type of Employment</h3>
               <span className="text-gray-400 text-xs">▲</span>
             </div>
-            {employmentTypes.map(t => (
-              <label key={t.label} className="flex items-center gap-2 text-sm text-gray-600 mb-2.5 cursor-pointer">
-                <input type="checkbox" className="accent-blue-600 w-4 h-4" />
-                <span className="flex-1">{t.label}</span>
-                <span className="text-gray-400 text-xs">({t.count})</span>
+            {EMPLOYMENT_TYPES.map(t => (
+              <label key={t} className="flex items-center gap-2 text-sm text-gray-600 mb-2.5 cursor-pointer hover:text-gray-900">
+                <input type="checkbox" checked={selTypes.includes(t)} onChange={() => toggle(selTypes, setSelTypes, t)} className="accent-blue-600 w-4 h-4" />
+                <span className="flex-1">{t}</span>
+                <span className="text-gray-400 text-xs">({typeCounts[t] || 0})</span>
               </label>
             ))}
           </div>
@@ -114,11 +126,11 @@ export default function FindJobs() {
               <h3 className="font-semibold text-gray-900 text-sm">Categories</h3>
               <span className="text-gray-400 text-xs">▲</span>
             </div>
-            {categoryFilters.map(c => (
-              <label key={c.label} className="flex items-center gap-2 text-sm text-gray-600 mb-2.5 cursor-pointer">
-                <input type="checkbox" defaultChecked={c.checked} className="accent-blue-600 w-4 h-4" />
-                <span className="flex-1">{c.label}</span>
-                <span className="text-gray-400 text-xs">({c.count})</span>
+            {CATEGORIES.map(c => (
+              <label key={c} className="flex items-center gap-2 text-sm text-gray-600 mb-2.5 cursor-pointer hover:text-gray-900">
+                <input type="checkbox" checked={selCats.includes(c)} onChange={() => toggle(selCats, setSelCats, c)} className="accent-blue-600 w-4 h-4" />
+                <span className="flex-1">{c}</span>
+                <span className="text-gray-400 text-xs">({catCounts[c] || 0})</span>
               </label>
             ))}
           </div>
@@ -129,11 +141,11 @@ export default function FindJobs() {
               <h3 className="font-semibold text-gray-900 text-sm">Job Level</h3>
               <span className="text-gray-400 text-xs">▲</span>
             </div>
-            {jobLevels.map(l => (
-              <label key={l.label} className="flex items-center gap-2 text-sm text-gray-600 mb-2.5 cursor-pointer">
-                <input type="checkbox" className="accent-blue-600 w-4 h-4" />
-                <span className="flex-1">{l.label}</span>
-                <span className="text-gray-400 text-xs">({l.count})</span>
+            {JOB_LEVELS.map(l => (
+              <label key={l} className="flex items-center gap-2 text-sm text-gray-600 mb-2.5 cursor-pointer hover:text-gray-900">
+                <input type="checkbox" checked={selLevels.includes(l)} onChange={() => toggle(selLevels, setSelLevels, l)} className="accent-blue-600 w-4 h-4" />
+                <span className="flex-1">{l}</span>
+                <span className="text-gray-400 text-xs">({levelCounts[l] || 0})</span>
               </label>
             ))}
           </div>
@@ -144,11 +156,10 @@ export default function FindJobs() {
               <h3 className="font-semibold text-gray-900 text-sm">Salary Range</h3>
               <span className="text-gray-400 text-xs">▲</span>
             </div>
-            {salaryRanges.map(s => (
-              <label key={s.label} className="flex items-center gap-2 text-sm text-gray-600 mb-2.5 cursor-pointer">
-                <input type="checkbox" defaultChecked={s.checked} className="accent-blue-600 w-4 h-4" />
+            {SALARY_RANGES.map(s => (
+              <label key={s.label} className="flex items-center gap-2 text-sm text-gray-600 mb-2.5 cursor-pointer hover:text-gray-900">
+                <input type="checkbox" checked={selSalary.includes(s.label)} onChange={() => toggle(selSalary, setSelSalary, s.label)} className="accent-blue-600 w-4 h-4" />
                 <span className="flex-1">{s.label}</span>
-                <span className="text-gray-400 text-xs">({s.count})</span>
               </label>
             ))}
           </div>
@@ -190,7 +201,7 @@ export default function FindJobs() {
                     <p className="text-sm text-gray-500">{job.company} • {job.location}</p>
                     <div className="flex flex-wrap gap-2 mt-2">
                       <span className="text-xs border border-green-500 text-green-600 rounded px-2 py-0.5">{job.type}</span>
-                      {job.categories.map(c => (
+                      {(Array.isArray(job.categories) ? job.categories : (job.categories || '').split(',').map(s => s.trim()).filter(Boolean)).map(c => (
                         <span key={c} className={`text-xs rounded px-2 py-0.5 border ${c === 'Design' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>{c}</span>
                       ))}
                     </div>
@@ -236,7 +247,7 @@ export default function FindJobs() {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2 mt-3">
-                    {job.categories.map(c => (
+                    {(Array.isArray(job.categories) ? job.categories : (job.categories || '').split(',').map(s => s.trim()).filter(Boolean)).map(c => (
                       <span key={c} className={`text-xs rounded px-2 py-0.5 border ${c === 'Design' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>{c}</span>
                     ))}
                   </div>
