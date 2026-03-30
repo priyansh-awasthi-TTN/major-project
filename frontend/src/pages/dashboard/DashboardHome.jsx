@@ -273,7 +273,9 @@ export default function DashboardHome() {
         return { start, end };
       }
     } catch {}
-    return { start: new Date(2024, 6, 19), end: new Date(2024, 6, 25) };
+    const end = new Date();
+    const start = new Date(); start.setDate(start.getDate() - 6);
+    return { start, end };
   });
 
   const handleDateChange = (date) => {
@@ -289,19 +291,52 @@ export default function DashboardHome() {
     return `${start.toLocaleDateString('en-US', options)} - ${end.toLocaleDateString('en-US', options)}`;
   };
 
+  const [apiApplications, setApiApplications] = useState([]);
   const [applications, setApplications] = useState([]);
   const [stats, setStats] = useState({ totalApplied: 0, interviewing: 0, hired: 0, byStatus: {} });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiService.getDashboardStats()
+    apiService.getApplications()
       .then(data => {
-        setStats(data);
-        setApplications(data.recentApplications || []);
+        setApiApplications(data || []);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!apiApplications.length && loading) return;
+
+    const { start, end } = selectedDateRange;
+    const startObj = new Date(start); startObj.setHours(0,0,0,0);
+    const endObj = new Date(end); endObj.setHours(23,59,59,999);
+
+    const filtered = apiApplications.filter(app => {
+      if (!app.dateApplied) return false;
+      // Handle the strict date string 'Jul 20, 2024' or ISO format
+      const d = new Date(app.dateApplied);
+      return d >= startObj && d <= endObj;
+    });
+
+    const byStatus = {};
+    let totalApplied = 0;
+    let interviewing = 0;
+    let hired = 0;
+
+    filtered.forEach(app => {
+      totalApplied++;
+      byStatus[app.status] = (byStatus[app.status] || 0) + 1;
+      if (app.status === 'Interviewing') interviewing++;
+      if (app.status === 'Hired') hired++;
+    });
+
+    setStats({ totalApplied, interviewing, hired, byStatus });
+    
+    // Sort descending by date to get recent ones
+    const sorted = [...filtered].sort((a,b) => new Date(b.dateApplied) - new Date(a.dateApplied));
+    setApplications(sorted.slice(0, 5));
+  }, [apiApplications, selectedDateRange, loading]);
 
   // Compute donut chart percentages from real status data
   const total = stats.totalApplied || 0;
@@ -314,12 +349,12 @@ export default function DashboardHome() {
     { 
       icon: '👁️', 
       label: 'View Details', 
-      action: () => navigate(`/dashboard/jobs/${app.id}`)
+      action: () => navigate(`/dashboard/jobs/${app.jobId}`)
     },
     { 
       icon: '📄', 
       label: 'View Job Posting', 
-      action: () => navigate(`/dashboard/jobs/${app.id}`)
+      action: () => navigate(`/dashboard/jobs/${app.jobId}`)
     },
     { 
       icon: '✉️', 
@@ -358,7 +393,7 @@ export default function DashboardHome() {
   ];
 
   const handleApplicationClick = (app) => {
-    navigate(`/dashboard/jobs/${app.id}`);
+    navigate(`/dashboard/jobs/${app.jobId}`);
   };
 
   return (

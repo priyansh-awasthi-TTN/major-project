@@ -74,6 +74,8 @@ export default function DashJobDetail() {
             <button className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">🔗</button>
             {applied ? (
               <span className="bg-green-100 text-green-700 px-6 py-2 rounded-lg text-sm font-medium flex items-center gap-1">✓ Applied</span>
+            ) : job.applied >= job.capacity ? (
+              <span className="bg-red-100 text-red-700 px-6 py-2 rounded-lg text-sm font-medium flex items-center gap-1">✕ Out of Capacity</span>
             ) : (
               <button onClick={() => setShowModal(true)} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700">Apply</button>
             )}

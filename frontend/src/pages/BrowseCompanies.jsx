@@ -28,10 +28,15 @@ const companySizes = [
 export default function BrowseCompanies() {
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [locationInput, setLocationInput] = useState('');
+  const [locationQuery, setLocationQuery] = useState('');
   const [selectedIndustries, setSelectedIndustries] = useState([]);
   const [selectedSizes, setSelectedSizes] = useState([]);
 
-  const handleSearch = () => setSearchQuery(searchInput);
+  const handleSearch = () => {
+    setSearchQuery(searchInput);
+    setLocationQuery(locationInput);
+  };
 
   const toggleIndustry = (label) =>
     setSelectedIndustries(prev => prev.includes(label) ? prev.filter(i => i !== label) : [...prev, label]);
@@ -41,13 +46,15 @@ export default function BrowseCompanies() {
 
   const filtered = companies.filter(c => {
     const q = searchQuery.toLowerCase();
+    const l = locationQuery.toLowerCase();
     const matchesQuery = !searchQuery ||
       c.name.toLowerCase().includes(q) ||
       c.industry?.toLowerCase().includes(q) ||
       c.tags.some(t => t.toLowerCase().includes(q));
+    const matchesLoc = !locationQuery.trim() || (c.location || c.description).toLowerCase().includes(l.trim());
     const matchesIndustry = selectedIndustries.length === 0 || selectedIndustries.includes(c.industry);
     const matchesSize = selectedSizes.length === 0 || selectedSizes.includes(c.size);
-    return matchesQuery && matchesIndustry && matchesSize;
+    return matchesQuery && matchesLoc && matchesIndustry && matchesSize;
   });
 
   return (
@@ -72,7 +79,7 @@ export default function BrowseCompanies() {
           <div className="w-px bg-gray-200 my-2" />
           <div className="flex items-center gap-2 flex-1 px-4 py-3">
             <span className="text-gray-400">📍</span>
-            <input className="flex-1 text-gray-800 text-sm outline-none" placeholder="Florence, Italy" />
+            <input value={locationInput} onChange={e => setLocationInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} className="flex-1 text-gray-800 text-sm outline-none" placeholder="Florence, Italy" />
             <span className="text-gray-400 text-xs">▼</span>
           </div>
           <button onClick={handleSearch} className="bg-blue-600 text-white text-sm px-6 py-3 hover:bg-blue-700 font-medium">Search</button>

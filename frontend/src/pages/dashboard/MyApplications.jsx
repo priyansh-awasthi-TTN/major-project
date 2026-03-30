@@ -427,7 +427,9 @@ export default function MyApplications() {
         return { start, end };
       }
     } catch {}
-    return { start: new Date(2024, 6, 19), end: new Date(2024, 6, 25) };
+    const end = new Date();
+    const start = new Date(); start.setDate(start.getDate() - 6);
+    return { start, end };
   });
 
   const handleDateChange = (date) => {
@@ -483,7 +485,17 @@ export default function MyApplications() {
     const matchTab    = !tabFilter || app.status === tabFilter;
     const matchSearch = !search || app.company.toLowerCase().includes(search.toLowerCase()) || app.title.toLowerCase().includes(search.toLowerCase());
     const matchType   = !filterType || app.type === filterType;
-    return matchTab && matchSearch && matchType;
+    
+    // Date filter
+    let matchDate = true;
+    if (app.dateApplied) {
+      const d = new Date(app.dateApplied);
+      const startObj = new Date(selectedDateRange.start); startObj.setHours(0,0,0,0);
+      const endObj = new Date(selectedDateRange.end); endObj.setHours(23,59,59,999);
+      matchDate = d >= startObj && d <= endObj;
+    }
+
+    return matchTab && matchSearch && matchType && matchDate;
   });
 
   if (sortBy === 'Company A-Z')           filtered = [...filtered].sort((a, b) => (a.company || '').localeCompare(b.company || ''));

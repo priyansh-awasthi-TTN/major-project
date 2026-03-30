@@ -24,7 +24,11 @@ export default function MessageList({
   const sorted = [...filtered].sort((a, b) => {
     if (a.isPinned && !b.isPinned) return -1;
     if (!a.isPinned && b.isPinned) return 1;
-    return 0;
+    
+    // Sort by latest message date (descending)
+    const dateA = a.chat?.length ? new Date(a.chat[a.chat.length - 1].date) : new Date(0);
+    const dateB = b.chat?.length ? new Date(b.chat[b.chat.length - 1].date) : new Date(0);
+    return dateB - dateA;
   });
 
   return (
@@ -112,7 +116,9 @@ export default function MessageList({
             </div>
 
             {!msg.isRead && (
-              <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0" />
+              <div className="flex items-center justify-center w-5 h-5 bg-blue-500 text-white text-[10px] font-bold rounded-full flex-shrink-0">
+                1
+              </div>
             )}
           </div>
         ))}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import DropdownMenu from '../DropdownMenu';
@@ -11,6 +11,15 @@ export default function ChatWindow({ selected, onTogglePin, onToggleStar, onTogg
   const [input, setInput] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [toast, setToast] = useState(null);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [selected?.chat]);
 
   if (!selected) {
     return (
@@ -152,6 +161,7 @@ export default function ChatWindow({ selected, onTogglePin, onToggleStar, onTogg
             </div>
           </div>
         ))}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
