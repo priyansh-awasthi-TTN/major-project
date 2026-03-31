@@ -30,6 +30,7 @@ import HelpCenter from './pages/dashboard/HelpCenter';
 import Notifications from './pages/dashboard/Notifications';
 import DashJobDetail from './pages/dashboard/DashJobDetail';
 import UserProfile from './pages/dashboard/UserProfile';
+import JobActionsManager from './components/JobActionsManager';
 
 import CompanySidebar from './components/CompanySidebar';
 import CompanyDashboard from './pages/company/CompanyDashboard';
@@ -121,6 +122,7 @@ export default function App() {
         <Route path="/dashboard/settings" element={<JobseekerRoute><DashboardLayout><Settings /></DashboardLayout></JobseekerRoute>} />
         <Route path="/dashboard/help" element={<JobseekerRoute><DashboardLayout><HelpCenter /></DashboardLayout></JobseekerRoute>} />
         <Route path="/dashboard/notifications" element={<JobseekerRoute><DashboardLayout><Notifications /></DashboardLayout></JobseekerRoute>} />
+        <Route path="/dashboard/job-actions" element={<JobseekerRoute><DashboardLayout><JobActionsManager /></DashboardLayout></JobseekerRoute>} />
         <Route path="/dashboard/jobs/:id" element={<JobseekerRoute><DashboardLayout><DashJobDetail /></DashboardLayout></JobseekerRoute>} />
 
         {/* Company Dashboard — company only */}

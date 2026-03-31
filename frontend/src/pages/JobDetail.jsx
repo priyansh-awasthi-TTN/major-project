@@ -4,6 +4,7 @@ import { jobs } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
 import JobCard from '../components/JobCard';
 import ApplicationModal from '../components/ApplicationModal';
+import ShareModal from '../components/ShareModal';
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -11,6 +12,7 @@ export default function JobDetail() {
   const navigate = useNavigate();
   const job = jobs.find(j => j.id === Number(id)) || jobs[0];
   const [showModal, setShowModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const handleApply = () => {
     if (!user) {
@@ -44,7 +46,15 @@ export default function JobDetail() {
             </div>
           </div>
           <div className="flex gap-3">
-            <button className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">🔗</button>
+            <button 
+              onClick={() => setShowShareModal(true)}
+              className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2 transition"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+              </svg>
+              Share
+            </button>
             {job.applied >= job.capacity ? (
               <span className="bg-red-100 text-red-700 px-6 py-2 rounded-lg text-sm font-medium flex items-center gap-1">✕ Out of Capacity</span>
             ) : (
@@ -142,6 +152,12 @@ export default function JobDetail() {
         </div>
       </div>
       {showModal && <ApplicationModal job={job} onClose={() => setShowModal(false)} />}
+      <ShareModal 
+        isOpen={showShareModal} 
+        onClose={() => setShowShareModal(false)} 
+        job={job}
+        url={window.location.href}
+      />
     </div>
   );
 }

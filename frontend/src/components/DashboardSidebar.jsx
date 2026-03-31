@@ -9,6 +9,7 @@ const navItems = [
   { label: 'My Applications', icon: '📄', path: '/dashboard/applications',match: (p) => p.startsWith('/dashboard/applications') },
   { label: 'Find Jobs',       icon: '🔍', path: '/dashboard/find-jobs',   match: (p) => p.startsWith('/dashboard/find-jobs') || p.startsWith('/dashboard/jobs/') },
   { label: 'Browse Companies',icon: '🏢', path: '/dashboard/companies',   match: (p) => p.startsWith('/dashboard/companies') },
+  { label: 'Job Actions',     icon: '⭐', path: '/dashboard/job-actions', match: (p) => p.startsWith('/dashboard/job-actions') },
   { label: 'My Public Profile',icon: '👤',path: '/dashboard/profile',     match: (p) => p === '/dashboard/profile' },
 ];
 

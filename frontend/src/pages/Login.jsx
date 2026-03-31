@@ -16,16 +16,35 @@ export default function Login() {
     setLoading(true);
     setError('');
 
+    // Basic validation
+    if (!email || !password) {
+      setError('Please fill in all fields');
+      setLoading(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await login({
-        email,
+        email: email.trim(),
         password,
         userType: tab.toUpperCase()
       });
-      const userType = response?.user?.userType || 'JOBSEEKER';
-      navigate(userType === 'COMPANY' ? '/company/dashboard' : '/dashboard');
+      
+      if (response && response.user) {
+        const userType = response.user.userType || 'JOBSEEKER';
+        navigate(userType === 'COMPANY' ? '/company/dashboard' : '/dashboard');
+      } else {
+        setError('Invalid response from server');
+      }
     } catch (error) {
-      setError(error.message || 'Login failed');
+      console.error('Login error:', error);
+      setError(error.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -90,8 +109,13 @@ export default function Login() {
                 type="email" 
                 value={email} 
                 onChange={e => setEmail(e.target.value)} 
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-500" 
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-500 bg-white" 
+                style={{
+                  WebkitBoxShadow: '0 0 0 1000px white inset',
+                  WebkitTextFillColor: '#000000'
+                }}
                 placeholder="example@email.com"
+                autoComplete="email"
                 required
               />
             </div>
@@ -101,8 +125,13 @@ export default function Login() {
                 type="password" 
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-500" 
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-500 bg-white" 
+                style={{
+                  WebkitBoxShadow: '0 0 0 1000px white inset',
+                  WebkitTextFillColor: '#000000'
+                }}
                 placeholder="At least 8 characters"
+                autoComplete="current-password"
                 required
               />
             </div>
