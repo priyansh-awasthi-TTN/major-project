@@ -104,7 +104,7 @@ const allJobUpdates = [
 ];
 
 // Mock data for different time periods
-const mockData = {
+const mockdata = {
   Week: {
     jobViews: 2342,
     jobViewsChange: 6.4,
@@ -427,7 +427,7 @@ export default function CompanyDashboard() {
   const { unreadCount } = useNotifications();
   const { user } = useAuth();
 
-  const currentData = mockData[activeTab];
+  const currentData = mockdata[activeTab];
   const displayedJobs = showAllJobs ? allJobUpdates : allJobUpdates.slice(0, 4);
 
   const getDateRangeText = () => {

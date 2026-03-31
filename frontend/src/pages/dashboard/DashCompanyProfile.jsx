@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { companies, jobs } from '../../data/mockData';
+import { companies, jobs } from '../../data/mockdata';
 import apiService from '../../services/api';
 import DashTopBar from '../../components/DashTopBar';
 

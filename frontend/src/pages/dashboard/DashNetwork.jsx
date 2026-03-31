@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import DashTopBar from '../../components/DashTopBar';
 import { useAuth } from '../../context/AuthContext';
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
+import apiService from '../../services/api';
 
 export default function DashNetwork() {
   const [users, setUsers] = useState([]);
@@ -14,16 +15,8 @@ export default function DashNetwork() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const token = sessionStorage.getItem('accessToken');
-        const res = await fetch('http://localhost:8081/api/network/users', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setUsers(data);
-        }
+        const data = await apiService.getNetworkUsers();
+        setUsers(data);
       } catch (err) {
         console.error('Failed to fetch network users', err);
       } finally {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { jobs, companies } from '../data/mockData';
+import { jobs, companies } from '../data/mockdata';
 import { useAuth } from '../context/AuthContext';
 import ApplicationModal from '../components/ApplicationModal';
 import JobCard from '../components/JobCard';
