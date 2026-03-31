@@ -1,20 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { companies } from '../../data/mockData';
+import { companies } from '../../data/mockdata';
 import DashTopBar from '../../components/DashTopBar';
 
-// Extended company dataset with more industries/sizes
-const allCompanies = [
-  ...companies,
-  { id: 21, name: 'Twitter',    description: 'Twitter is what\'s happening and what people are talking about right now.', logo: 'Tw', color: 'bg-sky-500',    jobs: 12, tags: ['Business Service', 'Technology'], industry: 'Technology',      size: '1001+' },
-  { id: 22, name: 'Microsoft',  description: 'Microsoft enables digital transformation for the era of an intelligent cloud and edge.', logo: 'Ms', color: 'bg-blue-700',   jobs: 25, tags: ['Technology', 'Cloud'],            industry: 'Cloud',           size: '1001+' },
-  { id: 23, name: 'Apple',      description: 'Apple designs Macs, the best personal computers in the world, along with OS X, iLife, iWork and professional software.', logo: 'Ap', color: 'bg-gray-600',   jobs: 18, tags: ['Technology', 'Consumer Tech'],   industry: 'Consumer Tech',   size: '1001+' },
-  { id: 24, name: 'Facebook',   description: 'Facebook\'s mission is to give people the power to build community and bring the world closer together.', logo: 'Fb', color: 'bg-blue-600',   jobs: 15, tags: ['Technology', 'Media'],            industry: 'Media',           size: '1001+' },
-  { id: 25, name: 'Google',     description: 'Google\'s mission is to organize the world\'s information and make it universally accessible and useful.', logo: 'G',  color: 'bg-red-500',    jobs: 30, tags: ['Technology', 'Cloud'],            industry: 'Cloud',           size: '1001+' },
-  { id: 26, name: 'Netflix',    description: 'Netflix is the world\'s leading streaming entertainment service with over 200 million paid memberships.', logo: 'Nf', color: 'bg-red-600',    jobs: 8,  tags: ['Media', 'Technology'],            industry: 'Media',           size: '1001+' },
-  { id: 27, name: 'Airbnb',     description: 'Airbnb is a community based on connection and belonging — a place where anyone can belong anywhere.', logo: 'Ab', color: 'bg-rose-500',   jobs: 6,  tags: ['Business Service'],               industry: 'Business Service', size: '1001+' },
-  { id: 28, name: 'Spotify',    description: 'Spotify is a digital music, podcast, and video service that gives you access to millions of songs.', logo: 'Sp', color: 'bg-green-500',  jobs: 9,  tags: ['Technology', 'Media'],            industry: 'Media',           size: '1001+' },
-];
 
 const INDUSTRIES = ['Advertising', 'Business Service', 'Blockchain', 'Cloud', 'Consumer Tech', 'Education', 'Fintech', 'Gaming', 'Food & Beverage', 'Healthcare', 'Hosting', 'Media', 'Technology'];
 const SIZES = ['1-50', '51-150', '151-250', '251-500', '501-1000', '1000+'];
@@ -98,7 +86,7 @@ export default function DashCompanies() {
     setSearchParams(prev => { const p = new URLSearchParams(prev); p.set('view', val ? 'grid' : 'list'); return p; }, { replace: true });
 
   const [search, setSearch]         = useState('');
-  const [location, setLocation]     = useState('Florence, Italy');
+  const [location, setLocation]     = useState('');
   const [sortBy, setSortBy]         = useState('Most relevant');
   const [page, setPage]             = useState(1);
   const [selIndustry, setSelIndustry] = useState([]);
@@ -109,12 +97,12 @@ export default function DashCompanies() {
 
   // Dynamic counts
   const industryCounts = useMemo(() =>
-    Object.fromEntries(INDUSTRIES.map(i => [i, allCompanies.filter(c => c.industry === i).length])), []);
+    Object.fromEntries(INDUSTRIES.map(i => [i, companies.filter(c => c.industry === i).length])), []);
   const sizeCounts = useMemo(() =>
-    Object.fromEntries(SIZES.map(s => [s, allCompanies.filter(c => c.size === s).length])), []);
+    Object.fromEntries(SIZES.map(s => [s, companies.filter(c => c.size === s).length])), []);
 
   const filtered = useMemo(() => {
-    let result = allCompanies.filter(c => {
+    let result = companies.filter(c => {
       const q = search.toLowerCase();
       const matchSearch = !q || c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q) || c.tags.some(t => t.toLowerCase().includes(q));
       const matchIndustry = selIndustry.length === 0 || selIndustry.includes(c.industry);

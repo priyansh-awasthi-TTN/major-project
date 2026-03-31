@@ -212,6 +212,11 @@ class ApiService {
   async isInReadingList(jobId) {
     return this.request(`/job-actions/reading-list/${jobId}`);
   }
+
+  // Network endpoints
+  async getNetworkUsers() {
+    return this.request('/network/users');
+  }
 }
 
 export default new ApiService();

@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { companies, jobs } from '../data/mockData';
+import { companies, jobs } from '../data/mockdata';
 
 const companyJobs = {
   1: [1, 2, 3, 4, 5, 6],

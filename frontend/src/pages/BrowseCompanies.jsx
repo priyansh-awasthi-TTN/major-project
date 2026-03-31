@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { companies } from '../data/mockData';
+import { companies } from '../data/mockdata';
 
 const industries = [
   { label: 'Advertising', count: 63 },

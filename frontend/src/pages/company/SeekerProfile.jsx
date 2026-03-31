@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { messages, recruiterProfiles } from '../../data/mockData';
+import { messages, recruiterProfiles } from '../../data/mockdata';
 import CompanyTopBar from '../../components/CompanyTopBar';
 
 // Seeker profile data keyed by seekerId (matches messages array ids)

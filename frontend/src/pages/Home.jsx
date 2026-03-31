@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { jobs, categories } from '../data/mockData';
+import { jobs, categories } from '../data/mockdata';
 
 const brands = [
   { name: 'vodafone', style: 'text-red-500 font-bold' },

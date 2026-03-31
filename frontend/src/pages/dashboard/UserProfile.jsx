@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { messages, recruiterProfiles, companies } from '../../data/mockData';
+import { messages, recruiterProfiles, companies } from '../../data/mockdata';
 import DashTopBar from '../../components/DashTopBar';
 
 export default function UserProfile() {
