@@ -48,6 +48,22 @@ public class User implements UserDetails {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     
+    // Additional fields for company profiles
+    @Column(name = "location")
+    private String location;
+    
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+    
+    @Column(name = "website")
+    private String website;
+    
+    @Column(name = "industry")
+    private String industry;
+    
+    @Column(name = "company_size")
+    private String companySize;
+    
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<AccessToken> accessTokens;
     
@@ -187,5 +203,46 @@ public class User implements UserDetails {
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+    
+    // Getters and setters for additional fields
+    public String getLocation() {
+        return location;
+    }
+    
+    public void setLocation(String location) {
+        this.location = location;
+    }
+    
+    public String getDescription() {
+        return description;
+    }
+    
+    public void setDescription(String description) {
+        this.description = description;
+    }
+    
+    public String getWebsite() {
+        return website;
+    }
+    
+    public void setWebsite(String website) {
+        this.website = website;
+    }
+    
+    public String getIndustry() {
+        return industry;
+    }
+    
+    public void setIndustry(String industry) {
+        this.industry = industry;
+    }
+    
+    public String getCompanySize() {
+        return companySize;
+    }
+    
+    public void setCompanySize(String companySize) {
+        this.companySize = companySize;
     }
 }

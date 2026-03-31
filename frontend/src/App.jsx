@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import { ToastProvider } from './components/Toast';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import DashboardSidebar from './components/DashboardSidebar';
@@ -10,6 +11,7 @@ import Home from './pages/Home';
 import FindJobs from './pages/FindJobs';
 import BrowseCompanies from './pages/BrowseCompanies';
 import JobDetail from './pages/JobDetail';
+import ApplicationDetail from './pages/ApplicationDetail';
 import CompanyProfile from './pages/CompanyProfile';
 import CompanyJobDetail from './pages/CompanyJobDetail';
 import Login from './pages/Login';
@@ -95,13 +97,15 @@ export default function App() {
   }
 
   return (
-    <BrowserRouter>
-      <Routes key={user ? 'authenticated' : 'unauthenticated'}>
+    <ToastProvider>
+      <BrowserRouter>
+        <Routes key={user ? 'authenticated' : 'unauthenticated'}>
         {/* Public */}
         <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
         <Route path="/find-jobs" element={<PublicLayout><FindJobs /></PublicLayout>} />
         <Route path="/browse-companies" element={<PublicLayout><BrowseCompanies /></PublicLayout>} />
         <Route path="/jobs/:id" element={<PublicLayout><JobDetail /></PublicLayout>} />
+        <Route path="/applications/:applicationId" element={<ProtectedRoute><DashboardLayout><ApplicationDetail /></DashboardLayout></ProtectedRoute>} />
         <Route path="/companies/:id" element={<PublicLayout><CompanyProfile /></PublicLayout>} />
         <Route path="/companies/:companyId/jobs/:jobId" element={<PublicLayout><CompanyJobDetail /></PublicLayout>} />
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
@@ -141,5 +145,6 @@ export default function App() {
         <Route path="/company/seeker/:seekerId" element={<CompanyRoute><CompanyLayout><SeekerProfile /></CompanyLayout></CompanyRoute>} />
       </Routes>
     </BrowserRouter>
+    </ToastProvider>
   );
 }

@@ -1,64 +1,71 @@
 package com.jobhuntly.backend.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.persistence.Column;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.FetchType;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "chat_messages")
 public class ChatMessage {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sender_id", nullable = false)
     private User sender;
-
+    
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "recipient_id", nullable = false)
-    private User recipient;
-
-    @NotBlank(message = "Content cannot be blank")
-    @Column(name = "content", nullable = false, columnDefinition = "TEXT")
+    @JoinColumn(name = "receiver_id", nullable = false)
+    private User receiver;
+    
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
-
-    @Column(name = "timestamp", nullable = false)
-    private LocalDateTime timestamp;
+    
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
     
     @Column(name = "is_read", nullable = false)
     private boolean isRead = false;
-
+    
+    @Column(name = "message_type")
+    private String messageType = "TEXT"; // TEXT, IMAGE, FILE, etc.
+    
+    // Constructors
     public ChatMessage() {
-        this.timestamp = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now();
     }
-
-    public ChatMessage(User sender, User recipient, String content) {
+    
+    public ChatMessage(User sender, User receiver, String content) {
         this();
         this.sender = sender;
-        this.recipient = recipient;
+        this.receiver = receiver;
         this.content = content;
     }
-
+    
+    public ChatMessage(User sender, User receiver, String content, String messageType) {
+        this(sender, receiver, content);
+        this.messageType = messageType;
+    }
+    
+    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+    
     public User getSender() { return sender; }
     public void setSender(User sender) { this.sender = sender; }
-    public User getRecipient() { return recipient; }
-    public void setRecipient(User recipient) { this.recipient = recipient; }
+    
+    public User getReceiver() { return receiver; }
+    public void setReceiver(User receiver) { this.receiver = receiver; }
+    
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
-    public LocalDateTime getTimestamp() { return timestamp; }
-    public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
+    
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    
     public boolean isRead() { return isRead; }
     public void setRead(boolean read) { isRead = read; }
+    
+    public String getMessageType() { return messageType; }
+    public void setMessageType(String messageType) { this.messageType = messageType; }
 }

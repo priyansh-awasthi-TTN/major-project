@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 @RestController
-@RequestMapping("/api/jobs")
+@RequestMapping("/api")
 @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
 public class JobController {
 
@@ -53,7 +53,7 @@ public class JobController {
     }
 
     // GET all jobs — public
-    @GetMapping
+    @GetMapping("/jobs")
     public ResponseEntity<?> getAll() {
         List<Map<String, Object>> result = new ArrayList<>();
         for (Job j : jobRepository.findAllByOrderByCreatedAtDesc()) result.add(toMap(j));
@@ -61,7 +61,7 @@ public class JobController {
     }
 
     // GET single job — public
-    @GetMapping("/{id}")
+    @GetMapping("/jobs/{id}")
     public ResponseEntity<?> getById(@PathVariable Long id) {
         return jobRepository.findById(id)
                 .map(j -> ResponseEntity.ok(toMap(j)))
@@ -69,7 +69,7 @@ public class JobController {
     }
 
     // POST — company creates a job (requires auth)
-    @PostMapping
+    @PostMapping("/jobs")
     public ResponseEntity<?> create(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         try {
             User user = resolveUser(request);
@@ -101,7 +101,7 @@ public class JobController {
     }
 
     // DELETE — company deletes own job
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/jobs/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id, HttpServletRequest request) {
         try {
             User user = resolveUser(request);
@@ -111,6 +111,44 @@ public class JobController {
                 return ResponseEntity.status(403).body(Map.of("message", "Forbidden"));
             jobRepository.delete(job);
             return ResponseEntity.ok(Map.of("message", "Deleted"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // GET companies with location filtering
+    @GetMapping("/companies")
+    public ResponseEntity<?> getCompanies(@RequestParam(required = false) String location) {
+        try {
+            List<User> companies;
+            if (location != null && !location.trim().isEmpty()) {
+                // Filter by location (case-insensitive partial match)
+                companies = userRepository.findByUserTypeAndLocationContainingIgnoreCase(User.UserType.COMPANY, location.trim());
+            } else {
+                // Get all companies
+                companies = userRepository.findByUserType(User.UserType.COMPANY);
+            }
+
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (User company : companies) {
+                Map<String, Object> companyData = new LinkedHashMap<>();
+                companyData.put("id", company.getId());
+                companyData.put("name", company.getFullName());
+                companyData.put("email", company.getEmail());
+                companyData.put("location", company.getLocation());
+                companyData.put("description", company.getDescription());
+                companyData.put("website", company.getWebsite());
+                companyData.put("industry", company.getIndustry());
+                companyData.put("companySize", company.getCompanySize());
+                
+                // Count jobs posted by this company
+                long jobCount = jobRepository.countByPostedByUserId(company.getId());
+                companyData.put("jobCount", jobCount);
+                
+                result.add(companyData);
+            }
+            
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }

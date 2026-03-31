@@ -1,0 +1,9 @@
+com/jobhuntly/backend/entity/JobAction.class
+com/jobhuntly/backend/dto/ApplicationDetailsDTO$RecruiterMessageDTO.class
+com/jobhuntly/backend/service/JobActionService$1.class
+com/jobhuntly/backend/dto/JobResponseDTO.class
+com/jobhuntly/backend/dto/ApplicationDetailsDTO.class
+com/jobhuntly/backend/entity/JobAction$ActionType.class
+com/jobhuntly/backend/dto/ApplicationDetailsDTO$InterviewScheduleDTO.class
+com/jobhuntly/backend/service/ChatService.class
+com/jobhuntly/backend/repository/JobActionRepository.class

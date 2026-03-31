@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import ApiService from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from './Toast';
 
 export default function ShareModal({ isOpen, onClose, job, url }) {
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
-  const [feedback, setFeedback] = useState({ message: '', type: '' });
   const { user } = useAuth();
+  const { showToast } = useToast();
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -38,7 +39,7 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
   // Clear feedback when modal opens
   useEffect(() => {
     if (isOpen) {
-      setFeedback({ message: '', type: '' });
+      // Reset any local state when modal opens
     }
   }, [isOpen]);
 
@@ -48,15 +49,11 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
   const shareTitle = job ? `${job.title} at ${job.company}` : 'Check out this job opportunity';
   const shareText = job ? `Found this amazing ${job.title} position at ${job.company} in ${job.location}. ${job.type} role with great benefits!` : 'Check out this job opportunity on JobHuntly';
 
-  const showFeedback = (message, type = 'success') => {
-    setFeedback({ message, type });
-    setTimeout(() => setFeedback({ message: '', type: '' }), 3000);
-  };
-
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
+      showToast('Link copied to clipboard!', 'success');
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       // Fallback for older browsers
@@ -67,18 +64,19 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
       document.execCommand('copy');
       document.body.removeChild(textArea);
       setCopied(true);
+      showToast('Link copied to clipboard!', 'success');
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
   const handleSaveJob = async () => {
     if (!user) {
-      showFeedback('Please log in to save jobs', 'error');
+      showToast('Please log in to save jobs', 'error');
       return;
     }
 
     if (!job?.id) {
-      showFeedback('Job information not available', 'error');
+      showToast('Job information not available', 'error');
       return;
     }
 
@@ -86,18 +84,18 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
     try {
       const response = await ApiService.saveJob(job.id);
       if (response.success) {
-        showFeedback(response.message, 'success');
+        showToast(response.message, 'success');
       } else {
-        showFeedback(response.message, 'warning');
+        showToast(response.message, 'warning');
       }
     } catch (error) {
       console.error('Save job error:', error);
       if (error.message.includes('Unauthorized') || error.message.includes('401')) {
-        showFeedback('Please log in to save jobs', 'error');
+        showToast('Please log in to save jobs', 'error');
       } else if (error.message.includes('404')) {
-        showFeedback('Job not found', 'error');
+        showToast('Job not found', 'error');
       } else {
-        showFeedback(error.message || 'Failed to save job', 'error');
+        showToast(error.message || 'Failed to save job', 'error');
       }
     } finally {
       setLoading(false);
@@ -106,12 +104,12 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
 
   const handleAddToReadingList = async () => {
     if (!user) {
-      showFeedback('Please log in to add to reading list', 'error');
+      showToast('Please log in to add to reading list', 'error');
       return;
     }
 
     if (!job?.id) {
-      showFeedback('Job information not available', 'error');
+      showToast('Job information not available', 'error');
       return;
     }
 
@@ -119,18 +117,18 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
     try {
       const response = await ApiService.addToReadingList(job.id);
       if (response.success) {
-        showFeedback(response.message, 'success');
+        showToast(response.message, 'success');
       } else {
-        showFeedback(response.message, 'warning');
+        showToast(response.message, 'warning');
       }
     } catch (error) {
       console.error('Add to reading list error:', error);
       if (error.message.includes('Unauthorized') || error.message.includes('401')) {
-        showFeedback('Please log in to add to reading list', 'error');
+        showToast('Please log in to add to reading list', 'error');
       } else if (error.message.includes('404')) {
-        showFeedback('Job not found', 'error');
+        showToast('Job not found', 'error');
       } else {
-        showFeedback(error.message || 'Failed to add to reading list', 'error');
+        showToast(error.message || 'Failed to add to reading list', 'error');
       }
     } finally {
       setLoading(false);
@@ -139,12 +137,12 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
 
   const handleReportJob = async (reason, description) => {
     if (!user) {
-      showFeedback('Please log in to report jobs', 'error');
+      showToast('Please log in to report jobs', 'error');
       return;
     }
 
     if (!job?.id) {
-      showFeedback('Job information not available', 'error');
+      showToast('Job information not available', 'error');
       return;
     }
 
@@ -152,21 +150,33 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
     try {
       const response = await ApiService.reportJob(job.id, reason, description);
       if (response.success) {
-        showFeedback(response.message, 'success');
+        showToast(response.message, 'success');
       } else {
-        showFeedback(response.message, 'warning');
+        showToast(response.message, 'warning');
       }
     } catch (error) {
       console.error('Report job error:', error);
       if (error.message.includes('Unauthorized') || error.message.includes('401')) {
-        showFeedback('Please log in to report jobs', 'error');
+        showToast('Please log in to report jobs', 'error');
       } else if (error.message.includes('404')) {
-        showFeedback('Job not found', 'error');
+        showToast('Job not found', 'error');
       } else {
-        showFeedback(error.message || 'Failed to report job', 'error');
+        showToast(error.message || 'Failed to report job', 'error');
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleShareJob = async (shareMethod) => {
+    if (user && job?.id) {
+      try {
+        await ApiService.shareJob(job.id, shareMethod);
+        showToast('Job shared successfully', 'success');
+      } catch (error) {
+        console.error('Share job error:', error);
+        // Don't show error for share logging - it's not critical
+      }
     }
   };
 
@@ -178,6 +188,7 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
       action: () => {
         const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`${shareText}\n\n${shareUrl}`)}`;
         window.open(whatsappUrl, '_blank');
+        handleShareJob('whatsapp');
         onClose();
       }
     },
@@ -188,6 +199,7 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
       action: () => {
         const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
         window.open(linkedinUrl, '_blank');
+        handleShareJob('linkedin');
         onClose();
       }
     },
@@ -198,6 +210,7 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
       action: () => {
         const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
         window.open(twitterUrl, '_blank');
+        handleShareJob('twitter');
         onClose();
       }
     },
@@ -208,6 +221,7 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
       action: () => {
         const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
         window.open(facebookUrl, '_blank');
+        handleShareJob('facebook');
         onClose();
       }
     },
@@ -218,6 +232,7 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
       action: () => {
         const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
         window.open(telegramUrl, '_blank');
+        handleShareJob('telegram');
         onClose();
       }
     },
@@ -228,6 +243,7 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
       action: () => {
         const emailUrl = `mailto:?subject=${encodeURIComponent(shareTitle)}&body=${encodeURIComponent(`${shareText}\n\n${shareUrl}`)}`;
         window.location.href = emailUrl;
+        handleShareJob('email');
         onClose();
       }
     }
@@ -251,7 +267,7 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
     },
     {
       name: 'Report Job',
-      icon: '⚠️',
+      icon: '🚩',
       color: user ? 'bg-red-100' : 'bg-gray-100',
       textColor: user ? 'text-red-700' : 'text-gray-500',
       action: () => setShowReportModal(true),
@@ -297,35 +313,6 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
               </svg>
             </button>
           </div>
-
-          {/* Feedback Message */}
-          {feedback.message && (
-            <div className={`mt-3 p-3 rounded-lg text-sm ${
-              feedback.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' :
-              feedback.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' :
-              feedback.type === 'warning' ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
-              'bg-blue-50 text-blue-700 border border-blue-200'
-            }`}>
-              <div className="flex items-center gap-2">
-                {feedback.type === 'success' && (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-                {feedback.type === 'error' && (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                )}
-                {feedback.type === 'warning' && (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                )}
-                <span>{feedback.message}</span>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Scrollable Content */}
@@ -354,7 +341,7 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
               {quickActions.map((action) => (
                 <button
                   key={action.name}
-                  onClick={action.disabled ? () => showFeedback('Please log in to use this feature', 'error') : action.action}
+                  onClick={action.disabled ? () => showToast('Please log in to use this feature', 'error') : action.action}
                   disabled={loading}
                   className={`w-full flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${action.disabled ? 'cursor-not-allowed opacity-60' : ''}`}
                 >
@@ -407,7 +394,7 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
                 <button className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors"
                   onClick={() => {
                     if (!user) {
-                      showFeedback('Please log in to add to reading list', 'error');
+                      showToast('Please log in to add to reading list', 'error');
                       return;
                     }
                     handleAddToReadingList();
