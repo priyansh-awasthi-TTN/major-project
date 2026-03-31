@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8081/api';
+const API_BASE_URL = 'http://localhost:8080/api';
 
 class ApiService {
   constructor() {
@@ -36,7 +36,18 @@ class ApiService {
       console.log('API response:', { status: response.status, data });
 
       if (!response.ok) {
-        throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
+        // Handle specific error cases
+        if (response.status === 401) {
+          throw new Error('Unauthorized - Please log in again');
+        } else if (response.status === 403) {
+          throw new Error('Access denied');
+        } else if (response.status === 404) {
+          throw new Error('Resource not found');
+        } else if (response.status === 500) {
+          throw new Error('Server error - Please try again later');
+        } else {
+          throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
+        }
       }
 
       return data;
@@ -145,6 +156,61 @@ class ApiService {
 
   async deleteJob(id) {
     return this.request(`/jobs/${id}`, { method: 'DELETE' });
+  }
+
+  // Job Action endpoints
+  async saveJob(jobId, notes = '') {
+    return this.request('/job-actions/save', {
+      method: 'POST',
+      body: JSON.stringify({ jobId, notes }),
+    });
+  }
+
+  async unsaveJob(jobId) {
+    return this.request(`/job-actions/save/${jobId}`, { method: 'DELETE' });
+  }
+
+  async getSavedJobs() {
+    return this.request('/job-actions/saved');
+  }
+
+  async isJobSaved(jobId) {
+    return this.request(`/job-actions/saved/${jobId}`);
+  }
+
+  async reportJob(jobId, reason, description = '') {
+    return this.request('/job-actions/report', {
+      method: 'POST',
+      body: JSON.stringify({ jobId, reason, description }),
+    });
+  }
+
+  async getUserReports() {
+    return this.request('/job-actions/reports');
+  }
+
+  async addToReadingList(jobId) {
+    return this.request(`/job-actions/reading-list/${jobId}`, { method: 'POST' });
+  }
+
+  async removeFromReadingList(jobId) {
+    return this.request(`/job-actions/reading-list/${jobId}`, { method: 'DELETE' });
+  }
+
+  async markAsRead(jobId) {
+    return this.request(`/job-actions/reading-list/${jobId}/read`, { method: 'PATCH' });
+  }
+
+  async getReadingList() {
+    return this.request('/job-actions/reading-list');
+  }
+
+  async getUnreadItems() {
+    return this.request('/job-actions/reading-list/unread');
+  }
+
+  async isInReadingList(jobId) {
+    return this.request(`/job-actions/reading-list/${jobId}`);
   }
 }
 

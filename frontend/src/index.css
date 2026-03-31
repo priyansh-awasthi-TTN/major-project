@@ -3,6 +3,21 @@
 * { box-sizing: border-box; }
 body { margin: 0; font-family: 'Inter', sans-serif; }
 
+/* Fix for browser autocomplete yellow background */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px white inset !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+input[type="email"]:-webkit-autofill,
+input[type="password"]:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 30px white inset !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
 @keyframes ring {
   0%   { transform: rotate(0deg); }
   5%   { transform: rotate(15deg); }
