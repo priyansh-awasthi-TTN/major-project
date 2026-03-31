@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ChatIcon from './ChatIcon';
 
 export default function Navbar() {
   const { pathname } = useLocation();
@@ -29,6 +30,7 @@ export default function Navbar() {
         {user ? (
           // Authenticated user
           <>
+            <ChatIcon />
             <Link to="/dashboard" className="text-sm text-gray-300 hover:text-white px-3 py-2">
               Dashboard
             </Link>

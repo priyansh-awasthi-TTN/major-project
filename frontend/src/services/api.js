@@ -213,6 +213,43 @@ class ApiService {
     return this.request(`/job-actions/reading-list/${jobId}`);
   }
 
+  // New unified job action methods
+  async shareJob(jobId, shareMethod) {
+    return this.request(`/job-actions/share/${jobId}`, {
+      method: 'POST',
+      body: JSON.stringify({ shareMethod }),
+    });
+  }
+
+  async getAllUserActions() {
+    return this.request('/job-actions/all');
+  }
+
+  async getSharedJobs() {
+    return this.request('/job-actions/shared');
+  }
+
+  // Chat endpoints
+  async getChatConversations() {
+    return this.request('/chat/conversations');
+  }
+
+  async getChatMessages(otherUserId) {
+    return this.request(`/chat/messages/${otherUserId}`);
+  }
+
+  async getUnreadMessageCount() {
+    return this.request('/chat/unread-count');
+  }
+
+  async getUnreadMessageCountBetweenUsers(otherUserId) {
+    return this.request(`/chat/unread-count/${otherUserId}`);
+  }
+
+  async markMessagesAsRead(otherUserId) {
+    return this.request(`/chat/mark-read/${otherUserId}`, { method: 'POST' });
+  }
+
   // Network endpoints
   async getNetworkUsers() {
     return this.request('/network/users');

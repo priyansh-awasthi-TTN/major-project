@@ -2,9 +2,7 @@ package com.jobhuntly.backend.controller;
 
 import com.jobhuntly.backend.dto.ReportJobRequest;
 import com.jobhuntly.backend.dto.SaveJobRequest;
-import com.jobhuntly.backend.entity.JobReport;
-import com.jobhuntly.backend.entity.ReadingListItem;
-import com.jobhuntly.backend.entity.SavedJob;
+import com.jobhuntly.backend.entity.JobAction;
 import com.jobhuntly.backend.service.JobActionService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,7 +53,7 @@ public class JobActionController {
     public ResponseEntity<?> getSavedJobs(Authentication authentication) {
         try {
             String email = authentication.getName();
-            List<SavedJob> savedJobs = jobActionService.getSavedJobs(email);
+            List<JobAction> savedJobs = jobActionService.getSavedJobs(email);
             return ResponseEntity.ok(savedJobs);
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
@@ -97,7 +95,7 @@ public class JobActionController {
     public ResponseEntity<?> getUserReports(Authentication authentication) {
         try {
             String email = authentication.getName();
-            List<JobReport> reports = jobActionService.getUserReports(email);
+            List<JobAction> reports = jobActionService.getUserReports(email);
             return ResponseEntity.ok(reports);
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
@@ -133,24 +131,11 @@ public class JobActionController {
         }
     }
     
-    @PatchMapping("/reading-list/{jobId}/read")
-    public ResponseEntity<?> markAsRead(@PathVariable Long jobId, Authentication authentication) {
-        try {
-            String email = authentication.getName();
-            Map<String, Object> response = jobActionService.markAsRead(email, jobId);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(error);
-        }
-    }
-    
     @GetMapping("/reading-list")
     public ResponseEntity<?> getReadingList(Authentication authentication) {
         try {
             String email = authentication.getName();
-            List<ReadingListItem> readingList = jobActionService.getReadingList(email);
+            List<JobAction> readingList = jobActionService.getReadingList(email);
             return ResponseEntity.ok(readingList);
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
@@ -163,7 +148,7 @@ public class JobActionController {
     public ResponseEntity<?> getUnreadItems(Authentication authentication) {
         try {
             String email = authentication.getName();
-            List<ReadingListItem> unreadItems = jobActionService.getUnreadItems(email);
+            List<JobAction> unreadItems = jobActionService.getReadingList(email); // Use same method for now
             return ResponseEntity.ok(unreadItems);
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
@@ -180,6 +165,47 @@ public class JobActionController {
             Map<String, Object> response = new HashMap<>();
             response.put("inReadingList", inList);
             return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+    
+    // New unified endpoints
+    @PostMapping("/share/{jobId}")
+    public ResponseEntity<?> shareJob(@PathVariable Long jobId, @RequestBody Map<String, String> request, Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            String shareMethod = request.getOrDefault("shareMethod", "unknown");
+            Map<String, Object> response = jobActionService.shareJob(email, jobId, shareMethod);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+    
+    @GetMapping("/all")
+    public ResponseEntity<?> getAllUserActions(Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            List<JobAction> actions = jobActionService.getAllUserActions(email);
+            return ResponseEntity.ok(actions);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+    
+    @GetMapping("/shared")
+    public ResponseEntity<?> getSharedJobs(Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            List<JobAction> sharedJobs = jobActionService.getSharedJobs(email);
+            return ResponseEntity.ok(sharedJobs);
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
             error.put("message", e.getMessage());
