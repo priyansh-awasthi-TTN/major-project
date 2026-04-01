@@ -9,10 +9,22 @@ const notifyJobActionsUpdated = (actionType, jobId) => {
   }));
 };
 
+const normalizeText = (value) => (value || '').toString().trim().toLowerCase();
+
+const reportReasons = [
+  { label: 'Spam', value: 'SPAM' },
+  { label: 'Fake Job', value: 'FAKE_JOB' },
+  { label: 'Misleading Information', value: 'MISLEADING_INFO' },
+  { label: 'Inappropriate Content', value: 'INAPPROPRIATE_CONTENT' },
+  { label: 'Discrimination', value: 'DISCRIMINATION' },
+  { label: 'Other', value: 'OTHER' },
+];
+
 export default function ShareModal({ isOpen, onClose, job, url }) {
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [resolvedJobId, setResolvedJobId] = useState(null);
   const { user } = useAuth();
   const { showToast } = useToast();
 
@@ -46,6 +58,7 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
   useEffect(() => {
     if (isOpen) {
       // Reset any local state when modal opens
+      setResolvedJobId(null);
     }
   }, [isOpen]);
 
@@ -54,6 +67,46 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
   const shareUrl = url || window.location.href;
   const shareTitle = job ? `${job.title} at ${job.company}` : 'Check out this job opportunity';
   const shareText = job ? `Found this amazing ${job.title} position at ${job.company} in ${job.location}. ${job.type} role with great benefits!` : 'Check out this job opportunity on JobHuntly';
+
+  const isMatchingJob = (candidate) =>
+    normalizeText(candidate.title) === normalizeText(job?.title) &&
+    normalizeText(candidate.company) === normalizeText(job?.company) &&
+    normalizeText(candidate.location) === normalizeText(job?.location) &&
+    normalizeText(candidate.type) === normalizeText(job?.type);
+
+  const findMatchingBackendJob = (jobs = []) => jobs.find((candidate) => isMatchingJob(candidate));
+
+  const resolveActionJobId = async () => {
+    if (resolvedJobId) {
+      return resolvedJobId;
+    }
+
+    const currentJobId = Number(job?.id);
+    if (Number.isFinite(currentJobId)) {
+      try {
+        const backendJob = await ApiService.getJob(currentJobId);
+        if (backendJob?.id && isMatchingJob(backendJob)) {
+          setResolvedJobId(backendJob.id);
+          return backendJob.id;
+        }
+      } catch {
+        // Fall back to a field match below.
+      }
+    }
+
+    try {
+      const jobs = await ApiService.getJobs();
+      const matchingJob = findMatchingBackendJob(jobs);
+      if (matchingJob?.id) {
+        setResolvedJobId(matchingJob.id);
+        return matchingJob.id;
+      }
+    } catch {
+      // Surface a single friendly error to the user below.
+    }
+
+    return null;
+  };
 
   const handleCopyLink = async () => {
     try {
@@ -88,9 +141,15 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
 
     setLoading(true);
     try {
-      const response = await ApiService.saveJob(job.id);
+      const targetJobId = await resolveActionJobId();
+      if (!targetJobId) {
+        showToast('This job is not available for actions yet', 'error');
+        return;
+      }
+
+      const response = await ApiService.saveJob(targetJobId);
       if (response.success || response.alreadyExists) {
-        notifyJobActionsUpdated('saved', job.id);
+        notifyJobActionsUpdated('saved', targetJobId);
       }
       if (response.success) {
         showToast(response.message, 'success');
@@ -124,9 +183,15 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
 
     setLoading(true);
     try {
-      const response = await ApiService.addToReadingList(job.id);
+      const targetJobId = await resolveActionJobId();
+      if (!targetJobId) {
+        showToast('This job is not available for actions yet', 'error');
+        return;
+      }
+
+      const response = await ApiService.addToReadingList(targetJobId);
       if (response.success || response.alreadyExists) {
-        notifyJobActionsUpdated('reading', job.id);
+        notifyJobActionsUpdated('reading', targetJobId);
       }
       if (response.success) {
         showToast(response.message, 'success');
@@ -160,9 +225,15 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
 
     setLoading(true);
     try {
-      const response = await ApiService.reportJob(job.id, reason, description);
+      const targetJobId = await resolveActionJobId();
+      if (!targetJobId) {
+        showToast('This job is not available for actions yet', 'error');
+        return;
+      }
+
+      const response = await ApiService.reportJob(targetJobId, reason, description);
       if (response.success || response.alreadyExists) {
-        notifyJobActionsUpdated('reports', job.id);
+        notifyJobActionsUpdated('reports', targetJobId);
       }
       if (response.success) {
         showToast(response.message, 'success');
@@ -186,9 +257,14 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
   const handleShareJob = async (shareMethod) => {
     if (user && job?.id) {
       try {
-        const response = await ApiService.shareJob(job.id, shareMethod);
+        const targetJobId = await resolveActionJobId();
+        if (!targetJobId) {
+          return;
+        }
+
+        const response = await ApiService.shareJob(targetJobId, shareMethod);
         if (response?.success || response?.alreadyExists) {
-          notifyJobActionsUpdated('shared', job.id);
+          notifyJobActionsUpdated('shared', targetJobId);
         }
         showToast('Job shared successfully', 'success');
       } catch (error) {
@@ -455,10 +531,9 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
           isOpen={showReportModal}
           onClose={() => setShowReportModal(false)}
           job={job}
-          onReport={(reason, description) => {
-            handleReportJob(reason, description);
-            setShowReportModal(false);
-          }}
+          onReport={(reason, description) =>
+            handleReportJob(reason, description).finally(() => setShowReportModal(false))
+          }
         />
       )}
 
@@ -495,15 +570,6 @@ function ReportJobModal({ isOpen, onClose, job, onReport }) {
   const [reason, setReason] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const reportReasons = [
-    'Spam or Fake Job',
-    'Inappropriate Content',
-    'Misleading Information',
-    'Duplicate Posting',
-    'Discriminatory Content',
-    'Other'
-  ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -562,16 +628,16 @@ function ReportJobModal({ isOpen, onClose, job, onReport }) {
             </label>
             <div className="space-y-2">
               {reportReasons.map((reasonOption) => (
-                <label key={reasonOption} className="flex items-center">
+                <label key={reasonOption.value} className="flex items-center">
                   <input
                     type="radio"
                     name="reason"
-                    value={reasonOption}
-                    checked={reason === reasonOption}
+                    value={reasonOption.value}
+                    checked={reason === reasonOption.value}
                     onChange={(e) => setReason(e.target.value)}
                     className="w-4 h-4 text-red-600 border-gray-300 focus:ring-red-500"
                   />
-                  <span className="ml-3 text-sm text-gray-700">{reasonOption}</span>
+                  <span className="ml-3 text-sm text-gray-700">{reasonOption.label}</span>
                 </label>
               ))}
             </div>
