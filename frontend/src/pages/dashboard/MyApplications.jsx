@@ -12,13 +12,13 @@ const LS_CAL = 'jh_calendarDate';
 const PAGE_SIZE = 11;
 
 const statusStyle = {
-  'In Review':    'border border-yellow-400 text-yellow-600 bg-yellow-50',
+  'In Review': 'border border-yellow-400 text-yellow-600 bg-yellow-50',
   'Interviewing': 'border border-orange-400 text-orange-600 bg-orange-50',
-  'Assessment':   'border border-blue-400 text-blue-600 bg-blue-50',
-  'Offered':      'border border-purple-400 text-purple-600 bg-purple-50',
-  'Hired':        'border border-green-500 text-green-600 bg-green-50',
-  'Unsuitable':   'border border-red-400 text-red-500 bg-red-50',
-  'Shortlisted':  'border border-cyan-400 text-cyan-600 bg-cyan-50',
+  'Assessment': 'border border-blue-400 text-blue-600 bg-blue-50',
+  'Offered': 'border border-purple-400 text-purple-600 bg-purple-50',
+  'Hired': 'border border-green-500 text-green-600 bg-green-50',
+  'Unsuitable': 'border border-red-400 text-red-500 bg-red-50',
+  'Shortlisted': 'border border-cyan-400 text-cyan-600 bg-cyan-50',
 };
 
 const tabs = [
@@ -40,7 +40,7 @@ function Calendar({ selectedDate, onDateChange, onClose }) {
   const today = new Date();
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
-  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   useEffect(() => {
     const h = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
@@ -48,7 +48,7 @@ function Calendar({ selectedDate, onDateChange, onClose }) {
     return () => document.removeEventListener('mousedown', h);
   }, [onClose]);
 
-  const isToday    = (d) => d.toDateString() === today.toDateString();
+  const isToday = (d) => d.toDateString() === today.toDateString();
   const isCurMonth = (d) => d.getMonth() === month;
   const isSelected = (d) => selectedDate && d.toDateString() === selectedDate.toDateString();
 
@@ -68,7 +68,7 @@ function Calendar({ selectedDate, onDateChange, onClose }) {
             <button onClick={() => setCurrentMonth(new Date(year, month + 1, 1))} className="p-1 hover:bg-gray-100 rounded">›</button>
           </div>
           <div className="grid grid-cols-7 gap-1 mb-2">
-            {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => <div key={d} className="text-center text-xs font-medium text-gray-500 py-1">{d}</div>)}
+            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => <div key={d} className="text-center text-xs font-medium text-gray-500 py-1">{d}</div>)}
           </div>
           <div className="grid grid-cols-7 gap-1">
             {days().map((d, i) => (
@@ -100,12 +100,12 @@ function Calendar({ selectedDate, onDateChange, onClose }) {
       {viewMode === 'years' && (
         <>
           <div className="flex items-center justify-between mb-4">
-            <button onClick={() => setCurrentMonth(new Date(Math.floor(year/10)*10 - 10, month, 1))} className="p-1 hover:bg-gray-100 rounded">‹</button>
-            <span className="font-semibold text-gray-900 text-sm">{Math.floor(year/10)*10} – {Math.floor(year/10)*10+9}</span>
-            <button onClick={() => setCurrentMonth(new Date(Math.floor(year/10)*10 + 10, month, 1))} className="p-1 hover:bg-gray-100 rounded">›</button>
+            <button onClick={() => setCurrentMonth(new Date(Math.floor(year / 10) * 10 - 10, month, 1))} className="p-1 hover:bg-gray-100 rounded">‹</button>
+            <span className="font-semibold text-gray-900 text-sm">{Math.floor(year / 10) * 10} – {Math.floor(year / 10) * 10 + 9}</span>
+            <button onClick={() => setCurrentMonth(new Date(Math.floor(year / 10) * 10 + 10, month, 1))} className="p-1 hover:bg-gray-100 rounded">›</button>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            {Array.from({ length: 12 }, (_, i) => Math.floor(year/10)*10 - 1 + i).map(y => (
+            {Array.from({ length: 12 }, (_, i) => Math.floor(year / 10) * 10 - 1 + i).map(y => (
               <button key={y} onClick={() => { setCurrentMonth(new Date(y, month, 1)); setViewMode('months'); }}
                 className={`text-center py-2 text-xs rounded hover:bg-gray-100 transition ${year === y ? 'bg-blue-600 text-white' : 'text-gray-700'}`}>
                 {y}
@@ -122,9 +122,9 @@ function Calendar({ selectedDate, onDateChange, onClose }) {
 }
 
 // ── Notes helpers ─────────────────────────────────────────────────────────────
-const LS_NOTES    = 'jh_appNotes';
+const LS_NOTES = 'jh_appNotes';
 const LS_FOLLOWUP = 'jh_followups';
-const LS_ASSESS   = 'jh_assessments';
+const LS_ASSESS = 'jh_assessments';
 function loadNotes() { try { return JSON.parse(sessionStorage.getItem(LS_NOTES)) || {}; } catch { return {}; } }
 function saveNotes(n) { sessionStorage.setItem(LS_NOTES, JSON.stringify(n)); }
 function loadLS(key) { try { return JSON.parse(sessionStorage.getItem(key)) || {}; } catch { return {}; } }
@@ -132,9 +132,9 @@ function saveLS(key, val) { sessionStorage.setItem(key, JSON.stringify(val)); }
 
 // ── Detail Drawer ─────────────────────────────────────────────────────────────
 function DetailDrawer({ app, onClose, onStatusChange, onToast }) {
-  const [input, setInput]             = useState('');
-  const [notes, setNotes]             = useState(() => (loadNotes()[app?.id] || []));
-  const [followupSent, setFollowupSent]   = useState(() => !!(loadLS(LS_FOLLOWUP)[app?.id]));
+  const [input, setInput] = useState('');
+  const [notes, setNotes] = useState(() => (loadNotes()[app?.id] || []));
+  const [followupSent, setFollowupSent] = useState(() => !!(loadLS(LS_FOLLOWUP)[app?.id]));
   const [assessStarted, setAssessStarted] = useState(() => !!(loadLS(LS_ASSESS)[app?.id]));
   const [confirmDecline, setConfirmDecline] = useState(false);
 
@@ -365,7 +365,7 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast }) {
 
 // ── Menu items ────────────────────────────────────────────────────────────────
 const buildMenuItems = (app, onRemove, navigate, onMessageRecruiter) => [
-  { icon: '👁️', label: 'View Details',    action: () => navigate(`/dashboard/jobs/${app.jobId}`) },
+  { icon: '👁️', label: 'View Details', action: () => navigate(`/dashboard/jobs/${app.jobId}`) },
   { icon: '📄', label: 'View Job Posting', action: () => navigate(`/dashboard/jobs/${app.jobId}`) },
   {
     icon: '✉️', label: 'Message Recruiter',
@@ -402,7 +402,7 @@ function Pagination({ current, total, onChange }) {
         p === '...'
           ? <span key={`e${i}`} className="w-8 h-8 flex items-center justify-center text-gray-400 text-sm">…</span>
           : <button key={p} onClick={() => onChange(p)}
-              className={`w-8 h-8 rounded text-sm font-medium ${p === current ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>{p}</button>
+            className={`w-8 h-8 rounded text-sm font-medium ${p === current ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>{p}</button>
       )}
       <button onClick={() => onChange(current + 1)} disabled={current === total}
         className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-100 rounded disabled:opacity-30">›</button>
@@ -426,7 +426,7 @@ export default function MyApplications() {
         const end = new Date(start); end.setDate(end.getDate() + 6);
         return { start, end };
       }
-    } catch {}
+    } catch { }
     const end = new Date();
     const start = new Date(); start.setDate(start.getDate() - 6);
     return { start, end };
@@ -441,20 +441,20 @@ export default function MyApplications() {
   const fmt = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const dateLabel = `${fmt(selectedDateRange.start)} - ${fmt(selectedDateRange.end)}`;
 
-  const [activeTab, setActiveTab]       = useState(0);
-  const [showNotice, setShowNotice]     = useState(true);
-  const [search, setSearch]             = useState('');
-  const [showSearch, setShowSearch]     = useState(false);
-  const [showFilter, setShowFilter]     = useState(false);
-  const [sortBy, setSortBy]             = useState(sortOptions[0]);
-  const [filterType, setFilterType]     = useState('');
-  const [selectedApp, setSelectedApp]   = useState(null);
-  const [openMenu, setOpenMenu]         = useState(null);
+  const [activeTab, setActiveTab] = useState(0);
+  const [showNotice, setShowNotice] = useState(true);
+  const [search, setSearch] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [showFilter, setShowFilter] = useState(false);
+  const [sortBy, setSortBy] = useState(sortOptions[0]);
+  const [filterType, setFilterType] = useState('');
+  const [selectedApp, setSelectedApp] = useState(null);
+  const [openMenu, setOpenMenu] = useState(null);
   const [applications, setApplications] = useState([]);
-  const [toast, setToast]               = useState(null);
+  const [toast, setToast] = useState(null);
   const [recruiterModal, setRecruiterModal] = useState(null);
-  const [page, setPage]                 = useState(1);
-  const [loading, setLoading]           = useState(true);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     apiService.getApplications()
@@ -475,42 +475,42 @@ export default function MyApplications() {
       await apiService.deleteApplication(id);
       setApplications(prev => prev.filter(a => a.id !== id));
       setToast({ message: 'Application removed', type: 'success' });
-    } catch(e) {
+    } catch (e) {
       setToast({ message: 'Failed to remove application', type: 'error' });
     }
   };
 
   const tabFilter = tabs[activeTab].filter;
   let filtered = applications.filter(app => {
-    const matchTab    = !tabFilter || app.status === tabFilter;
+    const matchTab = !tabFilter || app.status === tabFilter;
     const matchSearch = !search || app.company.toLowerCase().includes(search.toLowerCase()) || app.title.toLowerCase().includes(search.toLowerCase());
-    const matchType   = !filterType || app.type === filterType;
-    
+    const matchType = !filterType || app.type === filterType;
+
     // Date filter
     let matchDate = true;
     if (app.dateApplied) {
       const d = new Date(app.dateApplied);
-      const startObj = new Date(selectedDateRange.start); startObj.setHours(0,0,0,0);
-      const endObj = new Date(selectedDateRange.end); endObj.setHours(23,59,59,999);
+      const startObj = new Date(selectedDateRange.start); startObj.setHours(0, 0, 0, 0);
+      const endObj = new Date(selectedDateRange.end); endObj.setHours(23, 59, 59, 999);
       matchDate = d >= startObj && d <= endObj;
     }
 
     return matchTab && matchSearch && matchType && matchDate;
   });
 
-  if (sortBy === 'Company A-Z')           filtered = [...filtered].sort((a, b) => (a.company || '').localeCompare(b.company || ''));
+  if (sortBy === 'Company A-Z') filtered = [...filtered].sort((a, b) => (a.company || '').localeCompare(b.company || ''));
   else if (sortBy === 'Date Applied (Oldest)') filtered = [...filtered].sort((a, b) => new Date(a.dateApplied) - new Date(b.dateApplied));
   else if (sortBy === 'Date Applied (Newest)') filtered = [...filtered].sort((a, b) => new Date(b.dateApplied) - new Date(a.dateApplied));
-  else if (sortBy === 'Status')           filtered = [...filtered].sort((a, b) => (a.status || '').localeCompare(b.status || ''));
+  else if (sortBy === 'Status') filtered = [...filtered].sort((a, b) => (a.status || '').localeCompare(b.status || ''));
 
-  const totalPages  = Math.ceil(filtered.length / PAGE_SIZE);
-  const safePage    = Math.min(page, totalPages || 1);
-  const paginated   = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const counts      = tabs.map(t => t.filter ? applications.filter(a => a.status === t.filter).length : applications.length);
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const safePage = Math.min(page, totalPages || 1);
+  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const counts = tabs.map(t => t.filter ? applications.filter(a => a.status === t.filter).length : applications.length);
 
   // Reset to page 1 when filters change
   const handleTabChange = (i) => { setActiveTab(i); setPage(1); };
-  const handleSearch    = (v) => { setSearch(v); setPage(1); };
+  const handleSearch = (v) => { setSearch(v); setPage(1); };
 
   return (
     <div className="flex-1 flex flex-col h-full bg-white">
@@ -615,14 +615,14 @@ export default function MyApplications() {
                 <tr key={app.id} className="border-b border-gray-100 hover:bg-gray-50 transition cursor-pointer" onClick={() => setSelectedApp(app)}>
                   <td className="px-6 py-4 text-gray-400">{(safePage - 1) * PAGE_SIZE + idx + 1}</td>
                   <td className="px-4 py-4">
-                    <div className="flex items-center gap-3 cursor-pointer hover:bg-gray-100 p-1 rounded transition" 
-                         onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/companies/${app.companyId || app.company}`); }}>
+                    <div className="flex items-center gap-3 cursor-pointer hover:bg-gray-100 p-1 rounded transition"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/companies/${app.companyId || app.company}`); }}>
                       <div className={`${app.color} text-white rounded-xl w-10 h-10 flex items-center justify-center text-xs font-bold flex-shrink-0`}>{app.logo}</div>
                       <p className="font-semibold text-gray-900">{app.company}</p>
                     </div>
                   </td>
                   <td className="px-4 py-4 text-gray-600 cursor-pointer hover:text-blue-600 hover:underline"
-                      onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/jobs/${app.jobId}`); }}>
+                    onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/jobs/${app.jobId}`); }}>
                     {app.title}
                   </td>
                   <td className="px-4 py-4 text-gray-500">{app.dateApplied}</td>
@@ -644,9 +644,9 @@ export default function MyApplications() {
               ))}
               {loading && (
                 <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-400 text-sm">
-                   <div className="flex items-center justify-center">
-                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                   </div>
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
                 </td></tr>
               )}
               {!loading && paginated.length === 0 && (

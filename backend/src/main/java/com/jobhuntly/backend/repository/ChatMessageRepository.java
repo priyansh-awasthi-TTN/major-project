@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Modifying;
 
 import java.util.List;
 
@@ -33,8 +34,11 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     // Get unread message count between two users
     @Query("SELECT COUNT(cm) FROM ChatMessage cm WHERE cm.sender = :sender AND cm.receiver = :receiver AND cm.isRead = false")
     long countUnreadMessagesBetweenUsers(@Param("sender") User sender, @Param("receiver") User receiver);
+
     
     // Mark messages as read
+    @Modifying
+
     @Query("UPDATE ChatMessage cm SET cm.isRead = true WHERE cm.sender = :sender AND cm.receiver = :receiver AND cm.isRead = false")
     void markMessagesAsRead(@Param("sender") User sender, @Param("receiver") User receiver);
     
