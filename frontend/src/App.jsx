@@ -118,6 +118,7 @@ export default function App() {
         <Route path="/dashboard/messages" element={<JobseekerRoute><DashboardLayout><Messages /></DashboardLayout></JobseekerRoute>} />
         <Route path="/dashboard/network" element={<JobseekerRoute><DashboardLayout><DashNetwork /></DashboardLayout></JobseekerRoute>} />
         <Route path="/dashboard/applications" element={<JobseekerRoute><DashboardLayout><MyApplications /></DashboardLayout></JobseekerRoute>} />
+        <Route path="/dashboard/applications/:applicationId" element={<JobseekerRoute><DashboardLayout><ApplicationDetail /></DashboardLayout></JobseekerRoute>} />
         <Route path="/dashboard/find-jobs" element={<JobseekerRoute><DashboardLayout><DashFindJobs /></DashboardLayout></JobseekerRoute>} />
         <Route path="/dashboard/companies" element={<JobseekerRoute><DashboardLayout><DashCompanies /></DashboardLayout></JobseekerRoute>} />
         <Route path="/dashboard/companies/:id" element={<JobseekerRoute><DashboardLayout><DashCompanyProfile /></DashboardLayout></JobseekerRoute>} />
