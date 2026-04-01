@@ -1,5 +1,6 @@
 package com.jobhuntly.backend.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jobhuntly.backend.dto.ReportJobRequest;
 import com.jobhuntly.backend.dto.SaveJobRequest;
 import com.jobhuntly.backend.entity.*;
@@ -10,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Service
@@ -23,6 +25,21 @@ public class JobActionService {
     
     @Autowired
     private JobRepository jobRepository;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    private String toMetadataJson(Map<String, Object> metadata) {
+        if (metadata == null || metadata.isEmpty()) {
+            return null;
+        }
+
+        try {
+            return objectMapper.writeValueAsString(metadata);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
     
     // Unified Job Action functionality
     @Transactional
@@ -79,7 +96,13 @@ public class JobActionService {
     // Legacy methods for backward compatibility
     @Transactional
     public Map<String, Object> saveJob(String userEmail, SaveJobRequest request) {
-        return performJobAction(userEmail, request.getJobId(), JobAction.ActionType.SAVE, request.getNotes());
+        String metadata = null;
+
+        if (request.getNotes() != null && !request.getNotes().isBlank()) {
+            metadata = toMetadataJson(Map.of("notes", request.getNotes()));
+        }
+
+        return performJobAction(userEmail, request.getJobId(), JobAction.ActionType.SAVE, metadata);
     }
     
     @Transactional
@@ -89,8 +112,11 @@ public class JobActionService {
     
     @Transactional
     public Map<String, Object> reportJob(String userEmail, ReportJobRequest request) {
-        String metadata = String.format("{\"reason\":\"%s\",\"description\":\"%s\"}", 
-                                      request.getReason(), request.getDescription());
+        Map<String, Object> metadataMap = new LinkedHashMap<>();
+        metadataMap.put("reason", request.getReason().name());
+        metadataMap.put("description", request.getDescription() == null ? "" : request.getDescription());
+
+        String metadata = toMetadataJson(metadataMap);
         return performJobAction(userEmail, request.getJobId(), JobAction.ActionType.REPORT, metadata);
     }
     
@@ -106,7 +132,7 @@ public class JobActionService {
     
     @Transactional
     public Map<String, Object> shareJob(String userEmail, Long jobId, String shareMethod) {
-        String metadata = String.format("{\"shareMethod\":\"%s\"}", shareMethod);
+        String metadata = toMetadataJson(Map.of("shareMethod", shareMethod == null ? "unknown" : shareMethod));
         return performJobAction(userEmail, jobId, JobAction.ActionType.SHARE, metadata);
     }
     

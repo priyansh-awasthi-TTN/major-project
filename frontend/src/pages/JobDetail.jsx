@@ -1,18 +1,46 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { jobs } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
 import JobCard from '../components/JobCard';
 import ApplicationModal from '../components/ApplicationModal';
 import ShareModal from '../components/ShareModal';
+import apiService from '../services/api';
 
 export default function JobDetail() {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const job = jobs.find(j => j.id === Number(id)) || jobs[0];
   const [showModal, setShowModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [job, setJob] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    setLoading(true);
+    apiService.getJob(id)
+      .then((jobData) => {
+        if (active) {
+          setJob(jobData);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setJob(jobs.find(j => j.id === Number(id)) || jobs[0]);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
 
   const handleApply = () => {
     if (!user) {
@@ -21,6 +49,14 @@ export default function JobDetail() {
     }
     setShowModal(true);
   };
+
+  if (loading || !job) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

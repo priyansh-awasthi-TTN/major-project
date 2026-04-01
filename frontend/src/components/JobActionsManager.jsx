@@ -58,6 +58,17 @@ function formatActionDate(value) {
   return date.toLocaleDateString();
 }
 
+function formatReportReason(value) {
+  if (!value) return 'Reported job';
+
+  return value
+    .toString()
+    .toLowerCase()
+    .split('_')
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
 export default function JobActionsManager() {
   const [activeTab, setActiveTab] = useState('saved');
   const [savedJobs, setSavedJobs] = useState([]);
@@ -196,7 +207,7 @@ export default function JobActionsManager() {
         
         {type === 'reports' && (
           <div className="mt-2 text-sm">
-            <div className="text-red-600 font-medium">Reason: {item.reason}</div>
+            <div className="text-red-600 font-medium">Reason: {formatReportReason(item.reason)}</div>
             {item.description && (
               <div className="text-gray-600 mt-1">{item.description}</div>
             )}
