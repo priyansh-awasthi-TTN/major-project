@@ -255,7 +255,7 @@ export default function ApplicationDetail() {
                 <p className="text-sm text-gray-500">{formatDate(application.appliedDate)}</p>
               </div>
             </div>
-            
+
             {application.status === 'interview' && (
               <div className="flex items-center gap-4">
                 <div className="w-3 h-3 bg-green-600 rounded-full"></div>
@@ -265,7 +265,7 @@ export default function ApplicationDetail() {
                 </div>
               </div>
             )}
-            
+
             {(application.status === 'accepted' || application.status === 'rejected') && (
               <div className="flex items-center gap-4">
                 <div className={`w-3 h-3 rounded-full ${application.status === 'accepted' ? 'bg-green-600' : 'bg-red-600'}`}></div>
@@ -274,7 +274,7 @@ export default function ApplicationDetail() {
                     Application {application.status === 'accepted' ? 'Accepted' : 'Rejected'}
                   </p>
                   <p className="text-sm text-gray-500">
-                    {application.status === 'accepted' 
+                    {application.status === 'accepted'
                       ? 'Congratulations! You have been selected for this position.'
                       : 'Thank you for your interest. We have decided to move forward with other candidates.'
                     }

@@ -27,8 +27,8 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
 
     @Query("SELECT a FROM Application a WHERE a.user = :user AND a.dateApplied BETWEEN :start AND :end ORDER BY a.dateApplied DESC")
     List<Application> findByUserAndDateRange(@Param("user") User user,
-                                              @Param("start") LocalDate start,
-                                              @Param("end") LocalDate end);
+            @Param("start") LocalDate start,
+            @Param("end") LocalDate end);
 
     @Query("SELECT a.status, COUNT(a) FROM Application a WHERE a.user = :user GROUP BY a.status")
     List<Object[]> countByUserGroupByStatus(@Param("user") User user);

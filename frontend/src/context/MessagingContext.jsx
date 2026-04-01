@@ -1,7 +1,8 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
+import apiService from '../services/api';
 
 const MessagingContext = createContext(null);
 
@@ -22,7 +23,7 @@ const colors = ['bg-orange-400', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500',
 export function MessagingProvider({ children }) {
   const { user } = useAuth();
   
-  const [networkUsers, setNetworkUsers] = useState([]);
+  const [conversations, setConversations] = useState([]);
   const [chatMap, setChatMap] = useState({}); // { [userId]: [{from, text, time, date}] }
   const [historyLoaded, setHistoryLoaded] = useState({}); // { [userId]: boolean }
 
@@ -36,24 +37,38 @@ export function MessagingProvider({ children }) {
   useEffect(() => { saveLS(LS_BLOCKED, blockedIds); }, [blockedIds]);
   useEffect(() => { saveLS(LS_META, metaMap); }, [metaMap]);
 
-  // Load Network Users
+  // Load existing conversations on mount
   useEffect(() => {
     if (!user) return;
-    const fetchUsers = async () => {
+    const fetchConversations = async () => {
       try {
-        const token = sessionStorage.getItem('accessToken');
-        const res = await fetch('http://localhost:8081/api/network/users', {
-          headers: { 'Authorization': `Bearer ${token}` }
+        const data = await apiService.getChatConversations();
+        setConversations(data);
+        
+        // Populate chatMap with lastMessages if available
+        const initMap = {};
+        const initRead = {...readMap};
+        data.forEach(conv => {
+          if (conv.lastMessage) {
+            const isMe = conv.lastMessage.senderId === user.id;
+            const dateObj = new Date(conv.lastMessage.timestamp || conv.lastMessage.createdAt);
+            initMap[conv.userId] = [{
+              from: isMe ? 'me' : 'them',
+              text: conv.lastMessage.content,
+              time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              date: dateObj
+            }];
+            if (conv.unreadCount > 0) initRead[conv.userId] = false;
+          }
         });
-        if (res.ok) {
-          const data = await res.json();
-          setNetworkUsers(data);
-        }
+        // Dont overwrite full chat history if already loaded
+        setChatMap(prev => ({ ...initMap, ...prev }));
+        setReadMap(prev => ({ ...initRead, ...prev }));
       } catch (e) {
-        console.error('Failed to fetch network users', e);
+        console.error('Failed to fetch conversations', e);
       }
     };
-    fetchUsers();
+    fetchConversations();
   }, [user]);
 
   // Handle STOMP connection
@@ -61,32 +76,43 @@ export function MessagingProvider({ children }) {
     if (!user) return;
     const token = sessionStorage.getItem('accessToken');
     
-    // Connect to WebSocket
+    // Connect to WebSocket using the appropriate fallback logic
     const client = new Client({
-      webSocketFactory: () => new SockJS(`http://localhost:8081/ws?token=${token}`),
+      // We use base 8080 API port
+      webSocketFactory: () => new SockJS(`http://localhost:8080/ws?token=${token}`),
       connectHeaders: {
         Authorization: `Bearer ${token}`
       },
-      debug: () => {}, // Disable debug logs
+      debug: () => {}, // Disable debug logs so it doesn't spam console
       onConnect: () => {
-        // Subscribe to my queue
-        client.subscribe(`/user/queue/messages`, (msg) => {
+        // Subscribe to my user-specific STOMP topic
+        client.subscribe(`/topic/messages/${user.id}`, (msg) => {
           const dto = JSON.parse(msg.body);
-          // It's from them (senderId is the other user)
-          const dateObj = new Date(dto.timestamp);
+          const isMe = dto.senderId === user.id;
+          const otherUserId = isMe ? dto.receiverId : dto.senderId;
+          const otherUserName = isMe ? dto.receiverName : dto.senderName;
+          
+          const dateObj = new Date(dto.timestamp || dto.createdAt || new Date());
           const incomingEntry = {
-            from: 'them',
+            from: isMe ? 'me' : 'them',
             text: dto.content,
             time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             date: dateObj
           };
-          const otherUserId = dto.senderId;
           
           setChatMap(prev => ({
             ...prev,
             [otherUserId]: [...(prev[otherUserId] || []), incomingEntry]
           }));
-          setReadMap(prev => ({ ...prev, [otherUserId]: false }));
+          
+          if (!isMe) {
+            setReadMap(prev => ({ ...prev, [otherUserId]: false }));
+            // Add to conversation list if brand new chat!
+            setConversations(prev => {
+              if (prev.find(c => c.userId === otherUserId)) return prev;
+              return [{ userId: otherUserId, userName: otherUserName, userEmail: dto.senderEmail, userType: 'COMPANY' }, ...prev];
+            });
+          }
         });
       },
       onStompError: (error) => {
@@ -105,58 +131,57 @@ export function MessagingProvider({ children }) {
   const loadHistoryForUser = useCallback(async (userId) => {
     if (historyLoaded[userId]) return;
     try {
-      const token = sessionStorage.getItem('accessToken');
-      const res = await fetch(`http://localhost:8081/api/messages/${userId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const historyData = await apiService.getChatMessages(userId);
+      const mappedChats = historyData.map(dto => {
+        const dateObj = new Date(dto.timestamp || dto.createdAt);
+        return {
+          from: dto.senderId === user.id ? 'me' : 'them',
+          text: dto.content,
+          time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          date: dateObj
+        };
       });
-      if (res.ok) {
-        const historyData = await res.json();
-        const mappedChats = historyData.map(dto => {
-          const dateObj = new Date(dto.timestamp);
-          return {
-            from: dto.senderId === user.id ? 'me' : 'them',
-            text: dto.content,
-            time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            date: dateObj
-          };
-        });
-        setChatMap(prev => ({ ...prev, [userId]: mappedChats }));
-        setHistoryLoaded(prev => ({ ...prev, [userId]: true }));
-      }
+      setChatMap(prev => ({ ...prev, [userId]: mappedChats }));
+      setHistoryLoaded(prev => ({ ...prev, [userId]: true }));
     } catch (e) {
       console.error('Failed to load history', e);
     }
   }, [user, historyLoaded]);
 
-  const messages = networkUsers.map((u, i) => {
-    const userChats = chatMap[u.id] || [];
+  // Construct message format required by UI
+  const messages = conversations.map(c => {
+    const userChats = chatMap[c.userId] || [];
     const lastChat = userChats[userChats.length - 1];
     
     return {
-      id: u.id,
-      name: u.fullName,
-      role: 'Jobseeker',
-      company: 'Platform',
-      avatar: u.fullName.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase(),
-      avatarColor: colors[u.id % colors.length],
-      isRead: readMap[u.id] ?? true,
+      id: c.userId,
+      name: c.userName || 'Unknown User',
+      role: c.userType === 'COMPANY' ? 'Company' : 'Jobseeker',
+      company: 'Platform User',
+      avatar: (c.userName || 'AA').split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase(),
+      avatarColor: colors[c.userId % colors.length],
+      isRead: readMap[c.userId] ?? true,
       time: lastChat ? lastChat.time : '',
       preview: lastChat ? lastChat.text : 'Click to start chatting...',
-      isPinned:   metaMap[u.id]?.isPinned   ?? false,
-      isStarred:  metaMap[u.id]?.isStarred  ?? false,
-      isMuted:    metaMap[u.id]?.isMuted    ?? false,
-      isArchived: metaMap[u.id]?.isArchived ?? false,
+      isPinned:   metaMap[c.userId]?.isPinned   ?? false,
+      isStarred:  metaMap[c.userId]?.isStarred  ?? false,
+      isMuted:    metaMap[c.userId]?.isMuted    ?? false,
+      isArchived: metaMap[c.userId]?.isArchived ?? false,
       chat: userChats
     };
   });
 
-  // Since we create conversations for ALL network users, we might want to sort them 
-  // or only show users we actually have chats with, but for now we list all.
   const visibleMessages  = messages.filter(m => !blockedIds.includes(m.id));
   const blockedMessages  = messages.filter(m =>  blockedIds.includes(m.id));
 
+  // Compute total unread for UI badging across apps!
+  const totalUnreadCount = useMemo(() => {
+    return visibleMessages.filter(m => !m.isRead).length;
+  }, [visibleMessages]);
+
   const markRead = useCallback((id) => {
     setReadMap(prev => ({ ...prev, [id]: true }));
+    apiService.markMessagesAsRead(id).catch(err => console.error("Failed to mark read", err));
   }, []);
 
   const updateMeta = useCallback((id, patch) => {
@@ -167,21 +192,17 @@ export function MessagingProvider({ children }) {
   }, []);
 
   const sendMessage = useCallback((recipientId, text) => {
-    if (stompClient.current && stompClient.current.active) {
-      const payload = { recipientId: recipientId, content: text };
-      stompClient.current.publish({ destination: '/app/chat', body: JSON.stringify(payload) });
+    if (stompClient.current && stompClient.current.active && user) {
+      const payload = { senderId: user.id, recipientId: recipientId, content: text };
+      stompClient.current.publish({ destination: '/app/chat.send', body: JSON.stringify(payload) });
       
-      const outgoingEntry = {
-        from: 'me',
-        text,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        date: new Date()
-      };
-      setChatMap(prev => ({ ...prev, [recipientId]: [...(prev[recipientId] || []), outgoingEntry] }));
+      // Real-time optimistic update is no longer strictly needed if the server bounces it back to our topic!
+      // But we can still do it, or wait for the stomp subscriber. The socket broadcast covers both!
+      // Here we wait for server broadcast to avoid double messages.
     } else {
       console.error('STOMP client is not connected');
     }
-  }, []);
+  }, [user]);
 
   const blockUser = useCallback((id) => {
     setBlockedIds(prev => prev.includes(id) ? prev : [...prev, id]);
@@ -189,6 +210,14 @@ export function MessagingProvider({ children }) {
 
   const unblockUser = useCallback((id) => {
     setBlockedIds(prev => prev.filter(x => x !== id));
+  }, []);
+
+  // Ability to manually start a chat with someone not in the conversation list yet
+  const startNewChat = useCallback((userId, userName, userEmail, userType) => {
+    setConversations(prev => {
+      if (prev.find(c => c.userId === userId)) return prev;
+      return [{ userId, userName, userEmail, userType }, ...prev];
+    });
   }, []);
 
   return (
@@ -202,6 +231,8 @@ export function MessagingProvider({ children }) {
       blockUser,
       unblockUser,
       loadHistoryForUser,
+      startNewChat,
+      totalUnreadCount, // <-- new
     }}>
       {children}
     </MessagingContext.Provider>

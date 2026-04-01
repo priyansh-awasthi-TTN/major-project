@@ -1,14 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-
-const LS_KEY = 'jh_company_messages';
-
-function getUnreadCount() {
-  try {
-    const msgs = JSON.parse(sessionStorage.getItem(LS_KEY)) || [];
-    return msgs.filter(m => m.unread).length;
-  } catch { return 0; }
-}
+import { useMessaging } from '../context/MessagingContext';
 
 const NAV = [
   { label: 'Dashboard',       icon: '🏠', path: '/company/dashboard' },
@@ -27,8 +19,8 @@ const SETTINGS = [
 export default function CompanySidebar() {
   const { pathname } = useLocation();
   const { user } = useAuth();
+  const { totalUnreadCount: unread } = useMessaging();
 
-  const unread = getUnreadCount();
   const displayName = user?.fullName || 'Company';
   const initials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 

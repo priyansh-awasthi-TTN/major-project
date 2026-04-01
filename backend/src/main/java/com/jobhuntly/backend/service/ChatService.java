@@ -43,16 +43,14 @@ public class ChatService {
         ChatMessageDTO messageDTO = convertToDTO(savedMessage);
         
         // Send real-time notification to receiver
-        messagingTemplate.convertAndSendToUser(
-            receiver.getEmail(),
-            "/queue/messages",
+        messagingTemplate.convertAndSend(
+            "/topic/messages/" + receiver.getId(),
             messageDTO
         );
         
         // Also send to sender for confirmation
-        messagingTemplate.convertAndSendToUser(
-            sender.getEmail(),
-            "/queue/messages",
+        messagingTemplate.convertAndSend(
+            "/topic/messages/" + sender.getId(),
             messageDTO
         );
         
@@ -134,9 +132,8 @@ public class ChatService {
         readNotification.put("readByUserId", user.getId());
         readNotification.put("readByUserName", user.getFullName());
         
-        messagingTemplate.convertAndSendToUser(
-            otherUser.getEmail(),
-            "/queue/notifications",
+        messagingTemplate.convertAndSend(
+            "/topic/messages/" + otherUser.getId() + "/notifications",
             readNotification
         );
     }

@@ -22,9 +22,8 @@ export default function DashboardSidebar() {
   const { pathname } = useLocation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { messages } = useMessaging();
+  const { totalUnreadCount } = useMessaging();
 
-  const unreadCount = messages.filter(m => !m.isRead && !m.isArchived).length;
 
   const displayName  = user?.fullName || 'User';
   const displayEmail = user?.email    || 'user@email.com';
@@ -53,7 +52,7 @@ export default function DashboardSidebar() {
 
         <nav className="space-y-1">
           {navItems.map(item => {
-            const badge = item.label === 'Messages' && unreadCount > 0 ? unreadCount : null;
+            const badge = item.label === 'Messages' && totalUnreadCount > 0 ? totalUnreadCount : null;
             return (
               <Link key={item.path} to={item.path}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${item.match(pathname) ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}>

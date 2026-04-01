@@ -19,20 +19,27 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/applications")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
+@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:3000" })
 public class ApplicationController {
 
-    @Autowired private ApplicationRepository applicationRepository;
-    @Autowired private JobRepository jobRepository;
-    @Autowired private UserRepository userRepository;
-    @Autowired private JwtService jwtService;
-    @Autowired private TokenService tokenService;
+    @Autowired
+    private ApplicationRepository applicationRepository;
+    @Autowired
+    private JobRepository jobRepository;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private JwtService jwtService;
+    @Autowired
+    private TokenService tokenService;
 
     private User resolveUser(HttpServletRequest request) {
         String header = request.getHeader("Authorization");
-        if (header == null || !header.startsWith("Bearer ")) throw new RuntimeException("Unauthorized");
+        if (header == null || !header.startsWith("Bearer "))
+            throw new RuntimeException("Unauthorized");
         String token = header.substring(7);
-        if (!tokenService.isAccessTokenValid(token)) throw new RuntimeException("Invalid token");
+        if (!tokenService.isAccessTokenValid(token))
+            throw new RuntimeException("Invalid token");
         String email = jwtService.extractUsername(token);
         return userRepository.findByEmailAndIsActiveTrue(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -43,7 +50,8 @@ public class ApplicationController {
         m.put("id", a.getId());
         m.put("jobId", a.getJobId());
         m.put("company", a.getCompany());
-        m.put("logo", a.getLogo() != null ? a.getLogo() : a.getCompany().substring(0, Math.min(2, a.getCompany().length())).toUpperCase());
+        m.put("logo", a.getLogo() != null ? a.getLogo()
+                : a.getCompany().substring(0, Math.min(2, a.getCompany().length())).toUpperCase());
         m.put("color", a.getColor() != null ? a.getColor() : "bg-blue-600");
         m.put("location", a.getLocation());
         m.put("title", a.getTitle());
@@ -158,13 +166,14 @@ public class ApplicationController {
     // PATCH /api/applications/{id}/status — update status
     @PatchMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(@PathVariable Long id,
-                                           @RequestBody Map<String, String> body,
-                                           HttpServletRequest request) {
+            @RequestBody Map<String, String> body,
+            HttpServletRequest request) {
         try {
             User user = resolveUser(request);
             Application app = applicationRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Application not found"));
-            if (!app.getUser().getId().equals(user.getId())) return ResponseEntity.status(403).build();
+            if (!app.getUser().getId().equals(user.getId()))
+                return ResponseEntity.status(403).build();
             app.setStatus(body.get("status"));
             return ResponseEntity.ok(toMap(applicationRepository.save(app)));
         } catch (Exception e) {
@@ -179,7 +188,8 @@ public class ApplicationController {
             User user = resolveUser(request);
             Application app = applicationRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Application not found"));
-            if (!app.getUser().getId().equals(user.getId())) return ResponseEntity.status(403).build();
+            if (!app.getUser().getId().equals(user.getId()))
+                return ResponseEntity.status(403).build();
             applicationRepository.delete(app);
             return ResponseEntity.ok(Map.of("message", "Deleted"));
         } catch (Exception e) {
