@@ -40,6 +40,20 @@ public class JobActionService {
             return null;
         }
     }
+
+    private Map<String, Object> parseMetadata(String metadata) {
+        if (metadata == null || metadata.isBlank()) {
+            return new LinkedHashMap<>();
+        }
+
+        try {
+            return objectMapper.readValue(metadata, LinkedHashMap.class);
+        } catch (Exception ignored) {
+            Map<String, Object> fallback = new LinkedHashMap<>();
+            fallback.put("value", metadata);
+            return fallback;
+        }
+    }
     
     // Unified Job Action functionality
     @Transactional
@@ -90,6 +104,32 @@ public class JobActionService {
         
         response.put("success", true);
         response.put("message", getRemoveSuccessMessage(actionType));
+        return response;
+    }
+
+    @Transactional
+    public Map<String, Object> markReadingListItemAsRead(String userEmail, Long jobId) {
+        User user = userRepository.findByEmail(userEmail)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Job job = jobRepository.findById(jobId)
+            .orElseThrow(() -> new RuntimeException("Job not found"));
+
+        JobAction readingItem = jobActionRepository.findByUserAndJobAndActionType(user, job, JobAction.ActionType.READ_LATER);
+        if (readingItem == null) {
+            throw new RuntimeException("Job is not in your reading list");
+        }
+
+        Map<String, Object> metadata = parseMetadata(readingItem.getMetadata());
+        metadata.put("isRead", true);
+        readingItem.setMetadata(toMetadataJson(metadata));
+        jobActionRepository.save(readingItem);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Reading list item marked as read");
+        response.put("jobId", jobId);
+        response.put("isRead", true);
         return response;
     }
     
@@ -187,7 +227,7 @@ public class JobActionService {
         
         Job job = jobRepository.findById(jobId)
             .orElseThrow(() -> new RuntimeException("Job not found"));
-        
+
         return jobActionRepository.existsByUserAndJobAndActionType(user, job, actionType);
     }
     

@@ -202,6 +202,19 @@ public class JobActionController {
             return ResponseEntity.badRequest().body(error);
         }
     }
+
+    @PatchMapping("/reading-list/{jobId}/read")
+    public ResponseEntity<?> markAsRead(@PathVariable Long jobId, Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            Map<String, Object> response = jobActionService.markReadingListItemAsRead(email, jobId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
     
     @GetMapping("/reading-list")
     public ResponseEntity<?> getReadingList(Authentication authentication) {

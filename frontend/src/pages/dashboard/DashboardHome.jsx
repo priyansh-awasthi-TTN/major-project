@@ -349,7 +349,7 @@ export default function DashboardHome() {
     { 
       icon: '👁️', 
       label: 'View Details', 
-      action: () => navigate(`/dashboard/jobs/${app.jobId}`)
+      action: () => navigate(`/dashboard/applications/${app.id}`)
     },
     { 
       icon: '📄', 
@@ -393,7 +393,7 @@ export default function DashboardHome() {
   ];
 
   const handleApplicationClick = (app) => {
-    navigate(`/dashboard/jobs/${app.jobId}`);
+    navigate(`/dashboard/applications/${app.id}`);
   };
 
   return (

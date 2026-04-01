@@ -17,6 +17,8 @@ public interface JobActionRepository extends JpaRepository<JobAction, Long> {
     
     // Check if action exists
     boolean existsByUserAndJobAndActionType(User user, Job job, JobAction.ActionType actionType);
+
+    JobAction findByUserAndJobAndActionType(User user, Job job, JobAction.ActionType actionType);
     
     // Delete specific action
     @Modifying

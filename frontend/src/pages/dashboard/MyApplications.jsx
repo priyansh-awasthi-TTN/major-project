@@ -365,7 +365,7 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast }) {
 
 // ── Menu items ────────────────────────────────────────────────────────────────
 const buildMenuItems = (app, onRemove, navigate, onMessageRecruiter) => [
-  { icon: '👁️', label: 'View Details', action: () => navigate(`/dashboard/jobs/${app.jobId}`) },
+  { icon: '👁️', label: 'View Details', action: () => navigate(`/dashboard/applications/${app.id}`) },
   { icon: '📄', label: 'View Job Posting', action: () => navigate(`/dashboard/jobs/${app.jobId}`) },
   {
     icon: '✉️', label: 'Message Recruiter',
