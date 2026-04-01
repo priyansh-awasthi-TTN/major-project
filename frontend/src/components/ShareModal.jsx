@@ -3,6 +3,12 @@ import ApiService from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from './Toast';
 
+const notifyJobActionsUpdated = (actionType, jobId) => {
+  window.dispatchEvent(new CustomEvent('job-actions:updated', {
+    detail: { actionType, jobId },
+  }));
+};
+
 export default function ShareModal({ isOpen, onClose, job, url }) {
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -83,6 +89,9 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
     setLoading(true);
     try {
       const response = await ApiService.saveJob(job.id);
+      if (response.success || response.alreadyExists) {
+        notifyJobActionsUpdated('saved', job.id);
+      }
       if (response.success) {
         showToast(response.message, 'success');
       } else {
@@ -116,6 +125,9 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
     setLoading(true);
     try {
       const response = await ApiService.addToReadingList(job.id);
+      if (response.success || response.alreadyExists) {
+        notifyJobActionsUpdated('reading', job.id);
+      }
       if (response.success) {
         showToast(response.message, 'success');
       } else {
@@ -149,6 +161,9 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
     setLoading(true);
     try {
       const response = await ApiService.reportJob(job.id, reason, description);
+      if (response.success || response.alreadyExists) {
+        notifyJobActionsUpdated('reports', job.id);
+      }
       if (response.success) {
         showToast(response.message, 'success');
       } else {
@@ -171,7 +186,10 @@ export default function ShareModal({ isOpen, onClose, job, url }) {
   const handleShareJob = async (shareMethod) => {
     if (user && job?.id) {
       try {
-        await ApiService.shareJob(job.id, shareMethod);
+        const response = await ApiService.shareJob(job.id, shareMethod);
+        if (response?.success || response?.alreadyExists) {
+          notifyJobActionsUpdated('shared', job.id);
+        }
         showToast('Job shared successfully', 'success');
       } catch (error) {
         console.error('Share job error:', error);

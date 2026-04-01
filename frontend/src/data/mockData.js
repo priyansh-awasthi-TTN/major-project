@@ -40,6 +40,48 @@ export const companies = [
   { id: 28, name: 'Spotify',    description: 'Spotify is a digital music, podcast, and video service that gives you access to millions of songs.', logo: 'Sp', color: 'bg-green-500',  jobs: 9,  tags: ['Technology', 'Media'],            industry: 'Media',           size: '1001+' },
 ];
 
+export const companyOfficeLocations = {
+  1: ['San Francisco, USA', 'Dublin, Ireland', 'Singapore'],
+  2: ['San Francisco, USA', 'New York, USA'],
+  3: ['San Francisco, USA', 'Toronto, Canada'],
+  4: ['New York, USA', 'Remote'],
+  5: ['Menlo Park, USA', 'New York, USA'],
+  6: ['San Francisco, USA', 'Berlin, Germany'],
+  7: ['London, UK', 'Madrid, Spain'],
+  8: ['Salt Lake City, USA', 'Remote'],
+  9: ['Paris, France', 'Remote'],
+  10: ['San Francisco, USA', 'Remote'],
+  11: ['Paris, France', 'London, UK'],
+  12: ['Mountain View, USA', 'Remote'],
+  13: ['San Francisco, USA', 'Remote'],
+  14: ['New York, USA', 'Remote'],
+  15: ['London, UK', 'New York, USA'],
+  16: ['London, UK', 'New York, USA'],
+  17: ['San Francisco, USA', 'Remote'],
+  18: ['Amsterdam, Netherlands', 'New York, USA'],
+  19: ['Madrid, Spain', 'Remote'],
+  20: ['San Francisco, USA', 'Dublin, Ireland'],
+  21: ['San Francisco, USA', 'New York, USA'],
+  22: ['Redmond, USA', 'London, UK'],
+  23: ['Cupertino, USA', 'Austin, USA'],
+  24: ['Menlo Park, USA', 'London, UK'],
+  25: ['Mountain View, USA', 'Hyderabad, India'],
+  26: ['Los Gatos, USA', 'Los Angeles, USA'],
+  27: ['San Francisco, USA', 'Singapore'],
+  28: ['Stockholm, Sweden', 'New York, USA'],
+};
+
+const isOfficeLocation = (location) => (location || '').trim().toLowerCase() !== 'remote';
+
+export const getCompanyOfficeLocations = (companyId) =>
+  (companyOfficeLocations[companyId] || []).filter(isOfficeLocation);
+
+export const allOfficeLocations = [...new Set(
+  Object.values(companyOfficeLocations)
+    .flat()
+    .filter(isOfficeLocation)
+)].sort((left, right) => left.localeCompare(right));
+
 export const categories = [
   { name: 'Design', icon: '🎨', jobs: 235 },
   { name: 'Sales', icon: '📈', jobs: 756 },

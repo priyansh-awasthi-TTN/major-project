@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import DashTopBar from '../../components/DashTopBar';
 import Toast from '../../components/Toast';
 import MessageRecruiterModal from '../../components/MessageRecruiterModal';
-import { messages } from '../../data/mockdata';
+import { messages } from '../../data/mockData';
 import apiService from '../../services/api';
 
 const LS_CAL = 'jh_calendarDate';

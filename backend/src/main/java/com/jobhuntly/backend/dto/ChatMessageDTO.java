@@ -12,6 +12,7 @@ public class ChatMessageDTO {
     private String receiverEmail;
     private String content;
     private String messageType;
+    private String fileUrl;
     private LocalDateTime createdAt;
     private boolean isRead;
     
@@ -20,7 +21,7 @@ public class ChatMessageDTO {
     
     public ChatMessageDTO(Long id, Long senderId, String senderName, String senderEmail,
                          Long receiverId, String receiverName, String receiverEmail,
-                         String content, String messageType, LocalDateTime createdAt, boolean isRead) {
+                         String content, String messageType, String fileUrl, LocalDateTime createdAt, boolean isRead) {
         this.id = id;
         this.senderId = senderId;
         this.senderName = senderName;
@@ -30,6 +31,7 @@ public class ChatMessageDTO {
         this.receiverEmail = receiverEmail;
         this.content = content;
         this.messageType = messageType;
+        this.fileUrl = fileUrl;
         this.createdAt = createdAt;
         this.isRead = isRead;
     }
@@ -61,7 +63,10 @@ public class ChatMessageDTO {
     
     public String getMessageType() { return messageType; }
     public void setMessageType(String messageType) { this.messageType = messageType; }
-    
+
+    public String getFileUrl() { return fileUrl; }
+    public void setFileUrl(String fileUrl) { this.fileUrl = fileUrl; }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     

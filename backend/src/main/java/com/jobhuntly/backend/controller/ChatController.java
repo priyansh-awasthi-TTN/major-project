@@ -107,7 +107,13 @@ class ChatWebSocketController {
         // Assuming payload has senderId:
         User sender = userRepository.findById(payload.getSenderId()).orElse(null);
         if (sender != null) {
-            chatService.sendMessage(sender.getEmail(), payload.getRecipientId(), payload.getContent(), "TEXT");
+            chatService.sendMessage(
+                sender.getEmail(),
+                payload.getRecipientId(),
+                payload.getContent(),
+                payload.getMessageType(),
+                payload.getFileUrl()
+            );
         }
     }
 
@@ -115,6 +121,8 @@ class ChatWebSocketController {
         private Long senderId;
         private Long recipientId;
         private String content;
+        private String messageType;
+        private String fileUrl;
 
         public Long getSenderId() { return senderId; }
         public void setSenderId(Long senderId) { this.senderId = senderId; }
@@ -124,5 +132,11 @@ class ChatWebSocketController {
 
         public String getContent() { return content; }
         public void setContent(String content) { this.content = content; }
+
+        public String getMessageType() { return messageType; }
+        public void setMessageType(String messageType) { this.messageType = messageType; }
+
+        public String getFileUrl() { return fileUrl; }
+        public void setFileUrl(String fileUrl) { this.fileUrl = fileUrl; }
     }
 }

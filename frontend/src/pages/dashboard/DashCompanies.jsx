@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { companies } from '../../data/mockdata';
+import { allOfficeLocations, companies, getCompanyOfficeLocations } from '../../data/mockData';
 import DashTopBar from '../../components/DashTopBar';
 
 
@@ -107,7 +107,7 @@ export default function DashCompanies() {
       const matchSearch = !q || c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q) || c.tags.some(t => t.toLowerCase().includes(q));
       const matchIndustry = selIndustry.length === 0 || selIndustry.includes(c.industry);
       const matchSize     = selSize.length === 0     || selSize.includes(c.size);
-      const matchLoc      = !location.trim() || (c.location || c.description).toLowerCase().includes(location.trim().toLowerCase());
+      const matchLoc      = !location || getCompanyOfficeLocations(c.id).includes(location);
       return matchSearch && matchIndustry && matchSize && matchLoc;
     });
 
@@ -116,13 +116,13 @@ export default function DashCompanies() {
     else if (sortBy === 'Z-A')  result = [...result].sort((a, b) => b.name.localeCompare(a.name));
 
     return result;
-  }, [search, selIndustry, selSize, sortBy]);
+  }, [search, location, selIndustry, selSize, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const clearAll = () => { setSelIndustry([]); setSelSize([]); setSearch(''); setPage(1); };
-  const hasFilters = selIndustry.length || selSize.length;
+  const clearAll = () => { setSelIndustry([]); setSelSize([]); setSearch(''); setLocation(''); setPage(1); };
+  const hasFilters = selIndustry.length || selSize.length || location.trim();
 
   return (
     <div className="flex-1 flex flex-col h-full bg-gray-50">
@@ -140,9 +140,19 @@ export default function DashCompanies() {
           </div>
           <div className="flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2.5 min-w-52">
             <span className="text-gray-400 text-sm">📍</span>
-            <input value={location} onChange={e => setLocation(e.target.value)}
-              className="flex-1 text-sm outline-none text-gray-700" placeholder="Location" />
-            <span className="text-gray-300 text-xs">▼</span>
+            <select
+              value={location}
+              onChange={e => {
+                setLocation(e.target.value);
+                setPage(1);
+              }}
+              className="flex-1 bg-transparent text-sm outline-none text-gray-700"
+            >
+              <option value="">All office locations</option>
+              {allOfficeLocations.map(option => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
           </div>
           <button onClick={() => setPage(1)}
             className="bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition">
@@ -207,12 +217,13 @@ export default function DashCompanies() {
           {/* Active filter chips */}
           {hasFilters ? (
             <div className="flex flex-wrap gap-2 mb-4">
-              {[...selIndustry, ...selSize].map(f => (
+              {[...selIndustry, ...selSize, ...(location.trim() ? [`Location: ${location.trim()}`] : [])].map(f => (
                 <span key={f} className="flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-full border border-blue-200">
                   {f}
                   <button onClick={() => {
                     if (selIndustry.includes(f)) toggle(selIndustry, setSelIndustry, f);
-                    else toggle(selSize, setSelSize, f);
+                    else if (selSize.includes(f)) toggle(selSize, setSelSize, f);
+                    else setLocation('');
                     setPage(1);
                   }} className="ml-0.5 hover:text-red-500">✕</button>
                 </span>

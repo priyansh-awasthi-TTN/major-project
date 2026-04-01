@@ -1,17 +1,8 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { companies, jobs } from '../../data/mockdata';
-import apiService from '../../services/api';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { companies, getCompanyOfficeLocations } from '../../data/mockData';
 import DashTopBar from '../../components/DashTopBar';
-
-const companyJobs = {
-  1: [1, 2, 3, 4, 5, 6],
-  2: [2, 3], 3: [3, 7], 4: [6, 8], 5: [5, 1],
-  6: [3, 6], 7: [4, 8], 8: [7, 3], 9: [1, 2],
-  10: [2, 6], 11: [6, 3], 12: [1, 3], 13: [2, 5],
-  14: [6, 7], 15: [2, 6], 16: [2, 8], 17: [6, 3],
-  18: [1, 2], 19: [8, 3], 20: [2, 3],
-};
+import apiService from '../../services/api';
 
 const perks = [
   { icon: '🏥', label: 'Full Healthcare', desc: 'We believe in thriving communities and that starts with our team being happy and healthy.' },
@@ -38,25 +29,35 @@ export default function DashCompanyProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
   let company = companies.find(c => c.id === Number(id) || String(c.name).toLowerCase() === String(id).toLowerCase());
-  
+
   if (!company) {
     company = {
-      id: id,
+      id,
       name: String(id),
       logo: String(id).substring(0, 1).toUpperCase(),
       color: 'bg-indigo-500',
       description: '',
       industry: 'Technology',
-      jobs: 0
+      jobs: 0,
     };
   }
 
   const [realJobs, setRealJobs] = useState([]);
+
   useEffect(() => {
-    apiService.getJobs().then(data => {
-      if (data) setRealJobs(data.filter(j => (j.company || '').toLowerCase() === company.name.toLowerCase()));
-    }).catch(console.error);
+    apiService.getJobs()
+      .then(data => {
+        if (data) {
+          setRealJobs(data.filter(job => (job.company || '').toLowerCase() === company.name.toLowerCase()));
+        }
+      })
+      .catch(console.error);
   }, [company.name]);
+
+  const officeLocations = getCompanyOfficeLocations(company.id);
+  const officeLocationSummary = officeLocations.length === 1
+    ? '1 office location'
+    : `${officeLocations.length} office locations`;
 
   return (
     <div className="flex-1 flex flex-col h-full bg-gray-50">
@@ -73,10 +74,7 @@ export default function DashCompanyProfile() {
       <div className="overflow-y-auto flex-1">
         <div className="max-w-6xl mx-auto px-8 py-8">
           <div className="grid grid-cols-3 gap-6">
-            {/* Main */}
             <div className="col-span-2 space-y-6">
-
-              {/* Header */}
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <div className="h-28 bg-gradient-to-r from-blue-500 to-purple-600" />
                 <div className="px-6 pb-6">
@@ -91,13 +89,12 @@ export default function DashCompanyProfile() {
                   <div className="flex gap-6 text-sm text-gray-500">
                     <span>📅 Founded: July 31, 2011</span>
                     <span>👥 4000+</span>
-                    <span>📍 36 countries</span>
+                    <span>📍 {officeLocationSummary}</span>
                     <span>🏷️ {company.industry}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Company Profile */}
               <div className="bg-white rounded-xl p-6 border border-gray-200">
                 <h2 className="font-bold text-gray-900 mb-3">Company Profile</h2>
                 <p className="text-sm text-gray-600 leading-relaxed mb-4">
@@ -122,17 +119,16 @@ export default function DashCompanyProfile() {
                 </div>
               </div>
 
-              {/* Team */}
               <div className="bg-white rounded-xl p-6 border border-gray-200">
                 <div className="flex justify-between items-center mb-5">
                   <h2 className="font-bold text-gray-900">Team</h2>
                   <button className="text-blue-600 text-sm hover:underline">See all (47) →</button>
                 </div>
                 <div className="flex gap-5">
-                  {teamMembers.map((member, i) => (
+                  {teamMembers.map((member, index) => (
                     <div key={member.name} className="text-center">
-                      <div className={`w-14 h-14 rounded-full ${avatarColors[i]} mx-auto mb-2 flex items-center justify-center text-white font-bold text-lg`}>
-                        {member.name.split(' ').map(n => n[0]).join('')}
+                      <div className={`w-14 h-14 rounded-full ${avatarColors[index]} mx-auto mb-2 flex items-center justify-center text-white font-bold text-lg`}>
+                        {member.name.split(' ').map(name => name[0]).join('')}
                       </div>
                       <p className="text-xs font-medium text-gray-700">{member.name.split(' ')[0]}</p>
                       <p className="text-xs text-gray-400">{member.name.split(' ')[1]}</p>
@@ -141,7 +137,6 @@ export default function DashCompanyProfile() {
                 </div>
               </div>
 
-              {/* Perks */}
               <div className="bg-white rounded-xl p-6 border border-gray-200">
                 <h2 className="font-bold text-gray-900 mb-1">Perks & Benefits</h2>
                 <p className="text-sm text-gray-400 mb-5">This job comes with several perks and benefits</p>
@@ -156,36 +151,34 @@ export default function DashCompanyProfile() {
                 </div>
               </div>
 
-              {/* Reviews */}
               <div className="bg-white rounded-xl p-6 border border-gray-200">
                 <div className="flex justify-between items-center mb-5">
-                   <h2 className="font-bold text-gray-900">Company Reviews</h2>
-                   <span className="text-sm font-bold text-green-600 px-3 py-1 bg-green-50 rounded-full">★ 4.8 Average</span>
+                  <h2 className="font-bold text-gray-900">Company Reviews</h2>
+                  <span className="text-sm font-bold text-green-600 px-3 py-1 bg-green-50 rounded-full">★ 4.8 Average</span>
                 </div>
                 <div className="space-y-4">
                   <div className="border-b border-gray-100 pb-4">
-                     <p className="font-semibold text-gray-800 text-sm">"Great work-life balance and supportive team"</p>
-                     <div className="flex items-center gap-2 mt-1 mb-2 text-xs text-gray-500">
-                        <span className="text-yellow-400">★★★★☆</span>
-                        <span>• Current Employee</span>
-                        <span>• 2 months ago</span>
-                     </div>
-                     <p className="text-xs text-gray-600 leading-relaxed">The management is very transparent and genuinely cares about your growth. Flexible remote options are honored without micro-management.</p>
+                    <p className="font-semibold text-gray-800 text-sm">"Great work-life balance and supportive team"</p>
+                    <div className="flex items-center gap-2 mt-1 mb-2 text-xs text-gray-500">
+                      <span className="text-yellow-400">★★★★☆</span>
+                      <span>• Current Employee</span>
+                      <span>• 2 months ago</span>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed">The management is very transparent and genuinely cares about your growth. Flexible remote options are honored without micro-management.</p>
                   </div>
                   <div>
-                     <p className="font-semibold text-gray-800 text-sm">"Fast paced but highly rewarding"</p>
-                     <div className="flex items-center gap-2 mt-1 mb-2 text-xs text-gray-500">
-                        <span className="text-yellow-400">★★★★★</span>
-                        <span>• Former Employee</span>
-                        <span>• 10 months ago</span>
-                     </div>
-                     <p className="text-xs text-gray-600 leading-relaxed">You will learn a lot in a short amount of time. The benefits are top-tier and the compensation reviews occur bi-annually.</p>
+                    <p className="font-semibold text-gray-800 text-sm">"Fast paced but highly rewarding"</p>
+                    <div className="flex items-center gap-2 mt-1 mb-2 text-xs text-gray-500">
+                      <span className="text-yellow-400">★★★★★</span>
+                      <span>• Former Employee</span>
+                      <span>• 10 months ago</span>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed">You will learn a lot in a short amount of time. The benefits are top-tier and the compensation reviews occur bi-annually.</p>
                   </div>
                   <button className="text-blue-600 text-xs font-medium hover:underline w-full text-center mt-2">See all 142 reviews</button>
                 </div>
               </div>
 
-              {/* Open Jobs */}
               <div>
                 <div className="flex justify-between items-center mb-4 mt-2">
                   <h2 className="text-xl font-bold text-gray-900">Open Jobs</h2>
@@ -194,14 +187,19 @@ export default function DashCompanyProfile() {
                 <div className="grid grid-cols-2 gap-4">
                   {realJobs.length === 0 ? (
                     <div className="col-span-2 bg-white rounded-xl p-8 border border-gray-200 text-center">
-                       <p className="text-gray-500 text-sm font-medium">No open positions currently available</p>
+                      <p className="text-gray-500 text-sm font-medium">No open positions currently available</p>
                     </div>
                   ) : (
                     realJobs.map(job => (
-                      <Link key={job.id} to={`/dashboard/jobs/${job.id}`}
-                        className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition block">
+                      <Link
+                        key={job.id}
+                        to={`/dashboard/jobs/${job.id}`}
+                        className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition block"
+                      >
                         <div className="flex items-start gap-3 mb-3">
-                          <div className={`${job.color || 'bg-blue-500'} text-white rounded-xl w-10 h-10 flex items-center justify-center font-bold flex-shrink-0`}>{job.logo || company.logo}</div>
+                          <div className={`${job.color || 'bg-blue-500'} text-white rounded-xl w-10 h-10 flex items-center justify-center font-bold flex-shrink-0`}>
+                            {job.logo || company.logo}
+                          </div>
                           <div className="flex-1">
                             <h3 className="font-semibold text-gray-900 text-sm">{job.title}</h3>
                             <p className="text-xs text-gray-500 mt-0.5">{job.company} • {job.location}</p>
@@ -209,8 +207,8 @@ export default function DashCompanyProfile() {
                         </div>
                         <div className="flex flex-wrap gap-2 mb-3">
                           <span className="text-xs border border-green-500 text-green-600 rounded px-2 py-0.5">{job.type}</span>
-                          {((typeof job.categories === 'string' ? job.categories.split(',') : (job.categories || []))).map(c => (
-                            <span key={c} className={`text-xs rounded px-2 py-0.5 border bg-orange-50 text-orange-600 border-orange-200`}>{c}</span>
+                          {((typeof job.categories === 'string' ? job.categories.split(',') : (job.categories || []))).map(category => (
+                            <span key={category} className="text-xs rounded px-2 py-0.5 border bg-orange-50 text-orange-600 border-orange-200">{category}</span>
                           ))}
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-1.5 mb-1">
@@ -222,16 +220,14 @@ export default function DashCompanyProfile() {
                   )}
                 </div>
               </div>
-
             </div>
 
-            {/* Sidebar */}
             <div className="space-y-4">
               <div className="bg-white rounded-xl p-5 border border-gray-200">
                 <h3 className="font-semibold text-gray-900 mb-4">Tech Stack</h3>
                 <div className="flex flex-wrap gap-2">
-                  {['HTML5', 'CSS3', 'JavaScript', 'Ruby', 'Atom', 'Twitter'].map(t => (
-                    <span key={t} className="text-xs bg-gray-100 text-gray-700 rounded px-2 py-1">⚙️ {t}</span>
+                  {['HTML5', 'CSS3', 'JavaScript', 'Ruby', 'Atom', 'Twitter'].map(tech => (
+                    <span key={tech} className="text-xs bg-gray-100 text-gray-700 rounded px-2 py-1">⚙️ {tech}</span>
                   ))}
                 </div>
                 <button className="text-blue-600 text-xs mt-3 hover:underline">View tech stack →</button>
@@ -239,13 +235,19 @@ export default function DashCompanyProfile() {
 
               <div className="bg-white rounded-xl p-5 border border-gray-200">
                 <h3 className="font-semibold text-gray-900 mb-4">Office Location</h3>
-                <p className="text-sm text-gray-500 mb-3">{company.name} operates across multiple countries</p>
+                <p className="text-sm text-gray-500 mb-3">
+                  {officeLocations.length > 0
+                    ? `${company.name} operates across ${officeLocationSummary}`
+                    : `${company.name} will share office locations soon`}
+                </p>
                 <div className="space-y-2 text-sm">
-                  {['🇺🇸 United States', '🏴󠁧󠁢󠁥󠁮󠁧󠁿 England', '🇯🇵 Japan', '🇦🇺 Australia', '🇨🇳 China'].map(loc => (
-                    <p key={loc} className="text-gray-600">{loc}</p>
-                  ))}
+                  {officeLocations.length > 0 ? officeLocations.map(location => (
+                    <p key={location} className="text-gray-600">{location}</p>
+                  )) : (
+                    <p className="text-gray-400">Office locations coming soon</p>
+                  )}
                 </div>
-                <button className="text-blue-600 text-xs mt-3 hover:underline">View countries →</button>
+                <button className="text-blue-600 text-xs mt-3 hover:underline">View locations →</button>
               </div>
             </div>
           </div>

@@ -29,6 +29,9 @@ public class ChatMessage {
     
     @Column(name = "message_type")
     private String messageType = "TEXT"; // TEXT, IMAGE, FILE, etc.
+
+    @Column(name = "file_url")
+    private String fileUrl;
     
     // Constructors
     public ChatMessage() {
@@ -45,6 +48,11 @@ public class ChatMessage {
     public ChatMessage(User sender, User receiver, String content, String messageType) {
         this(sender, receiver, content);
         this.messageType = messageType;
+    }
+
+    public ChatMessage(User sender, User receiver, String content, String messageType, String fileUrl) {
+        this(sender, receiver, content, messageType);
+        this.fileUrl = fileUrl;
     }
     
     // Getters and Setters
@@ -68,4 +76,7 @@ public class ChatMessage {
     
     public String getMessageType() { return messageType; }
     public void setMessageType(String messageType) { this.messageType = messageType; }
+
+    public String getFileUrl() { return fileUrl; }
+    public void setFileUrl(String fileUrl) { this.fileUrl = fileUrl; }
 }

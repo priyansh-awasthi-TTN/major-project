@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { companies, jobs } from '../data/mockdata';
+import { companies, getCompanyOfficeLocations, jobs } from '../data/mockData';
 
 const companyJobs = {
   1: [1, 2, 3, 4, 5, 6],
@@ -50,6 +50,10 @@ export default function CompanyProfile() {
   const company = companies.find(c => c.id === Number(id)) || companies[0];
   const openJobIds = companyJobs[company.id] || [1, 2];
   const openJobs = openJobIds.map(jid => jobs.find(j => j.id === jid)).filter(Boolean);
+  const officeLocations = getCompanyOfficeLocations(company.id);
+  const officeLocationSummary = officeLocations.length === 1
+    ? '1 office location'
+    : `${officeLocations.length} office locations`;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -59,10 +63,7 @@ export default function CompanyProfile() {
         </p>
 
         <div className="grid grid-cols-3 gap-6">
-          {/* Main */}
           <div className="col-span-2 space-y-6">
-
-            {/* Header */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <div className="h-28 bg-gradient-to-r from-blue-500 to-purple-600" />
               <div className="px-6 pb-6">
@@ -77,13 +78,12 @@ export default function CompanyProfile() {
                 <div className="flex gap-6 text-sm text-gray-500">
                   <span>📅 Founded: July 31, 2011</span>
                   <span>👥 4000+</span>
-                  <span>📍 36 countries</span>
+                  <span>📍 {officeLocationSummary}</span>
                   <span>🏷️ {company.industry}</span>
                 </div>
               </div>
             </div>
 
-            {/* Company Profile */}
             <div className="bg-white rounded-xl p-6 border border-gray-200">
               <h2 className="font-bold text-gray-900 mb-3">Company Profile</h2>
               <p className="text-sm text-gray-600 leading-relaxed mb-4">
@@ -93,7 +93,6 @@ export default function CompanyProfile() {
                 We obsessively seek out elegant, composable abstractions that enable robust, scalable, flexible integrations.
               </p>
 
-              {/* Contact */}
               <h3 className="font-semibold text-gray-900 text-sm mb-3">Contact</h3>
               <div className="flex gap-3 flex-wrap">
                 <a href="#" className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-50">
@@ -107,7 +106,6 @@ export default function CompanyProfile() {
                 </a>
               </div>
 
-              {/* Office photos */}
               <div className="grid grid-cols-3 gap-3 mt-5">
                 <div className="col-span-1 bg-gradient-to-br from-blue-100 to-purple-100 rounded-xl h-32 flex items-center justify-center text-4xl">🏢</div>
                 <div className="col-span-1 bg-gradient-to-br from-green-100 to-teal-100 rounded-xl h-32 flex items-center justify-center text-4xl">💻</div>
@@ -115,7 +113,6 @@ export default function CompanyProfile() {
               </div>
             </div>
 
-            {/* Team */}
             <div className="bg-white rounded-xl p-6 border border-gray-200">
               <div className="flex justify-between items-center mb-5">
                 <h2 className="font-bold text-gray-900">Team</h2>
@@ -138,7 +135,6 @@ export default function CompanyProfile() {
               </div>
             </div>
 
-            {/* Perks & Benefits */}
             <div className="bg-white rounded-xl p-6 border border-gray-200">
               <h2 className="font-bold text-gray-900 mb-1">Perks & Benefits</h2>
               <p className="text-sm text-gray-400 mb-5">This job comes with several perks and benefits</p>
@@ -153,7 +149,6 @@ export default function CompanyProfile() {
               </div>
             </div>
 
-            {/* Open Jobs */}
             <div>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold text-gray-900">Open Jobs</h2>
@@ -188,10 +183,8 @@ export default function CompanyProfile() {
                 ))}
               </div>
             </div>
-
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-4">
             <div className="bg-white rounded-xl p-5 border border-gray-200">
               <h3 className="font-semibold text-gray-900 mb-4">Tech Stack</h3>
@@ -207,13 +200,19 @@ export default function CompanyProfile() {
 
             <div className="bg-white rounded-xl p-5 border border-gray-200">
               <h3 className="font-semibold text-gray-900 mb-4">Office Location</h3>
-              <p className="text-sm text-gray-500 mb-3">{company.name} operates across multiple countries</p>
+              <p className="text-sm text-gray-500 mb-3">
+                {officeLocations.length > 0
+                  ? `${company.name} operates across ${officeLocationSummary}`
+                  : `${company.name} will share office locations soon`}
+              </p>
               <div className="space-y-2 text-sm">
-                {['🇺🇸 United States', '🏴󠁧󠁢󠁥󠁮󠁧󠁿 England', '🇯🇵 Japan', '🇦🇺 Australia', '🇨🇳 China'].map(loc => (
-                  <p key={loc} className="text-gray-600">{loc}</p>
-                ))}
+                {officeLocations.length > 0 ? officeLocations.map(location => (
+                  <p key={location} className="text-gray-600">{location}</p>
+                )) : (
+                  <p className="text-gray-400">Office locations coming soon</p>
+                )}
               </div>
-              <button className="text-blue-600 text-xs mt-3 hover:underline">View countries →</button>
+              <button className="text-blue-600 text-xs mt-3 hover:underline">View locations →</button>
             </div>
           </div>
         </div>

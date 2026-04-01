@@ -1,12 +1,21 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { companies, getCompanyOfficeLocations } from '../../data/mockData';
+
+const buildOfficeEntries = (locations) => locations.map((location, index) => ({
+  country: location,
+  flag: '📍',
+  type: index === 0 ? 'Head Office' : 'Branch Office',
+}));
 
 export default function CompanyProfile() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const defaultCompany = companies.find(company => company.name === 'Nomad') || companies[0];
+  const defaultOfficeLocations = getCompanyOfficeLocations(defaultCompany?.id);
   
   // Company data state
   const [companyData, setCompanyData] = useState({
@@ -15,7 +24,7 @@ export default function CompanyProfile() {
     email: 'hello@nomad.com',
     founded: 'July 31, 2011',
     employees: '4000+',
-    locations: '20 countries',
+    locations: `${defaultOfficeLocations.length} office locations`,
     industry: 'Social & Non-Profit',
     bio: 'Nomad is a software platform for starting and running internet businesses. Millions of businesses rely on Stripe\'s software tools to accept payments, expand globally, and manage their businesses online. Stripe has been at the forefront of expanding internet commerce, powering new business models, and supporting the latest platforms, from marketplaces to mobile commerce sites. We believe that growing the GDP of the internet is a problem rooted in code and design, not finance. Stripe is built for developers, makers, and creators. We work on solving the hard technical problems necessary to build global economic infrastructure: from designing highly reliable systems to developing advanced machine learning algorithms to prevent fraud.',
     techStack: [
@@ -32,10 +41,10 @@ export default function CompanyProfile() {
       { type: 'linkedin', value: 'linkedin.com/company/nomad', icon: '💼', color: 'bg-blue-100 text-blue-700' },
       { type: 'email', value: 'nomad@gmail.com', icon: '📧', color: 'bg-gray-100 text-gray-700' }
     ],
-    offices: [
+    offices: buildOfficeEntries(defaultOfficeLocations), /*
       { country: 'United States', flag: '🇺🇸', type: 'Head Quarters' },
       { country: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', type: 'Branch Office' }
-    ]
+    */
   });
 
   const handlePostJob = () => {
