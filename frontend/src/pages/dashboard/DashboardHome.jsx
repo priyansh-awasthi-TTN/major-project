@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { messages } from '../../data/mockdata';
+import { messages } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
 import DropdownMenu from '../../components/DropdownMenu';
 import DashTopBar from '../../components/DashTopBar';

@@ -1,6 +1,63 @@
 import { useState, useEffect } from 'react';
 import ApiService from '../services/api';
 
+function parseActionMetadata(metadata) {
+  if (!metadata) return {};
+
+  if (typeof metadata !== 'string') {
+    return metadata;
+  }
+
+  try {
+    return JSON.parse(metadata);
+  } catch {
+    return { value: metadata };
+  }
+}
+
+function normalizeJobAction(item, type) {
+  const metadata = parseActionMetadata(item.metadata);
+
+  if (type === 'saved') {
+    return {
+      ...item,
+      notes: item.notes || metadata.notes || metadata.value || '',
+    };
+  }
+
+  if (type === 'reading') {
+    return {
+      ...item,
+      addedAt: item.addedAt || item.createdAt,
+      isRead: item.isRead || metadata.isRead || false,
+    };
+  }
+
+  if (type === 'reports') {
+    return {
+      ...item,
+      reason: item.reason || metadata.reason || 'Reported job',
+      description: item.description || metadata.description || '',
+      reportedAt: item.reportedAt || item.createdAt,
+    };
+  }
+
+  return item;
+}
+
+function normalizeJobActionList(response, type) {
+  return Array.isArray(response) ? response.map(item => normalizeJobAction(item, type)) : [];
+}
+
+function formatActionDate(value) {
+  if (!value) return null;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return date.toLocaleDateString();
+}
+
 export default function JobActionsManager() {
   const [activeTab, setActiveTab] = useState('saved');
   const [savedJobs, setSavedJobs] = useState([]);
@@ -12,21 +69,30 @@ export default function JobActionsManager() {
     loadData();
   }, [activeTab]);
 
+  useEffect(() => {
+    const handleJobActionUpdated = () => {
+      loadData();
+    };
+
+    window.addEventListener('job-actions:updated', handleJobActionUpdated);
+    return () => window.removeEventListener('job-actions:updated', handleJobActionUpdated);
+  }, [activeTab]);
+
   const loadData = async () => {
     setLoading(true);
     try {
       switch (activeTab) {
         case 'saved':
           const savedResponse = await ApiService.getSavedJobs();
-          setSavedJobs(savedResponse);
+          setSavedJobs(normalizeJobActionList(savedResponse, 'saved'));
           break;
         case 'reading':
           const readingResponse = await ApiService.getReadingList();
-          setReadingList(readingResponse);
+          setReadingList(normalizeJobActionList(readingResponse, 'reading'));
           break;
         case 'reports':
           const reportsResponse = await ApiService.getUserReports();
-          setReports(reportsResponse);
+          setReports(normalizeJobActionList(reportsResponse, 'reports'));
           break;
       }
     } catch (error) {
@@ -123,7 +189,7 @@ export default function JobActionsManager() {
         
         {type === 'reading' && (
           <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-            <span>Added: {new Date(item.addedAt).toLocaleDateString()}</span>
+            <span>Added: {formatActionDate(item.addedAt) || 'Recently added'}</span>
             {item.isRead && <span className="text-green-600">✓ Read</span>}
           </div>
         )}
@@ -135,7 +201,7 @@ export default function JobActionsManager() {
               <div className="text-gray-600 mt-1">{item.description}</div>
             )}
             <div className="text-xs text-gray-500 mt-1">
-              Reported: {new Date(item.reportedAt).toLocaleDateString()}
+              Reported: {formatActionDate(item.reportedAt) || 'Recently reported'}
             </div>
           </div>
         )}

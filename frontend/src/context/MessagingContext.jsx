@@ -18,6 +18,38 @@ function saveLS(key, value) {
   sessionStorage.setItem(key, JSON.stringify(value));
 }
 
+function getAttachmentFallbackLabel(messageType) {
+  if (messageType === 'IMAGE') return 'Image attachment';
+  if (messageType === 'VIDEO') return 'Video attachment';
+  return 'File attachment';
+}
+
+function getPreviewText(entry) {
+  if (!entry) return 'Click to start chatting...';
+  if (entry.messageType === 'TEXT') return entry.text || 'Click to start chatting...';
+  return entry.text || getAttachmentFallbackLabel(entry.messageType);
+}
+
+function createChatEntry(dto, currentUserId) {
+  const dateObj = new Date(dto.timestamp || dto.createdAt || new Date());
+  const messageType = dto.messageType || 'TEXT';
+
+  return {
+    from: dto.senderId === currentUserId ? 'me' : 'them',
+    text: dto.content,
+    time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    date: dateObj,
+    messageType,
+    fileUrl: apiService.resolveFileUrl(dto.fileUrl),
+  };
+}
+
+function getMessageTypeForFile(file) {
+  if (file.type.startsWith('image/')) return 'IMAGE';
+  if (file.type.startsWith('video/')) return 'VIDEO';
+  return 'FILE';
+}
+
 const colors = ['bg-orange-400', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-red-500'];
 
 export function MessagingProvider({ children }) {
@@ -50,14 +82,7 @@ export function MessagingProvider({ children }) {
         const initRead = {...readMap};
         data.forEach(conv => {
           if (conv.lastMessage) {
-            const isMe = conv.lastMessage.senderId === user.id;
-            const dateObj = new Date(conv.lastMessage.timestamp || conv.lastMessage.createdAt);
-            initMap[conv.userId] = [{
-              from: isMe ? 'me' : 'them',
-              text: conv.lastMessage.content,
-              time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              date: dateObj
-            }];
+            initMap[conv.userId] = [createChatEntry(conv.lastMessage, user.id)];
             if (conv.unreadCount > 0) initRead[conv.userId] = false;
           }
         });
@@ -91,14 +116,7 @@ export function MessagingProvider({ children }) {
           const isMe = dto.senderId === user.id;
           const otherUserId = isMe ? dto.receiverId : dto.senderId;
           const otherUserName = isMe ? dto.receiverName : dto.senderName;
-          
-          const dateObj = new Date(dto.timestamp || dto.createdAt || new Date());
-          const incomingEntry = {
-            from: isMe ? 'me' : 'them',
-            text: dto.content,
-            time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            date: dateObj
-          };
+          const incomingEntry = createChatEntry(dto, user.id);
           
           setChatMap(prev => ({
             ...prev,
@@ -132,15 +150,7 @@ export function MessagingProvider({ children }) {
     if (historyLoaded[userId]) return;
     try {
       const historyData = await apiService.getChatMessages(userId);
-      const mappedChats = historyData.map(dto => {
-        const dateObj = new Date(dto.timestamp || dto.createdAt);
-        return {
-          from: dto.senderId === user.id ? 'me' : 'them',
-          text: dto.content,
-          time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          date: dateObj
-        };
-      });
+      const mappedChats = historyData.map(dto => createChatEntry(dto, user.id));
       setChatMap(prev => ({ ...prev, [userId]: mappedChats }));
       setHistoryLoaded(prev => ({ ...prev, [userId]: true }));
     } catch (e) {
@@ -162,7 +172,7 @@ export function MessagingProvider({ children }) {
       avatarColor: colors[c.userId % colors.length],
       isRead: readMap[c.userId] ?? true,
       time: lastChat ? lastChat.time : '',
-      preview: lastChat ? lastChat.text : 'Click to start chatting...',
+      preview: getPreviewText(lastChat),
       isPinned:   metaMap[c.userId]?.isPinned   ?? false,
       isStarred:  metaMap[c.userId]?.isStarred  ?? false,
       isMuted:    metaMap[c.userId]?.isMuted    ?? false,
@@ -191,18 +201,32 @@ export function MessagingProvider({ children }) {
     }));
   }, []);
 
-  const sendMessage = useCallback((recipientId, text) => {
+  const publishMessage = useCallback((recipientId, text, options = {}) => {
     if (stompClient.current && stompClient.current.active && user) {
-      const payload = { senderId: user.id, recipientId: recipientId, content: text };
+      const payload = {
+        senderId: user.id,
+        recipientId,
+        content: text,
+        messageType: options.messageType || 'TEXT',
+        fileUrl: options.fileUrl || null,
+      };
       stompClient.current.publish({ destination: '/app/chat.send', body: JSON.stringify(payload) });
-      
-      // Real-time optimistic update is no longer strictly needed if the server bounces it back to our topic!
-      // But we can still do it, or wait for the stomp subscriber. The socket broadcast covers both!
-      // Here we wait for server broadcast to avoid double messages.
     } else {
-      console.error('STOMP client is not connected');
+      throw new Error('STOMP client is not connected');
     }
   }, [user]);
+
+  const sendMessage = useCallback((recipientId, text) => {
+    publishMessage(recipientId, text, { messageType: 'TEXT' });
+  }, [publishMessage]);
+
+  const sendAttachment = useCallback(async (recipientId, file) => {
+    const upload = await apiService.uploadFile(file);
+    publishMessage(recipientId, upload.fileName || file.name, {
+      messageType: getMessageTypeForFile(file),
+      fileUrl: upload.url,
+    });
+  }, [publishMessage]);
 
   const blockUser = useCallback((id) => {
     setBlockedIds(prev => prev.includes(id) ? prev : [...prev, id]);
@@ -228,6 +252,7 @@ export function MessagingProvider({ children }) {
       markRead,
       updateMeta,
       sendMessage,
+      sendAttachment,
       blockUser,
       unblockUser,
       loadHistoryForUser,

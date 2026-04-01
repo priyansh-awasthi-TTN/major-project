@@ -9,7 +9,7 @@ import Toast from '../../components/Toast';
 export default function Messages() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { messages, markRead, updateMeta, sendMessage, blockUser, loadHistoryForUser } = useMessaging();
+  const { messages, markRead, updateMeta, sendMessage, sendAttachment, blockUser, loadHistoryForUser, startNewChat } = useMessaging();
 
   const [selected, setSelected]       = useState(null);
   const [search, setSearch]           = useState('');
@@ -19,12 +19,22 @@ export default function Messages() {
 
   // Auto-select from URL param (e.g. coming back from recruiter profile)
   useEffect(() => {
-    const userId = searchParams.get('user');
-    if (userId) {
-      const found = messages.find(m => m.id === parseInt(userId));
-      if (found) setSelected(found);
+    const userId = Number(searchParams.get('user'));
+    if (!userId) return;
+
+    const found = messages.find(m => m.id === userId);
+    if (found) {
+      setSelected(found);
+      return;
     }
-  }, [searchParams, messages]); // intentionally only on param change / first load
+
+    startNewChat(
+      userId,
+      searchParams.get('name') || `User ${userId}`,
+      searchParams.get('email') || '',
+      searchParams.get('type') || 'COMPANY'
+    );
+  }, [searchParams, messages, startNewChat]);
 
   // Keep selected in sync when messages update (e.g. new chat message sent)
   useEffect(() => {
@@ -120,6 +130,7 @@ export default function Messages() {
           onBlock={handleBlock}
           onDelete={handleDelete}
           onSend={sendMessage}
+          onSendAttachment={sendAttachment}
           openMenu={openMenu}
           setOpenMenu={setOpenMenu}
         />

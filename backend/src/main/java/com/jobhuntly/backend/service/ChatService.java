@@ -29,14 +29,20 @@ public class ChatService {
     private SimpMessagingTemplate messagingTemplate;
     
     @Transactional
-    public ChatMessageDTO sendMessage(String senderEmail, Long receiverId, String content, String messageType) {
+    public ChatMessageDTO sendMessage(String senderEmail, Long receiverId, String content, String messageType, String fileUrl) {
         User sender = userRepository.findByEmail(senderEmail)
             .orElseThrow(() -> new RuntimeException("Sender not found"));
         
         User receiver = userRepository.findById(receiverId)
             .orElseThrow(() -> new RuntimeException("Receiver not found"));
         
-        ChatMessage message = new ChatMessage(sender, receiver, content, messageType);
+        ChatMessage message = new ChatMessage(
+            sender,
+            receiver,
+            content,
+            messageType != null ? messageType : "TEXT",
+            fileUrl
+        );
         ChatMessage savedMessage = chatMessageRepository.save(message);
         
         // Convert to DTO
@@ -149,6 +155,7 @@ public class ChatService {
         dto.setReceiverEmail(message.getReceiver().getEmail());
         dto.setContent(message.getContent());
         dto.setMessageType(message.getMessageType());
+        dto.setFileUrl(message.getFileUrl());
         dto.setCreatedAt(message.getCreatedAt());
         dto.setRead(message.isRead());
         return dto;

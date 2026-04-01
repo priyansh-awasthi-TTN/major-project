@@ -3,6 +3,7 @@ package com.jobhuntly.backend.controller;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -31,14 +32,26 @@ public class FileUploadController {
     @PostMapping
     public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file) {
         try {
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "File is empty"));
+            }
+
             String origName = file.getOriginalFilename();
             String extension = origName != null && origName.contains(".") ? origName.substring(origName.lastIndexOf(".")) : "";
             // Keep file original name without spaces and append UUID to prevent override
             String cleanName = origName != null ? origName.replaceAll("\\s+", "_").replace(extension, "") : "file";
             String newName = cleanName + "_" + UUID.randomUUID().toString() + extension;
             Files.copy(file.getInputStream(), this.root.resolve(newName));
-            String url = "/uploads/" + newName;
-            return ResponseEntity.ok(Map.of("url", url));
+            String url = ServletUriComponentsBuilder.fromCurrentContextPath()
+                    .path("/uploads/")
+                    .path(newName)
+                    .toUriString();
+            return ResponseEntity.ok(Map.of(
+                    "url", url,
+                    "fileName", origName != null ? origName : newName,
+                    "contentType", file.getContentType(),
+                    "size", file.getSize()
+            ));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("message", "Could not upload the file: " + e.getMessage()));
         }

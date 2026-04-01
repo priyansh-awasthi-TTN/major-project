@@ -1,4 +1,5 @@
 const API_BASE_URL = 'http://localhost:8080/api';
+const API_ORIGIN = new URL(API_BASE_URL).origin;
 
 class ApiService {
   constructor() {
@@ -105,6 +106,11 @@ class ApiService {
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || 'Upload failed');
     return data;
+  }
+
+  resolveFileUrl(url) {
+    if (!url) return '';
+    return /^https?:\/\//i.test(url) ? url : `${API_ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`;
   }
 
   // Application endpoints
@@ -253,6 +259,10 @@ class ApiService {
   // Network endpoints
   async getNetworkUsers() {
     return this.request('/network/users');
+  }
+
+  async getNetworkUser(userId) {
+    return this.request(`/network/users/${userId}`);
   }
 }
 

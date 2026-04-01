@@ -56,6 +56,7 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/jobs", "/api/jobs/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/companies").permitAll()
                 .requestMatchers("/actuator/**").permitAll()

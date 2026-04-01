@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashTopBar from '../../components/DashTopBar';
-import { useAuth } from '../../context/AuthContext';
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import apiService from '../../services/api';
 
@@ -10,7 +9,6 @@ export default function DashNetwork() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
-  const { user: currentUser } = useAuth(); // or something to get JWT
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -30,6 +28,16 @@ export default function DashNetwork() {
     const term = search.toLowerCase();
     return u.fullName.toLowerCase().includes(term) || u.email.toLowerCase().includes(term);
   });
+
+  const openMessages = (user) => {
+    const params = new URLSearchParams({
+      user: String(user.id),
+      name: user.fullName,
+      email: user.email,
+      type: user.userType || 'JOBSEEKER',
+    });
+    navigate(`/dashboard/messages?${params.toString()}`);
+  };
 
   return (
     <div className="flex-1 flex flex-col h-full bg-gray-50 overflow-y-auto">
@@ -60,7 +68,7 @@ export default function DashNetwork() {
                 <h3 className="text-lg font-semibold text-gray-900">{u.fullName}</h3>
                 <p className="text-sm text-gray-500 mb-6">{u.email}</p>
                 <button
-                  onClick={() => navigate(`/dashboard/messages?user=${u.id}`)}
+                  onClick={() => openMessages(u)}
                   className="w-full mt-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition"
                 >
                   <ChatBubbleLeftRightIcon className="w-5 h-5" />

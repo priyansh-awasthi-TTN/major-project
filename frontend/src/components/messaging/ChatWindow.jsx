@@ -5,12 +5,49 @@ import DropdownMenu from '../DropdownMenu';
 import EmojiPicker from '../EmojiPicker';
 import Toast from '../Toast';
 
-export default function ChatWindow({ selected, onTogglePin, onToggleStar, onToggleMute, onToggleArchive, onBlock, onDelete, onSend, openMenu, setOpenMenu }) {
+function renderAttachment(message, isOwnMessage) {
+  const linkClass = isOwnMessage ? 'text-blue-100 hover:text-white' : 'text-blue-600 hover:text-blue-700';
+
+  if (message.messageType === 'IMAGE' && message.fileUrl) {
+    return (
+      <a href={message.fileUrl} target="_blank" rel="noreferrer" className="block">
+        <img src={message.fileUrl} alt={message.text || 'Image attachment'} className="max-h-56 rounded-xl mb-2 object-cover" />
+        <span className={`text-xs underline ${linkClass}`}>{message.text || 'Open image'}</span>
+      </a>
+    );
+  }
+
+  if (message.messageType === 'VIDEO' && message.fileUrl) {
+    return (
+      <div className="space-y-2">
+        <video controls src={message.fileUrl} className="max-h-56 rounded-xl" />
+        <a href={message.fileUrl} target="_blank" rel="noreferrer" className={`text-xs underline ${linkClass}`}>
+          {message.text || 'Open video'}
+        </a>
+      </div>
+    );
+  }
+
+  if (message.fileUrl) {
+    return (
+      <a href={message.fileUrl} target="_blank" rel="noreferrer" className={`inline-flex items-center gap-2 text-sm underline ${linkClass}`}>
+        <span>📎</span>
+        <span>{message.text || 'Open attachment'}</span>
+      </a>
+    );
+  }
+
+  return message.text;
+}
+
+export default function ChatWindow({ selected, onTogglePin, onToggleStar, onToggleMute, onToggleArchive, onBlock, onDelete, onSend, onSendAttachment, openMenu, setOpenMenu }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [input, setInput] = useState('');
+  const [pendingFiles, setPendingFiles] = useState([]);
   const [showEmoji, setShowEmoji] = useState(false);
   const [toast, setToast] = useState(null);
+  const [sending, setSending] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -20,6 +57,12 @@ export default function ChatWindow({ selected, onTogglePin, onToggleStar, onTogg
   useEffect(() => {
     scrollToBottom();
   }, [selected?.chat]);
+
+  useEffect(() => {
+    setInput('');
+    setPendingFiles([]);
+    setShowEmoji(false);
+  }, [selected?.id]);
 
   if (!selected) {
     return (
@@ -33,15 +76,37 @@ export default function ChatWindow({ selected, onTogglePin, onToggleStar, onTogg
     );
   }
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    onSend(selected.id, input.trim());
-    setInput('');
+  const handleSend = async () => {
+    if ((!input.trim() && pendingFiles.length === 0) || sending) return;
+
+    setSending(true);
+    try {
+      if (input.trim()) {
+        onSend(selected.id, input.trim());
+      }
+      for (const file of pendingFiles) {
+        await onSendAttachment(selected.id, file);
+      }
+      setInput('');
+      setPendingFiles([]);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      setToast({ message: error.message || 'Failed to send message', type: 'error' });
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) setToast({ message: `File "${file.name}" attached`, type: 'success' });
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+
+    if (files.length === 0 || sending || typeof onSendAttachment !== 'function') return;
+    setPendingFiles(prev => [...prev, ...files]);
+  };
+
+  const removePendingFile = (indexToRemove) => {
+    setPendingFiles(prev => prev.filter((_, index) => index !== indexToRemove));
   };
 
   const headerMenu = [
@@ -155,7 +220,7 @@ export default function ChatWindow({ selected, onTogglePin, onToggleStar, onTogg
                   ? 'bg-blue-600 text-white rounded-br-sm'
                   : 'bg-gray-100 text-gray-800 rounded-bl-sm'
               }`}>
-                {msg.text}
+                {renderAttachment(msg, msg.from === 'me')}
               </div>
               <p className="text-xs text-gray-400 mt-1">{msg.time}</p>
             </div>
@@ -171,36 +236,55 @@ export default function ChatWindow({ selected, onTogglePin, onToggleStar, onTogg
             Conversation is muted — you cannot send messages
           </div>
         ) : (
-          <div className="flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50 relative">
-            <input type="file" onChange={handleFileUpload} className="hidden" id="chat-file-upload" accept="image/*,video/*,.pdf,.doc,.docx,.txt" />
-            <label htmlFor="chat-file-upload" className="text-gray-400 hover:text-gray-600 cursor-pointer flex-shrink-0">📎</label>
+          <div className="space-y-2">
+            {pendingFiles.map((file, index) => (
+              <div key={`${file.name}-${file.size}-${index}`} className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-sm text-blue-700">
+                <span>📎</span>
+                <span className="flex-1 truncate">{file.name}</span>
+                <button
+                  onClick={() => removePendingFile(index)}
+                  className="text-blue-400 hover:text-blue-700 text-lg leading-none"
+                  disabled={sending}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            <div className="flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50 relative">
+              <input type="file" onChange={handleFileUpload} className="hidden" id="chat-file-upload" accept="image/*,video/*,.pdf,.doc,.docx,.txt" multiple />
+              <label htmlFor="chat-file-upload" className={`cursor-pointer flex-shrink-0 ${sending ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}>
+                {sending ? '⏳' : '📎'}
+              </label>
 
-            <input
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSend()}
-              className="flex-1 text-sm outline-none bg-transparent text-gray-700 placeholder-gray-400"
-              placeholder="Reply message"
-            />
+              <input
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && !sending && handleSend()}
+                className="flex-1 text-sm outline-none bg-transparent text-gray-700 placeholder-gray-400"
+                placeholder={sending ? 'Sending...' : 'Reply message'}
+                disabled={sending}
+              />
 
-            <div className="relative flex-shrink-0">
-              <button onClick={() => setShowEmoji(v => !v)} className="text-gray-400 hover:text-gray-600">😊</button>
-              {showEmoji && (
-                <EmojiPicker
-                  onEmojiSelect={emoji => setInput(prev => prev + emoji)}
-                  onClose={() => setShowEmoji(false)}
-                />
-              )}
+              <div className="relative flex-shrink-0">
+                <button onClick={() => setShowEmoji(v => !v)} className="text-gray-400 hover:text-gray-600">😊</button>
+                {showEmoji && (
+                  <EmojiPicker
+                    onEmojiSelect={emoji => setInput(prev => prev + emoji)}
+                    onClose={() => setShowEmoji(false)}
+                  />
+                )}
+              </div>
+
+              <button
+                onClick={handleSend}
+                disabled={sending || (!input.trim() && pendingFiles.length === 0)}
+                className="bg-blue-600 text-white w-8 h-8 rounded-lg flex items-center justify-center hover:bg-blue-700 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg width="14" height="14" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" strokeLinejoin="round" strokeLinecap="round"/>
+                </svg>
+              </button>
             </div>
-
-            <button
-              onClick={handleSend}
-              className="bg-blue-600 text-white w-8 h-8 rounded-lg flex items-center justify-center hover:bg-blue-700 flex-shrink-0"
-            >
-              <svg width="14" height="14" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24">
-                <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" strokeLinejoin="round" strokeLinecap="round"/>
-              </svg>
-            </button>
           </div>
         )}
       </div>

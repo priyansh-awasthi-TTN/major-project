@@ -62,7 +62,7 @@ Spring Boot backend application with JWT authentication for the JobHuntly platfo
 
 The application is configured to use MySQL with the following default settings:
 - Database: `jobhuntly` (created automatically if it doesn't exist)
-- Host: `localhost:3306`
+- Host: `localhost:3310`
 - Username: `root`
 - Password: `root`
 
@@ -176,7 +176,7 @@ If you encounter connection issues:
 1. **Ensure MySQL is running**: Check if MySQL service is active
 2. **Verify credentials**: Make sure username/password in `application.yml` are correct
 3. **Check port**: Default MySQL port is 3306
-4. **Database creation**: The application will create the `jobhuntly` database automatically
+4. **Database creation**: The connection URL includes `createDatabaseIfNotExist=true`, so MySQL will create `jobhuntly` automatically if the configured user has permission
 5. **Time zone issues**: The connection URL includes `serverTimezone=UTC` to handle timezone differences
 
 Common MySQL setup commands:

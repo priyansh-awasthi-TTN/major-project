@@ -5,6 +5,7 @@ import CompanyTopBar from '../../components/CompanyTopBar';
 import DropdownMenu from '../../components/DropdownMenu';
 import EmojiPicker from '../../components/EmojiPicker';
 import Toast from '../../components/Toast';
+import apiService from '../../services/api';
 
 const LS_KEY = 'jh_company_messages';
 const LS_BLOCKED = 'jh_company_blocked';
@@ -217,6 +218,53 @@ function loadBlocked() {
 function saveBlocked(d) { 
   sessionStorage.setItem(LS_BLOCKED, JSON.stringify(d)); 
 }
+
+function getAttachmentType(file) {
+  if (!file?.type) return 'FILE';
+  if (file.type.startsWith('image/')) return 'IMAGE';
+  if (file.type.startsWith('video/')) return 'VIDEO';
+  return 'FILE';
+}
+
+function getAttachmentPreview(attachmentType, fileName) {
+  if (attachmentType === 'IMAGE') return `Image: ${fileName}`;
+  if (attachmentType === 'VIDEO') return `Video: ${fileName}`;
+  return `File: ${fileName}`;
+}
+
+function renderChatMessageContent(msg) {
+  if (msg.attachmentType === 'IMAGE' && msg.fileUrl) {
+    return (
+      <a href={msg.fileUrl} target="_blank" rel="noreferrer" className="block">
+        <img src={msg.fileUrl} alt={msg.text || 'Image attachment'} className="max-h-56 rounded-xl mb-2 object-cover" />
+        <span className="text-xs underline text-blue-600 hover:text-blue-700">{msg.text || 'Open image'}</span>
+      </a>
+    );
+  }
+
+  if (msg.attachmentType === 'VIDEO' && msg.fileUrl) {
+    return (
+      <div className="space-y-2">
+        <video controls src={msg.fileUrl} className="max-h-56 rounded-xl" />
+        <a href={msg.fileUrl} target="_blank" rel="noreferrer" className="text-xs underline text-blue-600 hover:text-blue-700">
+          {msg.text || 'Open video'}
+        </a>
+      </div>
+    );
+  }
+
+  if (msg.fileUrl) {
+    return (
+      <a href={msg.fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm underline text-blue-600 hover:text-blue-700">
+        <span>📎</span>
+        <span>{msg.text || 'Open attachment'}</span>
+      </a>
+    );
+  }
+
+  return msg.text;
+}
+
 export default function CompanyMessages() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -224,7 +272,8 @@ export default function CompanyMessages() {
   const [blocked, setBlocked] = useState(loadBlocked);
   const [sel, setSel] = useState(null);
   const [input, setInput] = useState('');
-  const [pendingFile, setPendingFile] = useState(null);
+  const [pendingFiles, setPendingFiles] = useState([]);
+  const [sending, setSending] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
   const [toast, setToast] = useState(null);
@@ -242,31 +291,63 @@ export default function CompanyMessages() {
 
   const handleSelect = (msg) => {
     setSel(msg);
-    setPendingFile(null);
+    setPendingFiles([]);
     if (msg.unread) update(msg.id, { unread: false });
   };
 
   const handleFileStage = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setPendingFile(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setPendingFiles(prev => [...prev, ...files]);
     e.target.value = '';
   };
 
-  const handleSend = () => {
-    if ((!input.trim() && !pendingFile) || !sel || sel.muted) return;
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const entries = [];
-    if (input.trim()) entries.push({ from: 'me', text: input.trim(), time });
-    if (pendingFile) entries.push({ from: 'me', text: `📎 ${pendingFile.name}`, time });
-    const lastEntry = entries[entries.length - 1];
-    setMsgs(p => p.map(m => m.id === sel.id
-      ? { ...m, chat: [...m.chat, ...entries], preview: lastEntry.text, time: 'Just now' }
-      : m
-    ));
-    setInput('');
-    setPendingFile(null);
-    setShowEmoji(false);
+  const removePendingFile = (indexToRemove) => {
+    setPendingFiles(prev => prev.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleSend = async () => {
+    if ((!input.trim() && pendingFiles.length === 0) || !sel || sel.muted) return;
+    setSending(true);
+    try {
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const entries = [];
+
+      if (input.trim()) {
+        entries.push({ from: 'me', text: input.trim(), time });
+      }
+
+      for (const file of pendingFiles) {
+        const uploadRes = await apiService.uploadFile(file);
+        const attachmentType = getAttachmentType(file);
+        entries.push({
+          from: 'me',
+          text: uploadRes.fileName || file.name,
+          time,
+          attachmentType,
+          fileUrl: uploadRes.url,
+        });
+      }
+
+      const lastEntry = entries[entries.length - 1];
+      const preview = lastEntry?.fileUrl
+        ? getAttachmentPreview(lastEntry.attachmentType, lastEntry.text)
+        : lastEntry?.text;
+
+      setMsgs(p => p.map(m => m.id === sel.id
+        ? { ...m, chat: [...m.chat, ...entries], preview, time: 'Just now' }
+        : m
+      ));
+      setInput('');
+      setPendingFiles([]);
+      setShowEmoji(false);
+      setToast({ message: pendingFiles.length > 0 ? 'Attachments sent' : 'Message sent', type: 'success' });
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      setToast({ message: error.message || 'Failed to send attachment', type: 'error' });
+    } finally {
+      setSending(false);
+    }
   };
   const handleDelete = (id) => {
     if (!confirm('Delete this conversation? This cannot be undone.')) return;
@@ -568,7 +649,7 @@ export default function CompanyMessages() {
                         ? 'bg-gray-100 text-gray-800 rounded-br-sm' 
                         : 'bg-gray-100 text-gray-800 rounded-bl-sm'
                     }`}>
-                      {msg.text}
+                      {renderChatMessageContent(msg)}
                     </div>
                     <p className="text-xs text-gray-400 mt-1">{msg.time}</p>
                   </div>
@@ -591,24 +672,26 @@ export default function CompanyMessages() {
               ) : (
                 <div className="space-y-2">
                   {/* Pending file preview */}
-                  {pendingFile && (
-                    <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-sm text-blue-700">
+                  {pendingFiles.map((file, index) => (
+                    <div key={`${file.name}-${file.size}-${index}`} className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-sm text-blue-700">
                       <span>📎</span>
-                      <span className="flex-1 truncate">{pendingFile.name}</span>
+                      <span className="flex-1 truncate">{file.name}</span>
                       <button 
-                        onClick={() => setPendingFile(null)} 
+                        onClick={() => removePendingFile(index)} 
                         className="text-blue-400 hover:text-blue-700 text-lg leading-none"
+                        disabled={sending}
                       >
                         ×
                       </button>
                     </div>
-                  )}
+                  ))}
                   <div className="flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50 relative">
-                    <input ref={fileRef} type="file" className="hidden" onChange={handleFileStage} />
+                    <input ref={fileRef} type="file" className="hidden" onChange={handleFileStage} accept="image/*,video/*,.pdf,.doc,.docx,.txt" multiple />
                     <button 
                       onClick={() => fileRef.current?.click()} 
-                      className="text-gray-400 hover:text-gray-600 flex-shrink-0" 
+                      className="text-gray-400 hover:text-gray-600 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed" 
                       title="Attach file"
+                      disabled={sending}
                     >
                       <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                         <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" strokeLinecap="round" strokeLinejoin="round"/>
@@ -617,9 +700,10 @@ export default function CompanyMessages() {
                     <input 
                       value={input} 
                       onChange={e => setInput(e.target.value)} 
-                      onKeyDown={e => e.key === 'Enter' && handleSend()}
+                      onKeyDown={e => e.key === 'Enter' && !sending && handleSend()}
                       className="flex-1 text-sm outline-none bg-transparent text-gray-700 placeholder-gray-400"
-                      placeholder="Reply message" 
+                      placeholder={sending ? 'Sending...' : 'Reply message'} 
+                      disabled={sending}
                     />
                     <div className="relative flex-shrink-0">
                       <button 
@@ -640,7 +724,8 @@ export default function CompanyMessages() {
                     </div>
                     <button 
                       onClick={handleSend} 
-                      className="bg-blue-600 text-white w-8 h-8 rounded-lg flex items-center justify-center hover:bg-blue-700 flex-shrink-0 transition"
+                      className="bg-blue-600 text-white w-8 h-8 rounded-lg flex items-center justify-center hover:bg-blue-700 flex-shrink-0 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={sending || (!input.trim() && pendingFiles.length === 0)}
                     >
                       <svg width="14" height="14" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24">
                         <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" strokeLinejoin="round" strokeLinecap="round"/>
