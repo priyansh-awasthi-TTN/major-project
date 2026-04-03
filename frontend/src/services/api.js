@@ -94,6 +94,17 @@ class ApiService {
     return this.request('/auth/verify');
   }
 
+  async getMyProfile() {
+    return this.request('/profile/me');
+  }
+
+  async updateMyProfile(profileData) {
+    return this.request('/profile/me', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    });
+  }
+
   async uploadFile(file) {
     const formData = new FormData();
     formData.append('file', file);

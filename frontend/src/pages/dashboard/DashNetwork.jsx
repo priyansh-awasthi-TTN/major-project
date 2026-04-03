@@ -4,6 +4,15 @@ import DashTopBar from '../../components/DashTopBar';
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import apiService from '../../services/api';
 
+function getInitials(name) {
+  return (name || 'U')
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+}
+
 export default function DashNetwork() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -62,10 +71,27 @@ export default function DashNetwork() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredUsers.map((u) => (
               <div key={u.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col items-center">
-                <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-2xl font-bold mb-4">
-                  {u.fullName.charAt(0)}
+                <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-2xl font-bold mb-4 overflow-hidden">
+                  {u.profilePhotoUrl ? (
+                    <a
+                      href={apiService.resolveFileUrl(u.profilePhotoUrl)}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`Open ${u.fullName} profile photo`}
+                      className="block w-full h-full"
+                    >
+                      <img
+                        src={apiService.resolveFileUrl(u.profilePhotoUrl)}
+                        alt={`${u.fullName} profile photo`}
+                        className="w-full h-full object-cover"
+                      />
+                    </a>
+                  ) : (
+                    getInitials(u.fullName)
+                  )}
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900">{u.fullName}</h3>
+                {u.title && <p className="text-sm text-gray-500">{u.title}</p>}
                 <p className="text-sm text-gray-500 mb-6">{u.email}</p>
                 <button
                   onClick={() => openMessages(u)}

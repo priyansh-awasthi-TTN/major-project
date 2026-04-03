@@ -4,15 +4,15 @@ import CompanyTopBar from '../../components/CompanyTopBar';
 import apiService from '../../services/api';
 
 const SEEKER_DATA = {
-  1: { title: 'UI/UX Designer', location: 'Paris, France', bio: 'Passionate designer with 5+ years creating intuitive digital experiences. Skilled in Figma, Adobe XD, and user research.', skills: ['Figma', 'Adobe XD', 'User Research', 'Prototyping', 'CSS'], experience: [{ role: 'Senior UI Designer', company: 'Dribbble', period: '2021 – Present', desc: 'Leading design for core product features.' }, { role: 'UI Designer', company: 'Behance', period: '2019 – 2021', desc: 'Designed marketing and product pages.' }], education: 'B.Des, Graphic Design — Paris School of Art, 2018', email: 'jan.mayer@email.com' },
-  2: { title: 'HR Manager', location: 'Salt Lake City, USA', bio: 'HR professional with 8 years building inclusive teams and streamlining hiring processes across fintech companies.', skills: ['HR Management', 'Onboarding', 'Compliance', 'Recruitment'], experience: [{ role: 'HR Manager', company: 'Divvy', period: '2019 – Present', desc: 'Overseeing HR operations for 200+ employees.' }], education: 'MBA, Human Resources — University of Utah, 2016', email: 'joe.bartmann@email.com' },
-  3: { title: 'Technical Recruiter', location: 'San Francisco, USA', bio: 'Technical recruiter bridging engineering teams and top-tier candidates. Background in software engineering.', skills: ['Technical Sourcing', 'Engineering Hiring', 'Pipeline Management'], experience: [{ role: 'Technical Recruiter', company: 'Stripe', period: '2021 – Present', desc: 'Hiring engineers across backend and frontend.' }], education: 'B.Sc, Computer Science — Stanford, 2017', email: 'ally.wales@email.com' },
-  4: { title: 'Product Manager', location: 'New York, USA', bio: 'Product and design manager with a keen eye for creative talent. Building world-class product teams.', skills: ['Product Strategy', 'Roadmapping', 'Agile', 'Design Thinking'], experience: [{ role: 'Product Manager', company: 'Coinbase', period: '2020 – Present', desc: 'Leading product across multiple verticals.' }], education: 'MBA, Product Management — NYU Stern, 2018', email: 'james.gardner@email.com' },
-  5: { title: 'Brand Designer', location: 'San Francisco, USA', bio: 'Brand designer passionate about candidate experience and employer branding. Helping companies attract world-class talent.', skills: ['Brand Identity', 'Illustration', 'Typography', 'Figma'], experience: [{ role: 'Brand Designer', company: 'Dropbox', period: '2021 – Present', desc: 'Driving brand consistency across all touchpoints.' }], education: 'B.FA, Graphic Design — RISD, 2019', email: 'allison.geidt@email.com' },
-  6: { title: 'Frontend Developer', location: 'Hamburg, Germany', bio: 'Engineering leader passionate about infrastructure and open source. Looking for impactful frontend roles.', skills: ['React', 'TypeScript', 'Node.js', 'GraphQL', 'AWS'], experience: [{ role: 'Senior Frontend Dev', company: 'Terraform', period: '2019 – Present', desc: 'Leading frontend architecture and code reviews.' }], education: 'B.Sc, Software Engineering — TU Hamburg, 2016', email: 'ruben.culhane@email.com' },
-  7: { title: 'Marketing Specialist', location: 'Madrid, Spain', bio: 'Growth marketer specializing in email campaigns and EMEA market expansion. Data-driven approach to marketing.', skills: ['Email Marketing', 'SEO', 'Google Analytics', 'Copywriting'], experience: [{ role: 'Marketing Specialist', company: 'Revolut', period: '2020 – Present', desc: 'Scaling marketing across European markets.' }], education: 'B.A, Marketing — Universidad Complutense, 2018', email: 'lydia.diaz@email.com' },
-  8: { title: 'Visual Designer', location: 'Madrid, Spain', bio: 'Visual designer with a passion for design-driven engineering. Strong portfolio across brand and digital.', skills: ['Visual Design', 'Motion Graphics', 'After Effects', 'Sketch'], experience: [{ role: 'Visual Designer', company: 'Packer', period: '2017 – Present', desc: 'Designed visual identity and marketing materials.' }], education: 'B.Des, Visual Communication — ESAD, 2016', email: 'james.dokidis@email.com' },
-  9: { title: 'Data Analyst', location: 'Berlin, Germany', bio: 'Data analyst focused on customer-facing analytics and operations. Passionate about turning data into stories.', skills: ['Python', 'SQL', 'Tableau', 'Data Visualization', 'Excel'], experience: [{ role: 'Data Analyst', company: 'Twilio', period: '2021 – Present', desc: 'Building dashboards and analytics pipelines.' }], education: 'B.Sc, Statistics — Humboldt University, 2019', email: 'angelina.swann@email.com' },
+  1: { title: 'UI/UX Designer', location: 'Paris, France', bio: 'Passionate designer with 5+ years creating intuitive digital experiences. Skilled in Figma, Adobe XD, and user research.', skills: ['Figma', 'Adobe XD', 'User Research', 'Prototyping', 'CSS'], experience: [{ role: 'Senior UI Designer', company: 'Dribbble', period: '2021 - Present', desc: 'Leading design for core product features.' }, { role: 'UI Designer', company: 'Behance', period: '2019 - 2021', desc: 'Designed marketing and product pages.' }], education: 'B.Des, Graphic Design - Paris School of Art, 2018', email: 'jan.mayer@email.com' },
+  2: { title: 'HR Manager', location: 'Salt Lake City, USA', bio: 'HR professional with 8 years building inclusive teams and streamlining hiring processes across fintech companies.', skills: ['HR Management', 'Onboarding', 'Compliance', 'Recruitment'], experience: [{ role: 'HR Manager', company: 'Divvy', period: '2019 - Present', desc: 'Overseeing HR operations for 200+ employees.' }], education: 'MBA, Human Resources - University of Utah, 2016', email: 'joe.bartmann@email.com' },
+  3: { title: 'Technical Recruiter', location: 'San Francisco, USA', bio: 'Technical recruiter bridging engineering teams and top-tier candidates. Background in software engineering.', skills: ['Technical Sourcing', 'Engineering Hiring', 'Pipeline Management'], experience: [{ role: 'Technical Recruiter', company: 'Stripe', period: '2021 - Present', desc: 'Hiring engineers across backend and frontend.' }], education: 'B.Sc, Computer Science - Stanford, 2017', email: 'ally.wales@email.com' },
+  4: { title: 'Product Manager', location: 'New York, USA', bio: 'Product and design manager with a keen eye for creative talent. Building world-class product teams.', skills: ['Product Strategy', 'Roadmapping', 'Agile', 'Design Thinking'], experience: [{ role: 'Product Manager', company: 'Coinbase', period: '2020 - Present', desc: 'Leading product across multiple verticals.' }], education: 'MBA, Product Management - NYU Stern, 2018', email: 'james.gardner@email.com' },
+  5: { title: 'Brand Designer', location: 'San Francisco, USA', bio: 'Brand designer passionate about candidate experience and employer branding. Helping companies attract world-class talent.', skills: ['Brand Identity', 'Illustration', 'Typography', 'Figma'], experience: [{ role: 'Brand Designer', company: 'Dropbox', period: '2021 - Present', desc: 'Driving brand consistency across all touchpoints.' }], education: 'B.FA, Graphic Design - RISD, 2019', email: 'allison.geidt@email.com' },
+  6: { title: 'Frontend Developer', location: 'Hamburg, Germany', bio: 'Engineering leader passionate about infrastructure and open source. Looking for impactful frontend roles.', skills: ['React', 'TypeScript', 'Node.js', 'GraphQL', 'AWS'], experience: [{ role: 'Senior Frontend Dev', company: 'Terraform', period: '2019 - Present', desc: 'Leading frontend architecture and code reviews.' }], education: 'B.Sc, Software Engineering - TU Hamburg, 2016', email: 'ruben.culhane@email.com' },
+  7: { title: 'Marketing Specialist', location: 'Madrid, Spain', bio: 'Growth marketer specializing in email campaigns and EMEA market expansion. Data-driven approach to marketing.', skills: ['Email Marketing', 'SEO', 'Google Analytics', 'Copywriting'], experience: [{ role: 'Marketing Specialist', company: 'Revolut', period: '2020 - Present', desc: 'Scaling marketing across European markets.' }], education: 'B.A, Marketing - Universidad Complutense, 2018', email: 'lydia.diaz@email.com' },
+  8: { title: 'Visual Designer', location: 'Madrid, Spain', bio: 'Visual designer with a passion for design-driven engineering. Strong portfolio across brand and digital.', skills: ['Visual Design', 'Motion Graphics', 'After Effects', 'Sketch'], experience: [{ role: 'Visual Designer', company: 'Packer', period: '2017 - Present', desc: 'Designed visual identity and marketing materials.' }], education: 'B.Des, Visual Communication - ESAD, 2016', email: 'james.dokidis@email.com' },
+  9: { title: 'Data Analyst', location: 'Berlin, Germany', bio: 'Data analyst focused on customer-facing analytics and operations. Passionate about turning data into stories.', skills: ['Python', 'SQL', 'Tableau', 'Data Visualization', 'Excel'], experience: [{ role: 'Data Analyst', company: 'Twilio', period: '2021 - Present', desc: 'Building dashboards and analytics pipelines.' }], education: 'B.Sc, Statistics - Humboldt University, 2019', email: 'angelina.swann@email.com' },
 };
 
 const CONTACTS = {
@@ -110,20 +110,38 @@ export default function SeekerProfile() {
   const profileData = useMemo(() => {
     if (networkUser) {
       const name = networkUser.fullName || `User ${seekerId}`;
-      const title = networkUser.industry || 'Job Seeker';
+      const title = networkUser.title || networkUser.industry || 'Job Seeker';
       const bio = networkUser.description
         || `${name} is active on JobHuntly and open to connecting about relevant opportunities.`;
       const websiteUrl = buildWebsiteUrl(networkUser.website);
-      const skills = Array.from(
-        new Set(
-          [
-            networkUser.industry,
-            networkUser.location?.split(',')[0]?.trim(),
-            'Communication',
-            'Collaboration',
-          ].filter(Boolean),
-        ),
-      ).slice(0, 5);
+      const skills = Array.isArray(networkUser.skills) && networkUser.skills.length > 0
+        ? networkUser.skills
+        : Array.from(
+            new Set(
+              [
+                networkUser.industry,
+                networkUser.location?.split(',')[0]?.trim(),
+                'Communication',
+                'Collaboration',
+              ].filter(Boolean),
+            ),
+          ).slice(0, 5);
+      const experiences = Array.isArray(networkUser.experiences) && networkUser.experiences.length > 0
+        ? networkUser.experiences.map((exp) => ({
+            role: exp.role || title,
+            company: exp.company || 'JobHuntly Member',
+            period: [exp.start, exp.end].filter(Boolean).join(' - ') || exp.duration || 'Current',
+            desc: exp.desc || bio,
+          }))
+        : [
+            {
+              role: title,
+              company: networkUser.company || 'JobHuntly Member',
+              period: 'Current',
+              desc: bio,
+            },
+          ];
+      const educations = Array.isArray(networkUser.educations) ? networkUser.educations : [];
 
       return {
         pageTitle: 'Candidate Profile',
@@ -132,25 +150,21 @@ export default function SeekerProfile() {
         location: networkUser.location,
         bio,
         skills: skills.length > 0 ? skills : ['Communication', 'Collaboration'],
-        experience: [
-          {
-            role: title,
-            company: 'JobHuntly Member',
-            period: 'Current',
-            desc: bio,
-          },
-        ],
-        educationLabel: websiteUrl ? 'Portfolio / Website' : 'Education',
-        educationText: websiteUrl || 'Education details are not available on this profile yet.',
-        educationHref: websiteUrl || '',
+        experience: experiences,
+        educationEntries: educations,
+        educationText: educations.length === 0 ? 'Education details are not available on this profile yet.' : '',
         email: networkUser.email,
         avatar: getInitials(name),
         avatarColor: getColorClass(networkUser.id),
+        profilePhotoUrl: networkUser.profilePhotoUrl ? apiService.resolveFileUrl(networkUser.profilePhotoUrl) : '',
         websiteUrl,
         contactRows: [
           { icon: '📧', value: networkUser.email, href: `mailto:${networkUser.email}` },
           ...(networkUser.location ? [{ icon: '📍', value: networkUser.location }] : []),
+          ...(networkUser.phone ? [{ icon: '📞', value: networkUser.phone }] : []),
           ...(websiteUrl ? [{ icon: '🌐', value: websiteUrl, href: websiteUrl }] : []),
+          ...(networkUser.instagram ? [{ icon: '📸', value: networkUser.instagram, href: buildWebsiteUrl(networkUser.instagram) }] : []),
+          ...(networkUser.twitter ? [{ icon: '🐦', value: networkUser.twitter, href: buildWebsiteUrl(networkUser.twitter) }] : []),
         ],
       };
     }
@@ -171,12 +185,12 @@ export default function SeekerProfile() {
       bio: data.bio,
       skills: data.skills,
       experience: data.experience,
-      educationLabel: 'Education',
+      educationEntries: [],
       educationText: data.education,
-      educationHref: '',
       email: data.email,
       avatar: contact.avatar,
       avatarColor: contact.color,
+      profilePhotoUrl: '',
       websiteUrl: '',
       contactRows: [
         { icon: '📧', value: data.email, href: `mailto:${data.email}` },
@@ -233,8 +247,20 @@ export default function SeekerProfile() {
 
           <div className="bg-white rounded-xl p-8 border border-gray-200">
             <div className="flex items-start gap-6">
-              <div className={`w-20 h-20 rounded-full ${profileData.avatarColor} flex items-center justify-center text-white text-2xl font-bold flex-shrink-0`}>
-                {profileData.avatar}
+              <div className={`w-20 h-20 rounded-full ${profileData.avatarColor} flex items-center justify-center text-white text-2xl font-bold flex-shrink-0 overflow-hidden`}>
+                {profileData.profilePhotoUrl ? (
+                  <a
+                    href={profileData.profilePhotoUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`Open ${profileData.name} profile photo`}
+                    className="block w-full h-full"
+                  >
+                    <img src={profileData.profilePhotoUrl} alt={`${profileData.name} profile photo`} className="w-full h-full object-cover" />
+                  </a>
+                ) : (
+                  profileData.avatar
+                )}
               </div>
               <div className="flex-1">
                 <h1 className="text-2xl font-bold text-gray-900">{profileData.name}</h1>
@@ -258,6 +284,16 @@ export default function SeekerProfile() {
                   >
                     Send Email
                   </a>
+                  {profileData.websiteUrl && (
+                    <a
+                      href={profileData.websiteUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition"
+                    >
+                      Visit Website
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
@@ -311,20 +347,38 @@ export default function SeekerProfile() {
           </div>
 
           <div className="bg-white rounded-xl p-6 border border-gray-200">
-            <h2 className="font-semibold text-gray-900 mb-3">{profileData.educationLabel}</h2>
-            {profileData.educationHref ? (
-              <a
-                href={profileData.educationHref}
-                target="_blank"
-                rel="noreferrer"
-                className="text-sm text-blue-600 hover:underline break-all"
-              >
-                {profileData.educationText}
-              </a>
+            <h2 className="font-semibold text-gray-900 mb-3">Education</h2>
+            {profileData.educationEntries.length > 0 ? (
+              <div className="space-y-4">
+                {profileData.educationEntries.map((edu, index) => (
+                  <div key={`${edu.school}-${edu.degree}-${index}`}>
+                    <p className="font-medium text-gray-900">{edu.school || 'Institution'}</p>
+                    <p className="text-sm text-blue-600">{edu.degree || 'Degree / Certificate'}</p>
+                    {(edu.start || edu.end) && (
+                      <p className="text-sm text-gray-500">{[edu.start, edu.end].filter(Boolean).join(' - ')}</p>
+                    )}
+                    {edu.desc && <p className="text-sm text-gray-700 mt-1">{edu.desc}</p>}
+                  </div>
+                ))}
+              </div>
             ) : (
               <p className="text-sm text-gray-700">{profileData.educationText}</p>
             )}
           </div>
+
+          {profileData.websiteUrl && (
+            <div className="bg-white rounded-xl p-6 border border-gray-200">
+              <h2 className="font-semibold text-gray-900 mb-3">Portfolio / Website</h2>
+              <a
+                href={profileData.websiteUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-blue-600 hover:underline break-all"
+              >
+                {profileData.websiteUrl}
+              </a>
+            </div>
+          )}
 
           <div className="bg-white rounded-xl p-6 border border-gray-200">
             <h2 className="font-semibold text-gray-900 mb-4">Contact</h2>

@@ -63,6 +63,45 @@ public class User implements UserDetails {
     
     @Column(name = "company_size")
     private String companySize;
+
+    @Column(name = "headline")
+    private String headline;
+
+    @Column(name = "current_company")
+    private String currentCompany;
+
+    @Column(name = "phone")
+    private String phone;
+
+    @Column(name = "languages")
+    private String languages;
+
+    @Column(name = "instagram_url")
+    private String instagramUrl;
+
+    @Column(name = "twitter_url")
+    private String twitterUrl;
+
+    @Column(name = "profile_photo_url", length = 1024)
+    private String profilePhotoUrl;
+
+    @Column(name = "cover_photo_url", length = 1024)
+    private String coverPhotoUrl;
+
+    @Column(name = "open_to_opportunities")
+    private Boolean openToOpportunities = true;
+
+    @Lob
+    @Column(name = "skills_json", columnDefinition = "TEXT")
+    private String skillsJson;
+
+    @Lob
+    @Column(name = "experiences_json", columnDefinition = "LONGTEXT")
+    private String experiencesJson;
+
+    @Lob
+    @Column(name = "educations_json", columnDefinition = "LONGTEXT")
+    private String educationsJson;
     
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<AccessToken> accessTokens;
@@ -241,8 +280,104 @@ public class User implements UserDetails {
     public String getCompanySize() {
         return companySize;
     }
-    
+
     public void setCompanySize(String companySize) {
         this.companySize = companySize;
+    }
+
+    public String getHeadline() {
+        return headline;
+    }
+
+    public void setHeadline(String headline) {
+        this.headline = headline;
+    }
+
+    public String getCurrentCompany() {
+        return currentCompany;
+    }
+
+    public void setCurrentCompany(String currentCompany) {
+        this.currentCompany = currentCompany;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getLanguages() {
+        return languages;
+    }
+
+    public void setLanguages(String languages) {
+        this.languages = languages;
+    }
+
+    public String getInstagramUrl() {
+        return instagramUrl;
+    }
+
+    public void setInstagramUrl(String instagramUrl) {
+        this.instagramUrl = instagramUrl;
+    }
+
+    public String getTwitterUrl() {
+        return twitterUrl;
+    }
+
+    public void setTwitterUrl(String twitterUrl) {
+        this.twitterUrl = twitterUrl;
+    }
+
+    public String getProfilePhotoUrl() {
+        return profilePhotoUrl;
+    }
+
+    public void setProfilePhotoUrl(String profilePhotoUrl) {
+        this.profilePhotoUrl = profilePhotoUrl;
+    }
+
+    public String getCoverPhotoUrl() {
+        return coverPhotoUrl;
+    }
+
+    public void setCoverPhotoUrl(String coverPhotoUrl) {
+        this.coverPhotoUrl = coverPhotoUrl;
+    }
+
+    public Boolean getOpenToOpportunities() {
+        return openToOpportunities;
+    }
+
+    public void setOpenToOpportunities(Boolean openToOpportunities) {
+        this.openToOpportunities = openToOpportunities;
+    }
+
+    public String getSkillsJson() {
+        return skillsJson;
+    }
+
+    public void setSkillsJson(String skillsJson) {
+        this.skillsJson = skillsJson;
+    }
+
+    public String getExperiencesJson() {
+        return experiencesJson;
+    }
+
+    public void setExperiencesJson(String experiencesJson) {
+        this.experiencesJson = experiencesJson;
+    }
+
+    public String getEducationsJson() {
+        return educationsJson;
+    }
+
+    public void setEducationsJson(String educationsJson) {
+        this.educationsJson = educationsJson;
     }
 }
