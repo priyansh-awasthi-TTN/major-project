@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { useParams, Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import ApplicationModal from '../../components/ApplicationModal';
 import ShareModal from '../../components/ShareModal';
 import DashTopBar from '../../components/DashTopBar';
 import Toast from '../../components/Toast';
+import { getCompanyRouteId } from '../../data/discoveryData';
 import apiService from '../../services/api';
 
 export default function DashJobDetail() {
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const fromView = searchParams.get('from') || 'list';
@@ -51,6 +53,13 @@ export default function DashJobDetail() {
     </div>
   );
 
+  const companyProfileHref = `/dashboard/companies/${getCompanyRouteId({ name: job.company })}`;
+  const companyProfileState = {
+    backTo: `${location.pathname}${location.search}${location.hash}`,
+    origin: 'job-detail',
+    suppressSidebarItem: 'companies',
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full bg-gray-50">
       <DashTopBar>
@@ -66,7 +75,17 @@ export default function DashJobDetail() {
               <div className={`${job.color} text-white rounded-xl w-16 h-16 flex items-center justify-center font-bold text-2xl`}>{job.logo}</div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">{job.title}</h1>
-                <p className="text-gray-500 text-sm">{job.company} • {job.location} • {job.type}</p>
+                <p className="text-gray-500 text-sm">
+                  <Link
+                    to={companyProfileHref}
+                    state={companyProfileState}
+                    className="transition-colors hover:text-blue-600 hover:underline underline-offset-4"
+                  >
+                    {job.company}
+                  </Link>
+                  {job.location ? ` • ${job.location}` : ''}
+                  {job.type ? ` • ${job.type}` : ''}
+                </p>
                 <div className="flex gap-2 mt-2">
                   {(job.categories || []).map(c => <span key={c} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded px-2 py-0.5">{c}</span>)}
                 </div>

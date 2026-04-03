@@ -1,8 +1,21 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import ApplicationProgressBar from '../../components/ApplicationProgressBar';
+import SearchableFilterInput from '../../components/SearchableFilterInput';
 import DashTopBar from '../../components/DashTopBar';
+import { useAuth } from '../../context/AuthContext';
 import { findJobsFallback } from '../../data/discoveryData';
 import apiService from '../../services/api';
+import {
+  buildApplicationProgressMap,
+  getSubmittedApplicationIds,
+  syncSubmittedApplications,
+} from '../../utils/applicationDrafts';
+import {
+  buildLocationFilterOptions,
+  getRegionsForCountryQuery,
+  matchesLocationFilters,
+} from '../../utils/locationFilters';
 
 const EMPLOYMENT_TYPES = ['Full-Time', 'Part-Time', 'Remote', 'Internship', 'Contract'];
 const CATEGORIES = ['Design', 'Sales', 'Marketing', 'Business', 'Human Resource', 'Finance', 'Engineering', 'Technology'];
@@ -41,7 +54,10 @@ function CheckItem({ label, checked, onChange }) {
 }
 
 // Compact job card for list view
-function ListJobCard({ job, viewParam, isApplied }) {
+function ListJobCard({ job, viewParam, applicationState }) {
+  const isSubmitted = applicationState?.status === 'submitted';
+  const badgeLabel = isSubmitted ? 'Applied' : applicationState ? 'Continue' : 'Apply';
+
   return (
     <Link to={`/dashboard/jobs/${job.id}?from=${viewParam}`} className="block">
       <div className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-blue-200 transition flex items-start gap-4">
@@ -63,28 +79,22 @@ function ListJobCard({ job, viewParam, isApplied }) {
               <h3 className="font-semibold text-gray-900 text-sm hover:text-blue-600">{job.title}</h3>
               <p className="text-xs text-gray-500 mt-0.5">{job.company} • {job.location}</p>
             </div>
-            {isApplied ? (
-               <span className="bg-green-100 text-green-700 text-xs px-4 py-1.5 rounded-lg flex-shrink-0 font-medium">Applied</span>
-            ) : (
-               <Link to={`/dashboard/jobs/${job.id}?from=${viewParam}`}
-                 className="bg-blue-50 text-blue-600 text-xs px-4 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition flex-shrink-0 font-medium">
-                 Apply
-               </Link>
-            )}
+            <span className={`text-xs px-4 py-1.5 rounded-lg flex-shrink-0 font-medium ${
+              isSubmitted
+                ? 'bg-green-100 text-green-700'
+                : applicationState
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'bg-blue-50 text-blue-600'
+            }`}>
+              {badgeLabel}
+            </span>
           </div>
           <div className="flex flex-wrap gap-1.5 mt-2">
             {(Array.isArray(job.categories) ? job.categories : (job.categories||'').split(',').map(s=>s.trim()).filter(Boolean)).map(c => (
               <span key={c} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded px-2 py-0.5">{c}</span>
             ))}
           </div>
-          <div className="mt-2">
-            <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
-              <span>{job.applied} applied of {job.capacity} capacity</span>
-            </div>
-            <div className="w-full bg-gray-100 rounded-full h-1.5">
-              <div className="bg-green-400 h-1.5 rounded-full" style={{ width: `${Math.min((job.applied / job.capacity) * 100, 100)}%` }} />
-            </div>
-          </div>
+          <ApplicationProgressBar applicationState={applicationState} className="mt-3" />
         </div>
       </div>
     </Link>
@@ -92,7 +102,10 @@ function ListJobCard({ job, viewParam, isApplied }) {
 }
 
 // Compact job card for grid view
-function GridJobCard({ job, viewParam }) {
+function GridJobCard({ job, viewParam, applicationState }) {
+  const isSubmitted = applicationState?.status === 'submitted';
+  const badgeLabel = isSubmitted ? 'Applied' : applicationState ? 'Continue' : 'Apply';
+
   return (
     <Link to={`/dashboard/jobs/${job.id}?from=${viewParam}`} className="block">
       <div className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md hover:border-blue-200 transition h-full flex flex-col">
@@ -100,6 +113,15 @@ function GridJobCard({ job, viewParam }) {
           <div className={`${job.color} text-white rounded-xl w-10 h-10 flex items-center justify-center font-bold text-xs flex-shrink-0`}>
             {job.logo}
           </div>
+          <span className={`text-xs rounded px-2 py-0.5 font-medium ${
+            isSubmitted
+              ? 'bg-green-100 text-green-700'
+              : 'bg-blue-50 text-blue-600'
+          }`}>{badgeLabel}</span>
+        </div>
+        <h3 className="font-semibold text-gray-900 text-sm hover:text-blue-600 mb-0.5">{job.title}</h3>
+        <p className="text-xs text-gray-500 mb-2">{job.company} • {job.location}</p>
+        <div className="mb-3">
           <span className={`text-xs border rounded px-2 py-0.5 font-medium ${
             job.type === 'Full-Time' ? 'border-green-500 text-green-600' :
             job.type === 'Part-Time' ? 'border-blue-500 text-blue-600' :
@@ -108,46 +130,71 @@ function GridJobCard({ job, viewParam }) {
             'border-purple-500 text-purple-600'
           }`}>{job.type}</span>
         </div>
-        <h3 className="font-semibold text-gray-900 text-sm hover:text-blue-600 mb-0.5">{job.title}</h3>
-        <p className="text-xs text-gray-500 mb-2">{job.company} • {job.location}</p>
         <div className="flex flex-wrap gap-1 mb-3">
           {(Array.isArray(job.categories) ? job.categories : (job.categories||'').split(',').map(s=>s.trim()).filter(Boolean)).map(c => (
             <span key={c} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded px-1.5 py-0.5">{c}</span>
           ))}
         </div>
-        <div className="mt-auto">
-          <div className="w-full bg-gray-100 rounded-full h-1.5 mb-1">
-            <div className="bg-green-400 h-1.5 rounded-full" style={{ width: `${Math.min((job.applied / job.capacity) * 100, 100)}%` }} />
-          </div>
-          <p className="text-xs text-gray-400">{job.applied} applied of {job.capacity} capacity</p>
-        </div>
+        <ApplicationProgressBar applicationState={applicationState} className="mt-auto" />
       </div>
     </Link>
   );
 }
 
 export default function DashFindJobs() {
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const viewGrid = searchParams.get('view') === 'grid';
+  const companyParam = searchParams.get('company')?.trim() || '';
+  const companyProfileOrigin = searchParams.get('origin') === 'company-profile';
   const setViewGrid = (val) => setSearchParams(prev => { const p = new URLSearchParams(prev); p.set('view', val ? 'grid' : 'list'); return p; }, { replace: true });
-  const [search, setSearch] = useState('');
-  const [location, setLocation] = useState('');
+  const [searchInput, setSearchInput] = useState(companyParam);
+  const [searchQuery, setSearchQuery] = useState(companyParam);
+  const [countryInput, setCountryInput] = useState('');
+  const [countryQuery, setCountryQuery] = useState('');
+  const [regionInput, setRegionInput] = useState('');
+  const [regionQuery, setRegionQuery] = useState('');
   const [sortBy, setSortBy] = useState('Most relevant');
   const [page, setPage] = useState(1);
   const [allJobs, setAllJobs] = useState(findJobsFallback);
   const [loadingJobs, setLoadingJobs] = useState(true);
-  const [appliedJobsIds, setAppliedJobsIds] = useState([]);
+  const [submittedJobIds, setSubmittedJobIds] = useState([]);
 
   useEffect(() => {
+    let active = true;
+
+    setSubmittedJobIds(user ? Array.from(getSubmittedApplicationIds(user)) : []);
+
     Promise.all([
-      apiService.getJobs(),
-      apiService.getApplications()
+      apiService.getJobs().catch(() => null),
+      user ? apiService.getApplications().catch(() => null) : Promise.resolve(null)
     ]).then(([jobsData, appsData]) => {
+      if (!active) return;
       if (jobsData?.length) setAllJobs(jobsData);
-      if (appsData?.length) setAppliedJobsIds(appsData.map(a => Number(a.jobId)));
+      if (user && Array.isArray(appsData)) {
+        setSubmittedJobIds(Array.from(syncSubmittedApplications(user, appsData)));
+      }
     }).catch(() => {})
-      .finally(() => setLoadingJobs(false));
-  }, []);
+      .finally(() => {
+        if (active) setLoadingJobs(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!companyParam) return;
+
+    setSearchInput(companyParam);
+    setSearchQuery(companyParam);
+    setCountryInput('');
+    setCountryQuery('');
+    setRegionInput('');
+    setRegionQuery('');
+    setPage(1);
+  }, [companyParam]);
 
   // Filter state
   const [selTypes, setSelTypes]       = useState([]);
@@ -157,6 +204,12 @@ export default function DashFindJobs() {
 
   const toggle = (arr, setArr, val) =>
     setArr(prev => prev.includes(val) ? prev.filter(x => x !== val) : [...prev, val]);
+  const allJobLocations = useMemo(() => allJobs.map((job) => job.location).filter(Boolean), [allJobs]);
+  const locationOptions = useMemo(() => buildLocationFilterOptions(allJobLocations), [allJobLocations]);
+  const availableRegions = useMemo(
+    () => getRegionsForCountryQuery(allJobLocations, countryInput),
+    [allJobLocations, countryInput],
+  );
 
   // Compute counts dynamically — depend on allJobs so they update after API load
   const typeCounts  = useMemo(() => Object.fromEntries(EMPLOYMENT_TYPES.map(t => [t, allJobs.filter(j => j.type === t).length])), [allJobs]);
@@ -170,12 +223,12 @@ export default function DashFindJobs() {
         ? j.categories
         : (j.categories || '').split(',').map(s => s.trim()).filter(Boolean);
 
-      const q = search.toLowerCase();
+      const q = searchQuery.toLowerCase();
       const matchSearch = !q || j.title.toLowerCase().includes(q) || j.company.toLowerCase().includes(q) || (j.location || '').toLowerCase().includes(q);
       const matchType   = selTypes.length === 0 || selTypes.includes(j.type);
       const matchCat    = selCats.length === 0  || selCats.some(c => cats.includes(c));
       const matchLevel  = selLevels.length === 0 || selLevels.includes(j.level);
-      const matchLoc    = !location.trim() || (j.location || '').toLowerCase().includes(location.toLowerCase());
+      const matchLoc = matchesLocationFilters([j.location], countryQuery, regionQuery);
       const matchSalary = selSalary.length === 0 || selSalary.some(r => {
         const range = SALARY_RANGES.find(s => s.label === r);
         return range && j.salary >= range.min && j.salary <= range.max;
@@ -189,19 +242,57 @@ export default function DashFindJobs() {
     else if (sortBy === 'Salary (Low-High)') result = [...result].sort((a, b) => a.salary - b.salary);
 
     return result;
-  }, [search, location, selTypes, selCats, selLevels, selSalary, sortBy, allJobs]);
+  }, [searchQuery, countryQuery, regionQuery, selTypes, selCats, selLevels, selSalary, sortBy, allJobs]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const applicationProgressMap = useMemo(() => {
+    return buildApplicationProgressMap(
+      user,
+      paginated.map((job) => job.id),
+      submittedJobIds,
+    );
+  }, [paginated, submittedJobIds, user]);
 
-  const handleSearch = () => setPage(1);
+  const handleSearch = () => {
+    setSearchQuery(searchInput);
+    setCountryQuery(countryInput);
+    setRegionQuery(regionInput.trim());
+    setPage(1);
+    if (companyParam) {
+      setSearchParams(prev => {
+        const nextParams = new URLSearchParams(prev);
+        nextParams.delete('company');
+        if (companyProfileOrigin) {
+          nextParams.delete('origin');
+        }
+        return nextParams;
+      }, { replace: true });
+    }
+  };
 
   const clearAll = () => {
     setSelTypes([]); setSelCats([]); setSelLevels([]); setSelSalary([]);
-    setSearch(''); setPage(1);
+    setSearchInput('');
+    setSearchQuery('');
+    setCountryInput('');
+    setCountryQuery('');
+    setRegionInput('');
+    setRegionQuery('');
+    setPage(1);
+    if (companyParam) {
+      setSearchParams(prev => {
+        const nextParams = new URLSearchParams(prev);
+        nextParams.delete('company');
+        if (companyProfileOrigin) {
+          nextParams.delete('origin');
+        }
+        return nextParams;
+      }, { replace: true });
+    }
   };
 
-  const hasFilters = selTypes.length || selCats.length || selLevels.length || selSalary.length;
+  const hasFilters = selTypes.length || selCats.length || selLevels.length || selSalary.length || countryQuery.trim() || regionQuery.trim();
 
   return (
     <div className="flex-1 flex flex-col h-full bg-gray-50">
@@ -209,20 +300,36 @@ export default function DashFindJobs() {
 
       {/* Search bar — fixed, doesn't scroll */}
       <div className="bg-white border-b border-gray-200 px-8 py-4 flex-shrink-0">
-        <div className="flex gap-3">
-          <div className="flex-1 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2.5">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.3fr)_220px_240px_auto]">
+          <div className="flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2.5">
             <span className="text-gray-400 text-sm">🔍</span>
-            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
+            <input value={searchInput} onChange={e => setSearchInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSearch()}
               className="flex-1 text-sm outline-none text-gray-700 placeholder-gray-400"
               placeholder="Job title or keyword" />
           </div>
-          <div className="flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2.5 min-w-44">
-            <span className="text-gray-400 text-sm">📍</span>
-            <input value={location} onChange={e => setLocation(e.target.value)}
-              className="flex-1 text-sm outline-none text-gray-700"
-              placeholder="Location" />
-          </div>
+          <SearchableFilterInput
+            icon="📍"
+            value={countryInput}
+            onChange={(nextValue) => {
+              setCountryInput(nextValue);
+              setRegionInput('');
+            }}
+            options={locationOptions.countries}
+            placeholder="Search country"
+            noResultsLabel="No matching countries"
+          />
+          <SearchableFilterInput
+            icon="🗺️"
+            value={regionInput}
+            onChange={(nextValue) => {
+              setRegionInput(nextValue);
+            }}
+            options={availableRegions}
+            disabled={!countryInput.trim()}
+            placeholder={countryInput.trim() ? `Search state / city in ${countryInput}` : 'Search state / city'}
+            noResultsLabel="No matching state or city"
+          />
           <button onClick={handleSearch}
             className="bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition">
             Search
@@ -278,6 +385,13 @@ export default function DashFindJobs() {
             <div>
               <h2 className="font-semibold text-gray-900">All Jobs</h2>
               <p className="text-sm text-gray-500">Showing {filtered.length} results</p>
+              {(countryQuery.trim() || regionQuery.trim()) ? (
+                <p className="text-xs text-gray-400 mt-1">
+                  {regionQuery.trim()
+                    ? `Location: ${regionQuery.trim()}, ${countryQuery.trim()}`
+                    : `Country: ${countryQuery.trim()}`}
+                </p>
+              ) : null}
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 text-sm text-gray-600">
@@ -301,14 +415,30 @@ export default function DashFindJobs() {
           {/* Active filter chips */}
           {hasFilters ? (
             <div className="flex flex-wrap gap-2 mb-4">
-              {[...selTypes, ...selCats, ...selLevels, ...selSalary].map(f => (
+              {[
+                ...selTypes,
+                ...selCats,
+                ...selLevels,
+                ...selSalary,
+                ...(countryQuery.trim() ? [`Country: ${countryQuery.trim()}`] : []),
+                ...(regionQuery.trim() ? [`State / city: ${regionQuery.trim()}`] : []),
+              ].map(f => (
                 <span key={f} className="flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-full border border-blue-200">
                   {f}
                   <button onClick={() => {
                     if (selTypes.includes(f)) toggle(selTypes, setSelTypes, f);
                     else if (selCats.includes(f)) toggle(selCats, setSelCats, f);
                     else if (selLevels.includes(f)) toggle(selLevels, setSelLevels, f);
-                    else toggle(selSalary, setSelSalary, f);
+                    else if (selSalary.includes(f)) toggle(selSalary, setSelSalary, f);
+                    else if (f.startsWith('Country: ')) {
+                      setCountryInput('');
+                      setCountryQuery('');
+                      setRegionInput('');
+                      setRegionQuery('');
+                    } else {
+                      setRegionInput('');
+                      setRegionQuery('');
+                    }
                     setPage(1);
                   }} className="ml-0.5 hover:text-red-500">✕</button>
                 </span>
@@ -325,16 +455,34 @@ export default function DashFindJobs() {
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <span className="text-5xl mb-3">🔍</span>
               <p className="text-lg font-medium text-gray-500">No jobs found</p>
-              <p className="text-sm mt-1">Try adjusting your filters or search terms</p>
+              <p className="text-sm mt-1">
+                {countryQuery.trim() || regionQuery.trim()
+                  ? 'No jobs match the selected country and state/city.'
+                  : 'Try adjusting your filters or search terms'}
+              </p>
               <button onClick={clearAll} className="mt-4 text-sm text-blue-600 hover:underline">Clear all filters</button>
             </div>
           ) : viewGrid ? (
             <div className="grid grid-cols-3 gap-4">
-              {paginated.map(job => <GridJobCard key={job.id} job={job} viewParam={viewGrid ? 'grid' : 'list'} />)}
+              {paginated.map(job => (
+                <GridJobCard
+                  key={job.id}
+                  job={job}
+                  viewParam={viewGrid ? 'grid' : 'list'}
+                  applicationState={applicationProgressMap[String(job.id)]}
+                />
+              ))}
             </div>
           ) : (
             <div className="space-y-3">
-              {paginated.map(job => <ListJobCard key={job.id} job={job} viewParam={viewGrid ? 'grid' : 'list'} isApplied={appliedJobsIds.includes(Number(job.id))} />)}
+              {paginated.map(job => (
+                <ListJobCard
+                  key={job.id}
+                  job={job}
+                  viewParam={viewGrid ? 'grid' : 'list'}
+                  applicationState={applicationProgressMap[String(job.id)]}
+                />
+              ))}
             </div>
           )}
 

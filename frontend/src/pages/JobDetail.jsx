@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import { findJobsFallback, getCompanyRouteId } from '../data/discoveryData';
 import { useAuth } from '../context/AuthContext';
 import JobCard from '../components/JobCard';
@@ -10,6 +10,7 @@ import apiService from '../services/api';
 export default function JobDetail() {
   const { id } = useParams();
   const { user } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -60,6 +61,12 @@ export default function JobDetail() {
     );
   }
 
+  const companyProfileHref = `/companies/${getCompanyRouteId({ name: job.company })}`;
+  const companyProfileState = {
+    backTo: `${location.pathname}${location.search}${location.hash}`,
+    origin: 'job-detail',
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-8 py-8">
@@ -77,7 +84,17 @@ export default function JobDetail() {
             <div className={`${job.color} text-white rounded-xl w-16 h-16 flex items-center justify-center font-bold text-2xl`}>{job.logo}</div>
             <div>
               <h1 className="text-xl font-bold text-gray-900">{job.title}</h1>
-              <p className="text-gray-500 text-sm">{job.company} • {job.location} • {job.type}</p>
+              <p className="text-gray-500 text-sm">
+                <Link
+                  to={companyProfileHref}
+                  state={companyProfileState}
+                  className="transition-colors hover:text-blue-600 hover:underline underline-offset-4"
+                >
+                  {job.company}
+                </Link>
+                {job.location ? ` • ${job.location}` : ''}
+                {job.type ? ` • ${job.type}` : ''}
+              </p>
               <div className="flex gap-2 mt-2">
                 {job.categories.map(c => <span key={c} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded px-2 py-0.5">{c}</span>)}
               </div>

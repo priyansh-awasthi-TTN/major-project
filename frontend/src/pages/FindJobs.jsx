@@ -1,8 +1,20 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ApplicationProgressBar from '../components/ApplicationProgressBar';
+import SearchableFilterInput from '../components/SearchableFilterInput';
 import { findJobsFallback } from '../data/discoveryData';
 import apiService from '../services/api';
+import {
+  buildApplicationProgressMap,
+  getSubmittedApplicationIds,
+  syncSubmittedApplications,
+} from '../utils/applicationDrafts';
+import {
+  buildLocationFilterOptions,
+  getRegionsForCountryQuery,
+  matchesLocationFilters,
+} from '../utils/locationFilters';
 
 const EMPLOYMENT_TYPES = ['Full-Time', 'Part-Time', 'Remote', 'Internship', 'Contract'];
 const CATEGORIES = ['Design', 'Sales', 'Marketing', 'Business', 'Human Resource', 'Finance', 'Engineering', 'Technology'];
@@ -17,6 +29,8 @@ const SALARY_RANGES = [
 export default function FindJobs() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const companyParam = searchParams.get('company')?.trim() || '';
   const handleApply = (jobId) => {
     if (!user) {
       navigate('/login');
@@ -25,18 +39,56 @@ export default function FindJobs() {
     navigate(`/jobs/${jobId}`);
   };
 
-  const [search, setSearch] = useState('');
-  const [location, setLocation] = useState('');
+  const [searchInput, setSearchInput] = useState(companyParam);
+  const [searchQuery, setSearchQuery] = useState(companyParam);
+  const [countryInput, setCountryInput] = useState('');
+  const [countryQuery, setCountryQuery] = useState('');
+  const [regionInput, setRegionInput] = useState('');
+  const [regionQuery, setRegionQuery] = useState('');
   const [viewGrid, setViewGrid] = useState(false);
   const [allJobs, setAllJobs] = useState(findJobsFallback);
+  const [submittedJobIds, setSubmittedJobIds] = useState([]);
 
   useEffect(() => {
-    apiService.getJobs()
-      .then(jobsData => {
-        if (jobsData?.length) setAllJobs(jobsData);
+    let active = true;
+
+    setSubmittedJobIds(user ? Array.from(getSubmittedApplicationIds(user)) : []);
+
+    Promise.all([
+      apiService.getJobs().catch(() => null),
+      user ? apiService.getApplications().catch(() => null) : Promise.resolve(null),
+    ])
+      .then(([jobsData, applications]) => {
+        if (!active) return;
+
+        if (jobsData?.length) {
+          setAllJobs(jobsData);
+        }
+
+        if (user && Array.isArray(applications)) {
+          setSubmittedJobIds(Array.from(syncSubmittedApplications(user, applications)));
+        }
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => {})
+      .finally(() => {
+        if (!active) return;
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!companyParam) return;
+
+    setSearchInput(companyParam);
+    setSearchQuery(companyParam);
+    setCountryInput('');
+    setCountryQuery('');
+    setRegionInput('');
+    setRegionQuery('');
+  }, [companyParam]);
 
   const [selTypes, setSelTypes] = useState([]);
   const [selCats, setSelCats] = useState([]);
@@ -45,6 +97,12 @@ export default function FindJobs() {
 
   const toggle = (arr, setArr, val) =>
     setArr(prev => prev.includes(val) ? prev.filter(x => x !== val) : [...prev, val]);
+  const allJobLocations = useMemo(() => allJobs.map((job) => job.location).filter(Boolean), [allJobs]);
+  const locationOptions = useMemo(() => buildLocationFilterOptions(allJobLocations), [allJobLocations]);
+  const availableRegions = useMemo(
+    () => getRegionsForCountryQuery(allJobLocations, countryInput),
+    [allJobLocations, countryInput],
+  );
 
   const typeCounts = useMemo(() => Object.fromEntries(EMPLOYMENT_TYPES.map(t => [t, allJobs.filter(j => j.type === t).length])), [allJobs]);
   const catCounts = useMemo(() => Object.fromEntries(CATEGORIES.map(c => [c, allJobs.filter(j => Array.isArray(j.categories) ? j.categories.includes(c) : (j.categories || '').includes(c)).length])), [allJobs]);
@@ -53,9 +111,9 @@ export default function FindJobs() {
   const filtered = useMemo(() => {
     let result = allJobs.filter(j => {
       const cats = Array.isArray(j.categories) ? j.categories : (j.categories || '').split(',').map(s => s.trim()).filter(Boolean);
-      const q = search.toLowerCase();
+      const q = searchQuery.toLowerCase();
       const matchSearch = !q || j.title.toLowerCase().includes(q) || j.company.toLowerCase().includes(q);
-      const matchLoc    = !location.trim() || (j.location || '').toLowerCase().includes(location.trim().toLowerCase());
+      const matchLoc = matchesLocationFilters([j.location], countryQuery, regionQuery);
       const matchType   = selTypes.length === 0 || selTypes.includes(j.type);
       const matchCat    = selCats.length === 0  || selCats.some(c => cats.includes(c));
       const matchLevel  = selLevels.length === 0 || selLevels.includes(j.level);
@@ -66,7 +124,43 @@ export default function FindJobs() {
       return matchSearch && matchType && matchCat && matchLevel && matchSalary && matchLoc;
     });
     return result;
-  }, [search, location, selTypes, selCats, selLevels, selSalary, allJobs]);
+  }, [searchQuery, countryQuery, regionQuery, selTypes, selCats, selLevels, selSalary, allJobs]);
+
+  const applicationProgressMap = useMemo(() => {
+    return buildApplicationProgressMap(
+      user,
+      filtered.map((job) => job.id),
+      submittedJobIds,
+    );
+  }, [filtered, submittedJobIds, user]);
+  const handleSearch = () => {
+    setSearchQuery(searchInput);
+    setCountryQuery(countryInput);
+    setRegionQuery(regionInput.trim());
+    if (companyParam) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('company');
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
+  const clearAll = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    setCountryInput('');
+    setCountryQuery('');
+    setRegionInput('');
+    setRegionQuery('');
+    setSelTypes([]);
+    setSelCats([]);
+    setSelLevels([]);
+    setSelSalary([]);
+    if (companyParam) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('company');
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
+  const hasActiveLocationFilter = countryQuery.trim() || regionQuery.trim();
 
   return (
     <div className="min-h-screen bg-white">
@@ -76,19 +170,34 @@ export default function FindJobs() {
           Find your <span className="text-blue-600">dream job</span>
         </h1>
         <p className="text-gray-500 text-sm mb-6">Find your next career at companies like HubSpot, Nike, and Dropbox</p>
-        <div className="flex bg-white border border-gray-300 rounded-lg overflow-hidden max-w-2xl mx-auto shadow-sm">
-          <div className="flex items-center gap-2 flex-1 px-4 py-3">
+        <div className="grid max-w-5xl grid-cols-1 gap-3 mx-auto md:grid-cols-[minmax(0,1.4fr)_220px_220px_auto]">
+          <div className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-3 shadow-sm">
             <span className="text-gray-400">🔍</span>
-            <input value={search} onChange={e => setSearch(e.target.value)}
+            <input value={searchInput} onChange={e => setSearchInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSearch()}
               className="flex-1 text-gray-800 text-sm outline-none" placeholder="Job title or keyword" />
           </div>
-          <div className="w-px bg-gray-200 my-2" />
-          <div className="flex items-center gap-2 flex-1 px-4 py-3">
-            <span className="text-gray-400">📍</span>
-            <input value={location} onChange={e => setLocation(e.target.value)} className="flex-1 text-gray-800 text-sm outline-none" placeholder="Florence, Italy" />
-            <span className="text-gray-400 text-xs">▼</span>
-          </div>
-          <button className="bg-blue-600 text-white text-sm px-6 py-3 hover:bg-blue-700 font-medium">Search</button>
+          <SearchableFilterInput
+            icon="📍"
+            value={countryInput}
+            onChange={(nextValue) => {
+              setCountryInput(nextValue);
+              setRegionInput('');
+            }}
+            options={locationOptions.countries}
+            placeholder="Search country"
+            noResultsLabel="No matching countries"
+          />
+          <SearchableFilterInput
+            icon="🗺️"
+            value={regionInput}
+            onChange={setRegionInput}
+            options={availableRegions}
+            disabled={!countryInput.trim()}
+            placeholder={countryInput.trim() ? `Search state / city in ${countryInput}` : 'Search state / city'}
+            noResultsLabel="No matching state or city"
+          />
+          <button onClick={handleSearch} className="rounded-lg bg-blue-600 px-6 py-3 text-sm font-medium text-white hover:bg-blue-700">Search</button>
         </div>
         <p className="text-gray-400 text-xs mt-3">Popular: UI Designer, UX Researcher, Android, Admin</p>
       </div>
@@ -162,6 +271,13 @@ export default function FindJobs() {
             <div>
               <h2 className="font-bold text-gray-900 text-lg">All Jobs</h2>
               <p className="text-sm text-gray-400">Showing {filtered.length} results</p>
+              {hasActiveLocationFilter ? (
+                <p className="text-xs text-gray-400 mt-1">
+                  {regionQuery.trim()
+                    ? `Location: ${regionQuery.trim()}, ${countryQuery.trim()}`
+                    : `Country: ${countryQuery.trim()}`}
+                </p>
+              ) : null}
             </div>
             <div className="flex items-center gap-3">
               <span className="text-sm text-gray-500">Sort by:</span>
@@ -180,76 +296,103 @@ export default function FindJobs() {
           </div>
 
           {/* List view */}
-          {!viewGrid && (
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-6 py-16 text-center">
+              <p className="text-4xl mb-3">🔍</p>
+              <p className="text-lg font-medium text-gray-600">No jobs found</p>
+              <p className="text-sm text-gray-400 mt-1">
+                {hasActiveLocationFilter
+                  ? 'No jobs match the selected country and state/city.'
+                  : 'Try changing your keywords or filters.'}
+              </p>
+              <button onClick={clearAll} className="mt-4 text-sm text-blue-600 hover:underline">Clear all filters</button>
+            </div>
+          ) : !viewGrid && (
             <div className="space-y-4">
-              {filtered.map(job => (
-                <div key={job.id} className="bg-white border border-gray-200 rounded-xl p-5 flex items-center gap-4 hover:shadow-sm transition">
-                  <div className={`${job.color} text-white rounded-xl w-12 h-12 flex items-center justify-center font-bold text-lg flex-shrink-0`}>{job.logo}</div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-gray-900">{job.title}</h3>
-                    </div>
-                    <p className="text-sm text-gray-500">{job.company} • {job.location}</p>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      <span className="text-xs border border-green-500 text-green-600 rounded px-2 py-0.5">{job.type}</span>
-                      {(Array.isArray(job.categories) ? job.categories : (job.categories || '').split(',').map(s => s.trim()).filter(Boolean)).map(c => (
-                        <span key={c} className={`text-xs rounded px-2 py-0.5 border ${c === 'Design' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>{c}</span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                    <button 
-                      onClick={() => handleApply(job.id)}
-                      className="bg-blue-600 text-white text-sm px-5 py-2 rounded-lg hover:bg-blue-700 font-medium"
-                    >
-                      Apply
-                    </button>
-                    <div className="text-right">
-                      <div className="w-32 bg-gray-200 rounded-full h-1.5 mb-1">
-                        <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${(job.applied / job.capacity) * 100}%` }} />
+              {filtered.map(job => {
+                const applicationState = applicationProgressMap[String(job.id)];
+                const isSubmitted = applicationState?.status === 'submitted';
+                const buttonClass = isSubmitted
+                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                  : 'bg-blue-600 text-white hover:bg-blue-700';
+                const buttonLabel = isSubmitted
+                  ? 'Applied'
+                  : applicationState
+                    ? 'Continue'
+                    : 'Apply';
+
+                return (
+                  <div key={job.id} className="bg-white border border-gray-200 rounded-xl p-5 flex items-center gap-4 hover:shadow-sm transition">
+                    <div className={`${job.color} text-white rounded-xl w-12 h-12 flex items-center justify-center font-bold text-lg flex-shrink-0`}>{job.logo}</div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-gray-900">{job.title}</h3>
                       </div>
-                      <p className="text-xs text-gray-400"><span className="font-medium text-gray-600">{job.applied} applied</span> of {job.capacity} capacity</p>
+                      <p className="text-sm text-gray-500">{job.company} • {job.location}</p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <span className="text-xs border border-green-500 text-green-600 rounded px-2 py-0.5">{job.type}</span>
+                        {(Array.isArray(job.categories) ? job.categories : (job.categories || '').split(',').map(s => s.trim()).filter(Boolean)).map(c => (
+                          <span key={c} className={`text-xs rounded px-2 py-0.5 border ${c === 'Design' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>{c}</span>
+                        ))}
+                      </div>
+                      <ApplicationProgressBar applicationState={applicationState} className="mt-3 max-w-sm" />
+                    </div>
+                    <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                      <button
+                        onClick={() => handleApply(job.id)}
+                        className={`${buttonClass} text-sm px-5 py-2 rounded-lg font-medium transition`}
+                      >
+                        {buttonLabel}
+                      </button>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
           {/* Grid view */}
           {viewGrid && (
             <div className="grid grid-cols-2 gap-4">
-              {filtered.map(job => (
-                <div key={job.id} className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-sm transition">
-                  <div className="flex items-start justify-between mb-3">
-                    <span className="text-xs border border-green-500 text-green-600 rounded px-2 py-0.5">{job.type}</span>
-                    <button 
-                      onClick={() => handleApply(job.id)}
-                      className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-blue-700"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className={`${job.color} text-white rounded-xl w-11 h-11 flex items-center justify-center font-bold flex-shrink-0`}>{job.logo}</div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-sm">{job.title}</h3>
-                      <p className="text-xs text-gray-500">{job.company} • {job.location}</p>
+              {filtered.map(job => {
+                const applicationState = applicationProgressMap[String(job.id)];
+                const isSubmitted = applicationState?.status === 'submitted';
+                const buttonClass = isSubmitted
+                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                  : 'bg-blue-600 text-white hover:bg-blue-700';
+                const buttonLabel = isSubmitted
+                  ? 'Applied'
+                  : applicationState
+                    ? 'Continue'
+                    : 'Apply';
+
+                return (
+                  <div key={job.id} className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-sm transition">
+                    <div className="flex items-start justify-between mb-3">
+                      <span className="text-xs border border-green-500 text-green-600 rounded px-2 py-0.5">{job.type}</span>
+                      <button
+                        onClick={() => handleApply(job.id)}
+                        className={`${buttonClass} text-xs px-3 py-1.5 rounded-lg transition`}
+                      >
+                        {buttonLabel}
+                      </button>
                     </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {(Array.isArray(job.categories) ? job.categories : (job.categories || '').split(',').map(s => s.trim()).filter(Boolean)).map(c => (
-                      <span key={c} className={`text-xs rounded px-2 py-0.5 border ${c === 'Design' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>{c}</span>
-                    ))}
-                  </div>
-                  <div className="mt-3">
-                    <div className="w-full bg-gray-200 rounded-full h-1.5 mb-1">
-                      <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${(job.applied / job.capacity) * 100}%` }} />
+                    <div className="flex items-start gap-3">
+                      <div className={`${job.color} text-white rounded-xl w-11 h-11 flex items-center justify-center font-bold flex-shrink-0`}>{job.logo}</div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900 text-sm">{job.title}</h3>
+                        <p className="text-xs text-gray-500">{job.company} • {job.location}</p>
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-400"><span className="font-medium text-gray-600">{job.applied} applied</span> of {job.capacity} capacity</p>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {(Array.isArray(job.categories) ? job.categories : (job.categories || '').split(',').map(s => s.trim()).filter(Boolean)).map(c => (
+                        <span key={c} className={`text-xs rounded px-2 py-0.5 border ${c === 'Design' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>{c}</span>
+                      ))}
+                    </div>
+                    <ApplicationProgressBar applicationState={applicationState} className="mt-3" />
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 

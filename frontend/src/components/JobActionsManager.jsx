@@ -1,8 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import ApiService from '../services/api';
+import ApplicationProgressBar from './ApplicationProgressBar';
 import DashTopBar from './DashTopBar';
 import { useToast } from './Toast';
+import {
+  buildApplicationProgressMap,
+  getSubmittedApplicationIds,
+  syncSubmittedApplications,
+} from '../utils/applicationDrafts';
 
 const TAB_META = {
   saved: {
@@ -335,7 +342,7 @@ function LoadingCard() {
   );
 }
 
-function EmptyState({ activeTab, hasQuery }) {
+function EmptyState({ activeTab, hasQuery, onClearQuery }) {
   const meta = TAB_META[activeTab];
 
   return (
@@ -350,25 +357,34 @@ function EmptyState({ activeTab, hasQuery }) {
         {hasQuery ? 'Try a broader search phrase, or switch tabs to inspect a different action collection.' : meta.emptyText}
       </p>
       <div className="mt-6">
-        <Link
-          to="/dashboard/find-jobs"
-          className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-        >
-          Browse Jobs
-          <ActionIcon name="arrow" className="w-4 h-4" />
-        </Link>
+        {hasQuery ? (
+          <button
+            onClick={onClearQuery}
+            className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+          >
+            Clear Search
+            <ActionIcon name="refresh" className="w-4 h-4" />
+          </button>
+        ) : (
+          <Link
+            to="/dashboard/find-jobs"
+            className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+          >
+            Browse Jobs
+            <ActionIcon name="arrow" className="w-4 h-4" />
+          </Link>
+        )}
       </div>
     </div>
   );
 }
 
-function ActionCard({ item, type, onUnsaveJob, onRemoveFromReadingList, onMarkAsRead }) {
+function ActionCard({ item, type, onUnsaveJob, onRemoveFromReadingList, onMarkAsRead, applicationState }) {
   const meta = TAB_META[type];
   const job = item.job || item;
   const categories = normalizeCategories(job.categories);
   const applied = typeof job.applied === 'number' ? job.applied : 0;
   const capacity = typeof job.capacity === 'number' ? job.capacity : 0;
-  const progress = capacity > 0 ? Math.min((applied / capacity) * 100, 100) : 0;
   const dateLabel =
     type === 'reading'
       ? formatActionDate(item.addedAt)
@@ -447,15 +463,23 @@ function ActionCard({ item, type, onUnsaveJob, onRemoveFromReadingList, onMarkAs
 
         <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50/90 p-4">
           <div className="flex items-center justify-between gap-4 text-xs font-medium text-slate-500">
-            <span>Application interest</span>
-            <span>{capacity > 0 ? `${Math.round(progress)}% capacity used` : `${applied} applicants`}</span>
+            <span>Application progress</span>
+            <span>
+              {applicationState
+                ? (applicationState.status === 'submitted' ? 'Submitted' : 'Draft saved')
+                : 'Not started'}
+            </span>
           </div>
-          <div className="mt-3 h-2 rounded-full bg-white">
-            <div
-              className={`h-2 rounded-full bg-gradient-to-r ${meta.ribbon}`}
-              style={{ width: `${Math.max(progress, capacity > 0 ? 6 : 18)}%` }}
-            ></div>
-          </div>
+          {applicationState ? (
+            <ApplicationProgressBar applicationState={applicationState} className="mt-3" />
+          ) : (
+            <div className="mt-3">
+              <div className="h-1.5 w-full rounded-full bg-white"></div>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                You have not started this application yet. Open the job posting to begin and save progress here.
+              </p>
+            </div>
+          )}
           {job.description && (
             <p className="mt-4 text-sm leading-6 text-slate-600">
               {job.description.length > 180 ? `${job.description.slice(0, 180)}...` : job.description}
@@ -530,6 +554,7 @@ function ActionCard({ item, type, onUnsaveJob, onRemoveFromReadingList, onMarkAs
 }
 
 export default function JobActionsManager() {
+  const { user } = useAuth();
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState('saved');
   const [savedJobs, setSavedJobs] = useState([]);
@@ -537,8 +562,10 @@ export default function JobActionsManager() {
   const [sharedJobs, setSharedJobs] = useState([]);
   const [reports, setReports] = useState([]);
   const [query, setQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [submittedJobIds, setSubmittedJobIds] = useState([]);
 
   const loadData = async ({ silent = false } = {}) => {
     if (silent) {
@@ -548,17 +575,26 @@ export default function JobActionsManager() {
     }
 
     try {
-      const [savedResponse, readingResponse, sharedResponse, reportsResponse] = await Promise.all([
+      if (user) {
+        setSubmittedJobIds(Array.from(getSubmittedApplicationIds(user)));
+      }
+
+      const [savedResponse, readingResponse, sharedResponse, reportsResponse, applicationsResponse] = await Promise.all([
         ApiService.getSavedJobs(),
         ApiService.getReadingList(),
         ApiService.getSharedJobs(),
         ApiService.getUserReports(),
+        user ? ApiService.getApplications().catch(() => null) : Promise.resolve(null),
       ]);
 
       setSavedJobs(normalizeJobActionList(savedResponse, 'saved'));
       setReadingList(normalizeJobActionList(readingResponse, 'reading'));
       setSharedJobs(normalizeJobActionList(sharedResponse, 'shared'));
       setReports(normalizeJobActionList(reportsResponse, 'reports'));
+
+      if (user && Array.isArray(applicationsResponse)) {
+        setSubmittedJobIds(Array.from(syncSubmittedApplications(user, applicationsResponse)));
+      }
     } catch (error) {
       console.error('Failed to load job actions:', error);
       showToast('Failed to load job actions', 'error');
@@ -570,7 +606,7 @@ export default function JobActionsManager() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     const handleJobActionUpdated = () => {
@@ -616,10 +652,30 @@ export default function JobActionsManager() {
     }
   };
 
+  const handleApplySearch = () => {
+    setQuery(searchInput.trim());
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setQuery('');
+  };
+
   const collections = { savedJobs, readingList, sharedJobs, reports };
   const activeItems = getActionCollection(collections, activeTab);
   const normalizedQuery = query.trim().toLowerCase();
   const filteredItems = activeItems.filter((item) => matchesQuery(item, activeTab, normalizedQuery));
+  const actionJobIds = useMemo(() => {
+    return [...new Set(
+      [savedJobs, readingList, sharedJobs, reports]
+        .flat()
+        .map((item) => item.job?.id || item.id)
+        .filter((jobId) => jobId != null)
+    )];
+  }, [savedJobs, readingList, sharedJobs, reports]);
+  const applicationProgressMap = useMemo(() => {
+    return buildApplicationProgressMap(user, actionJobIds, submittedJobIds);
+  }, [actionJobIds, submittedJobIds, user]);
   const totalActions = savedJobs.length + readingList.length + sharedJobs.length + reports.length;
   const unreadReading = readingList.filter((item) => !item.isRead).length;
   const savedWithNotes = savedJobs.filter((item) => item.notes).length;
@@ -696,19 +752,34 @@ export default function JobActionsManager() {
                   <div className="flex flex-1 items-center gap-3 rounded-full border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/80 backdrop-blur">
                     <ActionIcon name="search" className="w-4 h-4 text-sky-200" />
                     <input
-                      value={query}
-                      onChange={(event) => setQuery(event.target.value)}
+                      value={searchInput}
+                      onChange={(event) => setSearchInput(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          handleApplySearch();
+                        }
+                      }}
                       placeholder={`Search inside ${activeMeta.label.toLowerCase()}`}
                       className="w-full bg-transparent text-sm outline-none placeholder:text-white/45"
                     />
                   </div>
-                  <Link
-                    to="/dashboard/find-jobs"
+                  <button
+                    onClick={handleApplySearch}
                     className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
                   >
-                    Find More Jobs
-                    <ActionIcon name="arrow" className="w-4 h-4" />
-                  </Link>
+                    Search Collection
+                    <ActionIcon name="search" className="w-4 h-4" />
+                  </button>
+                  {(query || searchInput) && (
+                    <button
+                      onClick={handleClearSearch}
+                      className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/8 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/12"
+                    >
+                      Clear
+                      <ActionIcon name="refresh" className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -757,6 +828,13 @@ export default function JobActionsManager() {
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
+                <Link
+                  to="/dashboard/find-jobs"
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                >
+                  Browse New Jobs
+                  <ActionIcon name="arrow" className="w-4 h-4" />
+                </Link>
                 <button
                   onClick={() => loadData({ silent: true })}
                   className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
@@ -803,7 +881,7 @@ export default function JobActionsManager() {
                   <LoadingCard />
                 </div>
               ) : filteredItems.length === 0 ? (
-                <EmptyState activeTab={activeTab} hasQuery={Boolean(normalizedQuery)} />
+                <EmptyState activeTab={activeTab} hasQuery={Boolean(normalizedQuery)} onClearQuery={handleClearSearch} />
               ) : (
                 <div className="grid gap-5">
                   {filteredItems.map((item) => (
@@ -811,6 +889,7 @@ export default function JobActionsManager() {
                       key={`${activeTab}-${item.id}`}
                       item={item}
                       type={activeTab}
+                      applicationState={applicationProgressMap[String(item.job?.id || item.id)]}
                       onUnsaveJob={handleUnsaveJob}
                       onRemoveFromReadingList={handleRemoveFromReadingList}
                       onMarkAsRead={handleMarkAsRead}

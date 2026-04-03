@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { messages } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
 import DropdownMenu from '../../components/DropdownMenu';
 import DashTopBar from '../../components/DashTopBar';
 import Toast from '../../components/Toast';
 import MessageRecruiterModal from '../../components/MessageRecruiterModal';
+import { getCompanyRouteId } from '../../data/discoveryData';
 import apiService from '../../services/api';
 
 const LS_CAL = 'jh_calendarDate';
@@ -255,6 +256,7 @@ function Calendar({ selectedDate, onDateChange, onClose }) {
 
 export default function DashboardHome() {
   const { user } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
   const firstName = (user?.fullName || 'Jake').split(' ')[0];
   const [openMenu, setOpenMenu] = useState(null);
@@ -344,6 +346,19 @@ export default function DashboardHome() {
   const interviewed = (stats.byStatus?.['Interviewing'] || 0) + (stats.byStatus?.['Hired'] || 0);
   const unsuitablePct = total > 0 ? Math.round((unsuitable / total) * 100) : 0;
   const interviewedPct = total > 0 ? Math.round((interviewed / total) * 100) : 0;
+  const dashboardPath = `${location.pathname}${location.search}${location.hash}`;
+
+  const openCompanyProfile = (companyName) => {
+    if (!companyName) return;
+
+    navigate(`/dashboard/companies/${getCompanyRouteId({ name: companyName })}`, {
+      state: {
+        backTo: dashboardPath,
+        origin: 'dashboard-home',
+        suppressSidebarItem: 'companies',
+      },
+    });
+  };
 
   const appMenuItems = (app) => [
     { 
@@ -525,7 +540,20 @@ export default function DashboardHome() {
                   </div>
                   <div className="flex-1">
                     <p className="font-semibold text-gray-900 text-sm">{app.title}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{app.company} • {app.location} • {app.type}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openCompanyProfile(app.company);
+                        }}
+                        className="font-medium text-gray-500 transition-colors hover:text-blue-600 hover:underline underline-offset-4"
+                      >
+                        {app.company}
+                      </button>
+                      {app.location ? ` • ${app.location}` : ''}
+                      {app.type ? ` • ${app.type}` : ''}
+                    </p>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="text-xs text-gray-400">Date Applied</p>
