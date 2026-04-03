@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import DashTopBar from '../components/DashTopBar';
 import { useToast } from '../components/Toast';
+import { getCompanyRouteId } from '../data/discoveryData';
 import apiService from '../services/api';
 
 const statusStyle = {
@@ -56,6 +57,7 @@ function normalizeCategories(categories) {
 
 export default function ApplicationDetail() {
   const { applicationId } = useParams();
+  const locationState = useLocation();
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [application, setApplication] = useState(null);
@@ -152,6 +154,8 @@ export default function ApplicationDetail() {
   const salary = application.salary || (job?.salary ? `$${job.salary.toLocaleString()}` : 'Not shared');
   const applicationStatus = application.status || 'In Review';
   const hasJobPosting = Boolean(application.jobId);
+  const companyProfileHref = `/dashboard/companies/${getCompanyRouteId({ name: companyName })}`;
+  const backTo = `${locationState.pathname}${locationState.search}${locationState.hash}`;
 
   return (
     <div className="flex-1 flex flex-col h-full bg-gray-50">
@@ -177,7 +181,20 @@ export default function ApplicationDetail() {
                   ) : (
                     <h1 className="text-2xl font-bold text-gray-900">{jobTitle}</h1>
                   )}
-                  <p className="text-gray-500 mt-1">{companyName} • {location}</p>
+                  <p className="text-gray-500 mt-1">
+                    <Link
+                      to={companyProfileHref}
+                      state={{
+                        backTo,
+                        origin: 'application-detail',
+                        suppressSidebarItem: 'companies',
+                      }}
+                      className="transition-colors hover:text-blue-600 hover:underline underline-offset-4"
+                    >
+                      {companyName}
+                    </Link>
+                    {location ? ` • ${location}` : ''}
+                  </p>
                   <div className="flex flex-wrap gap-2 mt-4">
                     <span className="text-xs border border-gray-200 text-gray-600 rounded-full px-3 py-1">{type}</span>
                     <span className={`text-xs rounded-full px-3 py-1 font-medium ${statusStyle[applicationStatus] || 'border border-gray-200 bg-gray-50 text-gray-700'}`}>

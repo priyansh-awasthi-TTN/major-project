@@ -1,11 +1,17 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import SearchableFilterInput from '../../components/SearchableFilterInput';
 import {
   buildBrowseCompaniesFromJobs,
   getCompanyRouteId,
 } from '../../data/discoveryData';
 import DashTopBar from '../../components/DashTopBar';
 import apiService from '../../services/api';
+import {
+  buildLocationFilterOptions,
+  getRegionsForCountryQuery,
+  matchesLocationFilters,
+} from '../../utils/locationFilters';
 
 
 const SORT_OPTIONS = ['Most relevant', 'Most jobs', 'A-Z', 'Z-A'];
@@ -87,8 +93,12 @@ export default function DashCompanies() {
   const setViewGrid = (val) =>
     setSearchParams(prev => { const p = new URLSearchParams(prev); p.set('view', val ? 'grid' : 'list'); return p; }, { replace: true });
 
-  const [search, setSearch]         = useState('');
-  const [location, setLocation]     = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [countryInput, setCountryInput] = useState('');
+  const [countryQuery, setCountryQuery] = useState('');
+  const [regionInput, setRegionInput] = useState('');
+  const [regionQuery, setRegionQuery] = useState('');
   const [sortBy, setSortBy]         = useState('Most relevant');
   const [page, setPage]             = useState(1);
   const [selIndustry, setSelIndustry] = useState([]);
@@ -105,9 +115,13 @@ export default function DashCompanies() {
       .catch(() => {});
   }, []);
 
-  const allOfficeLocations = useMemo(
-    () => [...new Set(allCompanies.flatMap((company) => company.officeLocations || []))].sort((left, right) => left.localeCompare(right)),
+  const locationOptions = useMemo(
+    () => buildLocationFilterOptions(allCompanies.flatMap((company) => company.officeLocations || [])),
     [allCompanies],
+  );
+  const availableRegions = useMemo(
+    () => getRegionsForCountryQuery(allCompanies.flatMap((company) => company.officeLocations || []), countryInput),
+    [allCompanies, countryInput],
   );
 
   const industries = useMemo(() => {
@@ -138,11 +152,11 @@ export default function DashCompanies() {
 
   const filtered = useMemo(() => {
     let result = allCompanies.filter(c => {
-      const q = search.toLowerCase();
+      const q = searchQuery.toLowerCase();
       const matchSearch = !q || c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q) || c.tags.some(t => t.toLowerCase().includes(q));
       const matchIndustry = selIndustry.length === 0 || selIndustry.includes(c.industry);
       const matchSize     = selSize.length === 0     || selSize.includes(c.size);
-      const matchLoc      = !location || (c.officeLocations || []).includes(location);
+      const matchLoc      = matchesLocationFilters(c.officeLocations || [], countryQuery, regionQuery);
       return matchSearch && matchIndustry && matchSize && matchLoc;
     });
 
@@ -151,13 +165,29 @@ export default function DashCompanies() {
     else if (sortBy === 'Z-A')  result = [...result].sort((a, b) => b.name.localeCompare(a.name));
 
     return result;
-  }, [allCompanies, search, location, selIndustry, selSize, sortBy]);
+  }, [allCompanies, searchQuery, countryQuery, regionQuery, selIndustry, selSize, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const handleSearch = () => {
+    setSearchQuery(searchInput);
+    setCountryQuery(countryInput);
+    setRegionQuery(regionInput.trim());
+    setPage(1);
+  };
 
-  const clearAll = () => { setSelIndustry([]); setSelSize([]); setSearch(''); setLocation(''); setPage(1); };
-  const hasFilters = selIndustry.length || selSize.length || location.trim();
+  const clearAll = () => {
+    setSelIndustry([]);
+    setSelSize([]);
+    setSearchInput('');
+    setSearchQuery('');
+    setCountryInput('');
+    setCountryQuery('');
+    setRegionInput('');
+    setRegionQuery('');
+    setPage(1);
+  };
+  const hasFilters = selIndustry.length || selSize.length || countryQuery.trim() || regionQuery.trim();
 
   return (
     <div className="flex-1 flex flex-col h-full bg-gray-50">
@@ -165,31 +195,37 @@ export default function DashCompanies() {
 
       {/* Search bar — fixed */}
       <div className="bg-white border-b border-gray-200 px-8 py-4 flex-shrink-0">
-        <div className="flex gap-3">
-          <div className="flex-1 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2.5">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.3fr)_200px_240px_auto]">
+          <div className="flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2.5">
             <span className="text-gray-400 text-sm">🔍</span>
-            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
-              onKeyDown={e => e.key === 'Enter' && setPage(1)}
+            <input value={searchInput} onChange={e => setSearchInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSearch()}
               className="flex-1 text-sm outline-none text-gray-700 placeholder-gray-400"
               placeholder="Company title or keyword" />
           </div>
-          <div className="flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2.5 min-w-52">
-            <span className="text-gray-400 text-sm">📍</span>
-            <select
-              value={location}
-              onChange={e => {
-                setLocation(e.target.value);
-                setPage(1);
-              }}
-              className="flex-1 bg-transparent text-sm outline-none text-gray-700"
-            >
-              <option value="">All office locations</option>
-              {allOfficeLocations.map(option => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-          </div>
-          <button onClick={() => setPage(1)}
+          <SearchableFilterInput
+            icon="📍"
+            value={countryInput}
+            onChange={(nextValue) => {
+              setCountryInput(nextValue);
+              setRegionInput('');
+            }}
+            options={locationOptions.countries}
+            placeholder="Search country"
+            noResultsLabel="No matching countries"
+          />
+          <SearchableFilterInput
+            icon="🗺️"
+            value={regionInput}
+            onChange={(nextValue) => {
+              setRegionInput(nextValue);
+            }}
+            options={availableRegions}
+            disabled={!countryInput.trim()}
+            placeholder={countryInput.trim() ? `Search state / city in ${countryInput}` : 'Search state / city'}
+            noResultsLabel="No matching state or city"
+          />
+          <button onClick={handleSearch}
             className="bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition">
             Search
           </button>
@@ -252,13 +288,26 @@ export default function DashCompanies() {
           {/* Active filter chips */}
           {hasFilters ? (
             <div className="flex flex-wrap gap-2 mb-4">
-              {[...selIndustry, ...selSize, ...(location.trim() ? [`Location: ${location.trim()}`] : [])].map(f => (
+              {[
+                ...selIndustry,
+                ...selSize,
+                ...(countryQuery.trim() ? [`Country: ${countryQuery.trim()}`] : []),
+                ...(regionQuery.trim() ? [`State / city: ${regionQuery.trim()}`] : []),
+              ].map(f => (
                 <span key={f} className="flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-full border border-blue-200">
                   {f}
                   <button onClick={() => {
                     if (selIndustry.includes(f)) toggle(selIndustry, setSelIndustry, f);
                     else if (selSize.includes(f)) toggle(selSize, setSelSize, f);
-                    else setLocation('');
+                    else if (f.startsWith('Country: ')) {
+                      setCountryInput('');
+                      setCountryQuery('');
+                      setRegionInput('');
+                      setRegionQuery('');
+                    } else {
+                      setRegionInput('');
+                      setRegionQuery('');
+                    }
                     setPage(1);
                   }} className="ml-0.5 hover:text-red-500">✕</button>
                 </span>
@@ -271,7 +320,11 @@ export default function DashCompanies() {
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <span className="text-5xl mb-3">🏢</span>
               <p className="text-lg font-medium text-gray-500">No companies found</p>
-              <p className="text-sm mt-1">Try adjusting your filters or search terms</p>
+              <p className="text-sm mt-1">
+                {countryQuery.trim() || regionQuery.trim()
+                  ? 'No companies match the selected country and state/city.'
+                  : 'Try adjusting your filters or search terms'}
+              </p>
               <button onClick={clearAll} className="mt-4 text-sm text-blue-600 hover:underline">Clear all filters</button>
             </div>
           ) : (

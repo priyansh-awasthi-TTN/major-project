@@ -19,10 +19,13 @@ const settingsItems = [
 ];
 
 export default function DashboardSidebar() {
-  const { pathname } = useLocation();
+  const { pathname, search, state } = useLocation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { totalUnreadCount } = useMessaging();
+  const searchParams = new URLSearchParams(search);
+  const suppressFindJobsHighlight = pathname === '/dashboard/find-jobs' && searchParams.get('origin') === 'company-profile';
+  const suppressCompaniesHighlight = pathname.startsWith('/dashboard/companies') && state?.suppressSidebarItem === 'companies';
 
 
   const displayName  = user?.fullName || 'User';
@@ -53,9 +56,14 @@ export default function DashboardSidebar() {
         <nav className="space-y-1">
           {navItems.map(item => {
             const badge = item.label === 'Messages' && totalUnreadCount > 0 ? totalUnreadCount : null;
+            const isActive = item.label === 'Find Jobs'
+              ? (!suppressFindJobsHighlight && item.match(pathname))
+              : item.label === 'Browse Companies'
+                ? (!suppressCompaniesHighlight && item.match(pathname))
+              : item.match(pathname);
             return (
               <Link key={item.path} to={item.path}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${item.match(pathname) ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}>
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}>
                 <span>{item.icon}</span>
                 <span className="flex-1">{item.label}</span>
                 {badge && (

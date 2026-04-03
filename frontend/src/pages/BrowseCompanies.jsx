@@ -1,16 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import SearchableFilterInput from '../components/SearchableFilterInput';
 import {
   buildBrowseCompaniesFromJobs,
   getCompanyRouteId,
 } from '../data/discoveryData';
 import apiService from '../services/api';
+import {
+  buildLocationFilterOptions,
+  getRegionsForCountryQuery,
+  matchesLocationFilters,
+} from '../utils/locationFilters';
 
 export default function BrowseCompanies() {
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [locationInput, setLocationInput] = useState('');
-  const [locationQuery, setLocationQuery] = useState('');
+  const [countryInput, setCountryInput] = useState('');
+  const [countryQuery, setCountryQuery] = useState('');
+  const [regionInput, setRegionInput] = useState('');
+  const [regionQuery, setRegionQuery] = useState('');
   const [selectedIndustries, setSelectedIndustries] = useState([]);
   const [selectedSizes, setSelectedSizes] = useState([]);
   const [allCompanies, setAllCompanies] = useState(() => buildBrowseCompaniesFromJobs());
@@ -25,9 +33,13 @@ export default function BrowseCompanies() {
       .catch(() => {});
   }, []);
 
-  const allOfficeLocations = useMemo(
-    () => [...new Set(allCompanies.flatMap((company) => company.officeLocations || []))].sort((left, right) => left.localeCompare(right)),
+  const locationOptions = useMemo(
+    () => buildLocationFilterOptions(allCompanies.flatMap((company) => company.officeLocations || [])),
     [allCompanies],
+  );
+  const availableRegions = useMemo(
+    () => getRegionsForCountryQuery(allCompanies.flatMap((company) => company.officeLocations || []), countryInput),
+    [allCompanies, countryInput],
   );
 
   const industries = useMemo(() => {
@@ -55,7 +67,8 @@ export default function BrowseCompanies() {
 
   const handleSearch = () => {
     setSearchQuery(searchInput);
-    setLocationQuery(locationInput);
+    setCountryQuery(countryInput);
+    setRegionQuery(regionInput.trim());
   };
 
   const toggleIndustry = (label) =>
@@ -70,7 +83,7 @@ export default function BrowseCompanies() {
       c.name.toLowerCase().includes(q) ||
       c.industry?.toLowerCase().includes(q) ||
       c.tags.some(t => t.toLowerCase().includes(q));
-    const matchesLoc = !locationQuery || (c.officeLocations || []).includes(locationQuery);
+    const matchesLoc = matchesLocationFilters(c.officeLocations || [], countryQuery, regionQuery);
     const matchesIndustry = selectedIndustries.length === 0 || selectedIndustries.includes(c.industry);
     const matchesSize = selectedSizes.length === 0 || selectedSizes.includes(c.size);
     return matchesQuery && matchesLoc && matchesIndustry && matchesSize;
@@ -84,8 +97,8 @@ export default function BrowseCompanies() {
           Find your <span className="text-blue-600 underline decoration-2 underline-offset-4">dream companies</span>
         </h1>
         <p className="text-gray-500 text-sm mb-6">Find the dream companies you dream work for</p>
-        <div className="flex bg-white border border-gray-300 rounded-lg overflow-hidden max-w-2xl mx-auto shadow-sm">
-          <div className="flex items-center gap-2 flex-1 px-4 py-3">
+        <div className="grid max-w-5xl grid-cols-1 gap-3 mx-auto md:grid-cols-[minmax(0,1.4fr)_220px_220px_auto]">
+          <div className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-3 shadow-sm">
             <span className="text-gray-400">🔍</span>
             <input
               value={searchInput}
@@ -95,24 +108,27 @@ export default function BrowseCompanies() {
               placeholder="Company name or keyword"
             />
           </div>
-          <div className="w-px bg-gray-200 my-2" />
-          <div className="flex items-center gap-2 flex-1 px-4 py-3">
-            <span className="text-gray-400">📍</span>
-            <select
-              value={locationInput}
-              onChange={e => {
-                setLocationInput(e.target.value);
-                setLocationQuery(e.target.value);
-              }}
-              className="flex-1 bg-transparent text-gray-800 text-sm outline-none"
-            >
-              <option value="">All office locations</option>
-              {allOfficeLocations.map(location => (
-                <option key={location} value={location}>{location}</option>
-              ))}
-            </select>
-          </div>
-          <button onClick={handleSearch} className="bg-blue-600 text-white text-sm px-6 py-3 hover:bg-blue-700 font-medium">Search</button>
+          <SearchableFilterInput
+            icon="📍"
+            value={countryInput}
+            onChange={(nextValue) => {
+              setCountryInput(nextValue);
+              setRegionInput('');
+            }}
+            options={locationOptions.countries}
+            placeholder="Search country"
+            noResultsLabel="No matching countries"
+          />
+          <SearchableFilterInput
+            icon="🗺️"
+            value={regionInput}
+            onChange={setRegionInput}
+            options={availableRegions}
+            disabled={!countryInput.trim()}
+            placeholder={countryInput.trim() ? `Search state / city in ${countryInput}` : 'Search state / city'}
+            noResultsLabel="No matching state or city"
+          />
+          <button onClick={handleSearch} className="rounded-lg bg-blue-600 px-6 py-3 text-sm font-medium text-white hover:bg-blue-700">Search</button>
         </div>
         <p className="text-gray-400 text-xs mt-3">Popular: Revolut, Canva, Terraform, Dropbox</p>
       </div>
@@ -177,7 +193,11 @@ export default function BrowseCompanies() {
             <div className="text-center py-20 text-gray-400">
               <p className="text-4xl mb-3">🔍</p>
               <p className="font-medium text-gray-600">No companies found</p>
-              <p className="text-sm mt-1">Try a different keyword or clear filters</p>
+              <p className="text-sm mt-1">
+                {countryQuery.trim() || regionQuery.trim()
+                  ? 'No companies match the selected country and state/city.'
+                  : 'Try a different keyword or clear filters'}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4">

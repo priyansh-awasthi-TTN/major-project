@@ -1,4 +1,4 @@
-export const findJobsFallback = [
+const legacyFindJobsFallback = [
   {
     id: 1,
     title: 'Social Media Assistant',
@@ -401,6 +401,8 @@ export const browseCompanies = browseCompanyProfiles.map(({ jobs, ...company }) 
 export const browseCompanyJobs = browseCompanyProfiles.flatMap((company) =>
   company.jobs.map((job) => toBrowseJob(company, job))
 );
+
+export const findJobsFallback = browseCompanyJobs.length ? browseCompanyJobs : legacyFindJobsFallback;
 
 export const getBrowseCompany = (idOrName) =>
   browseCompanyProfiles.find((company) =>

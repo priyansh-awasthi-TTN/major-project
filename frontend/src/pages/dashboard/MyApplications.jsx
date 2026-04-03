@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import DropdownMenu from '../../components/DropdownMenu';
 import { useAuth } from '../../context/AuthContext';
 import DashTopBar from '../../components/DashTopBar';
 import Toast from '../../components/Toast';
 import MessageRecruiterModal from '../../components/MessageRecruiterModal';
+import { getCompanyRouteId } from '../../data/discoveryData';
 import { messages } from '../../data/mockData';
 import apiService from '../../services/api';
 
@@ -413,6 +414,7 @@ function Pagination({ current, total, onChange }) {
 // ── Main component ────────────────────────────────────────────────────────────
 export default function MyApplications() {
   const { user } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
   const firstName = (user?.fullName || 'Jake').split(' ')[0];
 
@@ -455,6 +457,7 @@ export default function MyApplications() {
   const [recruiterModal, setRecruiterModal] = useState(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const applicationsPath = `${location.pathname}${location.search}${location.hash}`;
 
   useEffect(() => {
     apiService.getApplications()
@@ -469,6 +472,18 @@ export default function MyApplications() {
   };
 
   const handleToast = (message, type = 'success') => setToast({ message, type });
+  const openCompanyProfile = (companyName) => {
+    if (!companyName) return;
+
+    navigate(`/dashboard/companies/${getCompanyRouteId({ name: companyName })}`, {
+      state: {
+        backTo: applicationsPath,
+        origin: 'my-applications',
+        suppressSidebarItem: 'companies',
+      },
+    });
+  };
+
   const handleRemove = async (id) => {
     if (!window.confirm('Remove this application?')) return;
     try {
@@ -615,11 +630,17 @@ export default function MyApplications() {
                 <tr key={app.id} className="border-b border-gray-100 hover:bg-gray-50 transition cursor-pointer" onClick={() => setSelectedApp(app)}>
                   <td className="px-6 py-4 text-gray-400">{(safePage - 1) * PAGE_SIZE + idx + 1}</td>
                   <td className="px-4 py-4">
-                    <div className="flex items-center gap-3 cursor-pointer hover:bg-gray-100 p-1 rounded transition"
-                      onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/companies/${app.companyId || app.company}`); }}>
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-3 rounded p-1 text-left transition hover:bg-gray-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openCompanyProfile(app.company);
+                      }}
+                    >
                       <div className={`${app.color} text-white rounded-xl w-10 h-10 flex items-center justify-center text-xs font-bold flex-shrink-0`}>{app.logo}</div>
                       <p className="font-semibold text-gray-900">{app.company}</p>
-                    </div>
+                    </button>
                   </td>
                   <td className="px-4 py-4 text-gray-600 cursor-pointer hover:text-blue-600 hover:underline"
                     onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/jobs/${app.jobId}`); }}>

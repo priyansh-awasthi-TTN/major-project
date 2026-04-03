@@ -7,11 +7,71 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Service;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 @Service
 public class JobSeederService implements ApplicationRunner {
 
     @Autowired
     private JobRepository jobRepository;
+
+    private static final String[] LEVELS = {
+        "Entry Level",
+        "Mid Level",
+        "Senior Level",
+        "Director"
+    };
+
+    private static final String[] EMPLOYMENT_TYPES = {
+        "Full-Time",
+        "Full-Time",
+        "Remote",
+        "Contract",
+        "Part-Time"
+    };
+
+    private static final String[] TECH_ROLE_POOL = {
+        "Platform Engineer",
+        "Backend Engineer",
+        "Cloud Engineer",
+        "Site Reliability Engineer",
+        "Frontend Engineer",
+        "Data Engineer",
+        "Systems Engineer",
+        "Solutions Architect"
+    };
+
+    private static final String[] CREATIVE_ROLE_POOL = {
+        "Product Designer",
+        "Visual Designer",
+        "UX Researcher",
+        "Brand Strategist",
+        "Content Designer",
+        "Growth Marketer",
+        "Campaign Manager",
+        "Creative Technologist"
+    };
+
+    private static final String[] BUSINESS_ROLE_POOL = {
+        "Business Analyst",
+        "Operations Specialist",
+        "Product Manager",
+        "Customer Success Manager",
+        "Strategy Associate",
+        "Program Manager",
+        "Revenue Operations Analyst",
+        "Account Manager"
+    };
+
+    private static final String[] FINANCE_ROLE_POOL = {
+        "Risk Analyst",
+        "Fraud Operations Specialist",
+        "Compliance Analyst",
+        "Financial Systems Engineer",
+        "Treasury Analyst",
+        "Audit Associate"
+    };
 
     private static final Object[][] JOBS = {
         {"Social Media Assistant",  "Nomad",      "N",  "bg-emerald-500", "Paris, France",        "Full-Time",  "Marketing,Design",       "Entry Level",  700,  5,  10},
@@ -91,24 +151,144 @@ public class JobSeederService implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        for (Object[] row : JOBS) {
-            String title   = (String)  row[0];
-            String company = (String)  row[1];
-            if (jobRepository.existsByTitleAndCompany(title, company)) continue;
+        Map<String, Integer> companySeedCounts = new LinkedHashMap<>();
+        Map<String, Object[]> companyBaseRows = new LinkedHashMap<>();
 
-            Job job = new Job();
-            job.setTitle(title);
-            job.setCompany(company);
-            job.setLogo((String)  row[2]);
-            job.setColor((String) row[3]);
-            job.setLocation((String) row[4]);
-            job.setType((String)  row[5]);
-            job.setCategories((String) row[6]);
-            job.setLevel((String) row[7]);
-            job.setSalary((Integer) row[8]);
-            job.setApplied((Integer) row[9]);
-            job.setCapacity((Integer) row[10]);
-            jobRepository.save(job);
+        for (Object[] row : JOBS) {
+            seedJobRow(row);
+
+            String company = (String) row[1];
+            companySeedCounts.merge(company, 1, Integer::sum);
+            companyBaseRows.putIfAbsent(company, row);
         }
+
+        for (Map.Entry<String, Object[]> entry : companyBaseRows.entrySet()) {
+            String company = entry.getKey();
+            Object[] baseRow = entry.getValue();
+            int baseCount = companySeedCounts.getOrDefault(company, 1);
+            int desiredOpenings = 3 + Math.floorMod(company.hashCode(), 4);
+            int extraJobsNeeded = Math.max(0, desiredOpenings - baseCount);
+
+            seedGeneratedJobs(baseRow, extraJobsNeeded);
+        }
+    }
+
+    private void seedJobRow(Object[] row) {
+        seedJobIfMissing(
+            (String) row[0],
+            (String) row[1],
+            (String) row[2],
+            (String) row[3],
+            (String) row[4],
+            (String) row[5],
+            (String) row[6],
+            (String) row[7],
+            (Integer) row[8],
+            (Integer) row[9],
+            (Integer) row[10]
+        );
+    }
+
+    private void seedGeneratedJobs(Object[] baseRow, int extraJobsNeeded) {
+        if (extraJobsNeeded <= 0) return;
+
+        String company = (String) baseRow[1];
+        String[] titlePool = resolveRolePool((String) baseRow[6]);
+        int companySeed = Math.floorMod(company.hashCode(), 97);
+        int startIndex = Math.floorMod(company.hashCode(), titlePool.length);
+        int generated = 0;
+        int attempts = 0;
+
+        while (generated < extraJobsNeeded && attempts < titlePool.length * 2) {
+            int poolIndex = (startIndex + attempts) % titlePool.length;
+            String title = titlePool[poolIndex];
+            attempts += 1;
+
+            if (jobRepository.existsByTitleAndCompany(title, company)) {
+                continue;
+            }
+
+            int variantIndex = generated + 1;
+            String type = EMPLOYMENT_TYPES[Math.floorMod(companySeed + variantIndex, EMPLOYMENT_TYPES.length)];
+            String location = "Remote".equals(type) ? "Remote" : (String) baseRow[4];
+            int capacity = Math.max(4, ((Integer) baseRow[10]) + (variantIndex % 3) + 1);
+            int applied = Math.min(capacity - 1, Math.max(1, ((Integer) baseRow[9]) + Math.floorMod(companySeed + variantIndex, 4) - 1));
+            int salary = ((Integer) baseRow[8]) + 150 + (variantIndex * 120) + (companySeed % 130);
+
+            seedJobIfMissing(
+                title,
+                company,
+                (String) baseRow[2],
+                (String) baseRow[3],
+                location,
+                type,
+                (String) baseRow[6],
+                resolveLevel((String) baseRow[7], variantIndex),
+                salary,
+                applied,
+                capacity
+            );
+
+            generated += 1;
+        }
+    }
+
+    private String resolveLevel(String baseLevel, int variantIndex) {
+        int baseIndex = 0;
+
+        for (int index = 0; index < LEVELS.length; index += 1) {
+            if (LEVELS[index].equals(baseLevel)) {
+                baseIndex = index;
+                break;
+            }
+        }
+
+        return LEVELS[Math.floorMod(baseIndex + variantIndex, LEVELS.length)];
+    }
+
+    private String[] resolveRolePool(String categories) {
+        String normalizedCategories = categories == null ? "" : categories.toLowerCase();
+        boolean hasTech = normalizedCategories.contains("technology") || normalizedCategories.contains("engineering");
+        boolean hasCreative = normalizedCategories.contains("design") || normalizedCategories.contains("marketing");
+        boolean hasFinance = normalizedCategories.contains("finance");
+        boolean hasBusiness = normalizedCategories.contains("business");
+
+        if (hasFinance) return FINANCE_ROLE_POOL;
+        if (hasTech && !hasCreative) return TECH_ROLE_POOL;
+        if (hasCreative && !hasTech) return CREATIVE_ROLE_POOL;
+        if (hasBusiness && !hasCreative) return BUSINESS_ROLE_POOL;
+        if (hasTech) return TECH_ROLE_POOL;
+        if (hasCreative) return CREATIVE_ROLE_POOL;
+        return BUSINESS_ROLE_POOL;
+    }
+
+    private void seedJobIfMissing(
+        String title,
+        String company,
+        String logo,
+        String color,
+        String location,
+        String type,
+        String categories,
+        String level,
+        Integer salary,
+        Integer applied,
+        Integer capacity
+    ) {
+        if (jobRepository.existsByTitleAndCompany(title, company)) return;
+
+        Job job = new Job();
+        job.setTitle(title);
+        job.setCompany(company);
+        job.setLogo(logo);
+        job.setColor(color);
+        job.setLocation(location);
+        job.setType(type);
+        job.setCategories(categories);
+        job.setLevel(level);
+        job.setSalary(salary);
+        job.setApplied(applied);
+        job.setCapacity(capacity);
+        jobRepository.save(job);
     }
 }
