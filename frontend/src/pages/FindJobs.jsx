@@ -1,17 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { findJobsFallback } from '../data/discoveryData';
 import apiService from '../services/api';
-
-const fallbackJobs = [
-  { id: 1, title: 'Social Media Assistant', company: 'Nomad', location: 'Paris, France', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'N', color: 'bg-emerald-500', applied: 5, capacity: 10, salary: 700, level: 'Entry Level' },
-  { id: 2, title: 'Brand Designer', company: 'Dropbox', location: 'San Francisco, USA', type: 'Full-Time', categories: ['Design', 'Business'], logo: 'D', color: 'bg-blue-500', applied: 2, capacity: 8, salary: 1200, level: 'Mid Level' },
-  { id: 3, title: 'Interactive Developer', company: 'Terraform', location: 'Hamburg, Germany', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'T', color: 'bg-indigo-500', applied: 3, capacity: 12, salary: 1800, level: 'Senior Level' },
-  { id: 4, title: 'Email Marketing', company: 'Revolut', location: 'Madrid, Spain', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'R', color: 'bg-red-500', applied: 0, capacity: 6, salary: 900, level: 'Entry Level' },
-  { id: 5, title: 'Lead Engineer', company: 'Canva', location: 'Ankara, Turkey', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'C', color: 'bg-teal-500', applied: 5, capacity: 15, salary: 3500, level: 'Director' },
-  { id: 6, title: 'Product Designer', company: 'ClassPass', location: 'Berlin, Germany', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'C', color: 'bg-purple-500', applied: 5, capacity: 10, salary: 1600, level: 'Senior Level' },
-  { id: 7, title: 'Customer Manager', company: 'Pitch', location: 'Berlin, Germany', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'P', color: 'bg-gray-800', applied: 5, capacity: 10, salary: 1100, level: 'Mid Level' },
-];
 
 const EMPLOYMENT_TYPES = ['Full-Time', 'Part-Time', 'Remote', 'Internship', 'Contract'];
 const CATEGORIES = ['Design', 'Sales', 'Marketing', 'Business', 'Human Resource', 'Finance', 'Engineering', 'Technology'];
@@ -37,7 +28,7 @@ export default function FindJobs() {
   const [search, setSearch] = useState('');
   const [location, setLocation] = useState('');
   const [viewGrid, setViewGrid] = useState(false);
-  const [allJobs, setAllJobs] = useState(fallbackJobs);
+  const [allJobs, setAllJobs] = useState(findJobsFallback);
 
   useEffect(() => {
     apiService.getJobs()

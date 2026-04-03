@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { jobs } from '../data/mockData';
+import { findJobsFallback, getCompanyRouteId } from '../data/discoveryData';
 import { useAuth } from '../context/AuthContext';
 import JobCard from '../components/JobCard';
 import ApplicationModal from '../components/ApplicationModal';
@@ -15,11 +15,12 @@ export default function JobDetail() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadedJobId, setLoadedJobId] = useState(null);
 
   useEffect(() => {
     let active = true;
+    const requestedId = String(id);
 
-    setLoading(true);
     apiService.getJob(id)
       .then((jobData) => {
         if (active) {
@@ -28,11 +29,12 @@ export default function JobDetail() {
       })
       .catch(() => {
         if (active) {
-          setJob(jobs.find(j => j.id === Number(id)) || jobs[0]);
+          setJob(findJobsFallback.find((item) => item.id === Number(id)) || findJobsFallback[0]);
         }
       })
       .finally(() => {
         if (active) {
+          setLoadedJobId(requestedId);
           setLoading(false);
         }
       });
@@ -50,7 +52,7 @@ export default function JobDetail() {
     setShowModal(true);
   };
 
-  if (loading || !job) {
+  if (loading || loadedJobId !== String(id) || !job) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
@@ -171,7 +173,7 @@ export default function JobDetail() {
               <div className={`${job.color} text-white rounded-xl w-12 h-12 flex items-center justify-center font-bold text-xl mb-3`}>{job.logo}</div>
               <h3 className="font-semibold text-gray-900">{job.company}</h3>
               <p className="text-sm text-gray-500 mt-1">{job.description || 'A great company to work for.'}</p>
-              <Link to={`/companies/${job.companyId || 1}`} className="text-blue-600 text-sm mt-3 block hover:underline">Read more about {job.company} →</Link>
+              <Link to={`/companies/${getCompanyRouteId({ name: job.company })}`} className="text-blue-600 text-sm mt-3 block hover:underline">Read more about {job.company} →</Link>
             </div>
           </div>
         </div>
@@ -183,7 +185,7 @@ export default function JobDetail() {
             <Link to="/find-jobs" className="text-blue-600 text-sm hover:underline">Show all jobs →</Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {jobs.slice(0, 4).map(j => <JobCard key={j.id} job={j} />)}
+            {findJobsFallback.filter((item) => item.id !== job.id).slice(0, 4).map((item) => <JobCard key={item.id} job={item} />)}
           </div>
         </div>
       </div>

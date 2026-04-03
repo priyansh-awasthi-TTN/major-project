@@ -1,29 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { allOfficeLocations, companies, getCompanyOfficeLocations } from '../data/mockData';
-
-const industries = [
-  { label: 'Advertising', count: 63 },
-  { label: 'Business Service', count: 6 },
-  { label: 'Blockchain', count: 3 },
-  { label: 'Cloud', count: 16 },
-  { label: 'Consumer Tech', count: 8 },
-  { label: 'Education', count: 34 },
-  { label: 'Fintech', count: 48 },
-  { label: 'Food & Beverage', count: 1 },
-  { label: 'Healthcare', count: 7 },
-  { label: 'Hosting', count: 5 },
-  { label: 'Media', count: 4 },
-];
-
-const companySizes = [
-  { label: '1-50', count: 3 },
-  { label: '51-150', count: 97 },
-  { label: '151-250', count: 46 },
-  { label: '251-500', count: 4 },
-  { label: '501-1000', count: 43 },
-  { label: '1001+', count: 23 },
-];
+import {
+  buildBrowseCompaniesFromJobs,
+  getCompanyRouteId,
+} from '../data/discoveryData';
+import apiService from '../services/api';
 
 export default function BrowseCompanies() {
   const [searchInput, setSearchInput] = useState('');
@@ -32,6 +13,45 @@ export default function BrowseCompanies() {
   const [locationQuery, setLocationQuery] = useState('');
   const [selectedIndustries, setSelectedIndustries] = useState([]);
   const [selectedSizes, setSelectedSizes] = useState([]);
+  const [allCompanies, setAllCompanies] = useState(() => buildBrowseCompaniesFromJobs());
+
+  useEffect(() => {
+    apiService.getJobs()
+      .then((jobsData) => {
+        if (jobsData?.length) {
+          setAllCompanies(buildBrowseCompaniesFromJobs(jobsData));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const allOfficeLocations = useMemo(
+    () => [...new Set(allCompanies.flatMap((company) => company.officeLocations || []))].sort((left, right) => left.localeCompare(right)),
+    [allCompanies],
+  );
+
+  const industries = useMemo(() => {
+    const counts = allCompanies.reduce((accumulator, company) => {
+      accumulator[company.industry] = (accumulator[company.industry] || 0) + 1;
+      return accumulator;
+    }, {});
+
+    return Object.entries(counts)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([label, count]) => ({ label, count }));
+  }, [allCompanies]);
+
+  const companySizes = useMemo(() => {
+    const order = ['1-50', '51-150', '151-250', '251-500', '501-1000', '1001+'];
+    const counts = allCompanies.reduce((accumulator, company) => {
+      accumulator[company.size] = (accumulator[company.size] || 0) + 1;
+      return accumulator;
+    }, {});
+
+    return order
+      .filter((size) => counts[size])
+      .map((label) => ({ label, count: counts[label] }));
+  }, [allCompanies]);
 
   const handleSearch = () => {
     setSearchQuery(searchInput);
@@ -44,13 +64,13 @@ export default function BrowseCompanies() {
   const toggleSize = (label) =>
     setSelectedSizes(prev => prev.includes(label) ? prev.filter(s => s !== label) : [...prev, label]);
 
-  const filtered = companies.filter(c => {
+  const filtered = allCompanies.filter(c => {
     const q = searchQuery.toLowerCase();
     const matchesQuery = !searchQuery ||
       c.name.toLowerCase().includes(q) ||
       c.industry?.toLowerCase().includes(q) ||
       c.tags.some(t => t.toLowerCase().includes(q));
-    const matchesLoc = !locationQuery || getCompanyOfficeLocations(c.id).includes(locationQuery);
+    const matchesLoc = !locationQuery || (c.officeLocations || []).includes(locationQuery);
     const matchesIndustry = selectedIndustries.length === 0 || selectedIndustries.includes(c.industry);
     const matchesSize = selectedSizes.length === 0 || selectedSizes.includes(c.size);
     return matchesQuery && matchesLoc && matchesIndustry && matchesSize;
@@ -94,7 +114,7 @@ export default function BrowseCompanies() {
           </div>
           <button onClick={handleSearch} className="bg-blue-600 text-white text-sm px-6 py-3 hover:bg-blue-700 font-medium">Search</button>
         </div>
-        <p className="text-gray-400 text-xs mt-3">Popular: Twitter, Microsoft, Apple, Facebook</p>
+        <p className="text-gray-400 text-xs mt-3">Popular: Revolut, Canva, Terraform, Dropbox</p>
       </div>
 
       <div className="max-w-6xl mx-auto px-8 py-8 flex gap-8">
@@ -162,7 +182,7 @@ export default function BrowseCompanies() {
           ) : (
             <div className="grid grid-cols-2 gap-4">
               {filtered.map(company => (
-                <Link key={company.id} to={`/companies/${company.id}`}
+                <Link key={company.name} to={`/companies/${getCompanyRouteId(company)}`}
                   className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition block">
                   <div className="flex items-start gap-4">
                     <div className={`${company.color} text-white rounded-xl w-12 h-12 flex items-center justify-center font-bold flex-shrink-0`}>{company.logo}</div>

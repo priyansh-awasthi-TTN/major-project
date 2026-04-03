@@ -1,28 +1,10 @@
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { companies, getCompanyOfficeLocations, jobs } from '../data/mockData';
-
-const companyJobs = {
-  1: [1, 2, 3, 4, 5, 6],
-  2: [2, 3],
-  3: [3, 7],
-  4: [6, 8],
-  5: [5, 1],
-  6: [3, 6],
-  7: [4, 8],
-  8: [7, 3],
-  9: [1, 2],
-  10: [2, 6],
-  11: [6, 3],
-  12: [1, 3],
-  13: [2, 5],
-  14: [6, 7],
-  15: [2, 6],
-  16: [2, 8],
-  17: [6, 3],
-  18: [1, 2],
-  19: [8, 3],
-  20: [2, 3],
-};
+import {
+  buildBrowseCompanyDetailsFromJobs,
+  getCompanyRouteId,
+} from '../data/discoveryData';
+import apiService from '../services/api';
 
 const perks = [
   { icon: '🏥', label: 'Full Healthcare', desc: 'We believe in thriving communities and that starts with our team being happy and healthy.' },
@@ -47,10 +29,25 @@ const avatarColors = ['bg-blue-400', 'bg-purple-400', 'bg-pink-400', 'bg-indigo-
 
 export default function CompanyProfile() {
   const { id } = useParams();
-  const company = companies.find(c => c.id === Number(id)) || companies[0];
-  const openJobIds = companyJobs[company.id] || [1, 2];
-  const openJobs = openJobIds.map(jid => jobs.find(j => j.id === jid)).filter(Boolean);
-  const officeLocations = getCompanyOfficeLocations(company.id);
+  const [companyDetails, setCompanyDetails] = useState(() => buildBrowseCompanyDetailsFromJobs(id));
+
+  useEffect(() => {
+    apiService.getJobs()
+      .then((jobsData) => {
+        if (jobsData?.length) {
+          setCompanyDetails(buildBrowseCompanyDetailsFromJobs(id, jobsData));
+        } else {
+          setCompanyDetails(buildBrowseCompanyDetailsFromJobs(id));
+        }
+      })
+      .catch(() => {
+        setCompanyDetails(buildBrowseCompanyDetailsFromJobs(id));
+      });
+  }, [id]);
+
+  const { company, jobs: openJobs } = companyDetails;
+  const officeLocations = company.officeLocations || [];
+  const companyRouteId = getCompanyRouteId(company);
   const officeLocationSummary = officeLocations.length === 1
     ? '1 office location'
     : `${officeLocations.length} office locations`;
@@ -156,7 +153,7 @@ export default function CompanyProfile() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 {openJobs.map(job => (
-                  <Link key={job.id} to={`/companies/${company.id}/jobs/${job.id}`}
+                  <Link key={job.id} to={`/companies/${companyRouteId}/jobs/${job.id}`}
                     className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition block">
                     <div className="flex items-start gap-3 mb-3">
                       <div className={`${job.color} text-white rounded-xl w-10 h-10 flex items-center justify-center font-bold flex-shrink-0`}>{job.logo}</div>
