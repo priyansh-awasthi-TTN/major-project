@@ -1,17 +1,83 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { jobs, companies } from '../data/mockData';
+import {
+  browseCompanyJobs,
+  buildBrowseCompanyDetailsFromJobs,
+  getCompanyRouteId,
+} from '../data/discoveryData';
 import { useAuth } from '../context/AuthContext';
 import ApplicationModal from '../components/ApplicationModal';
-import JobCard from '../components/JobCard';
+import apiService from '../services/api';
+
+const normalizeCategories = (categories) => {
+  if (Array.isArray(categories)) return categories;
+  if (typeof categories !== 'string') return [];
+  return categories.split(',').map((category) => category.trim()).filter(Boolean);
+};
 
 export default function CompanyJobDetail() {
   const { companyId, jobId } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const company = companies.find(c => c.id === Number(companyId)) || companies[0];
-  const job = jobs.find(j => j.id === Number(jobId)) || jobs[0];
   const [showModal, setShowModal] = useState(false);
+  const [job, setJob] = useState(() => browseCompanyJobs.find((item) => String(item.id) === String(jobId)) || browseCompanyJobs[0]);
+  const [allJobs, setAllJobs] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+
+    Promise.all([
+      apiService.getJob(jobId).catch(() => null),
+      apiService.getJobs().catch(() => []),
+    ]).then(([jobData, jobsData]) => {
+      if (!active) return;
+
+      if (jobData) {
+        setJob({ ...jobData, categories: normalizeCategories(jobData.categories) });
+      } else {
+        setJob(browseCompanyJobs.find((item) => String(item.id) === String(jobId)) || browseCompanyJobs[0]);
+      }
+
+      setAllJobs(
+        (jobsData?.length ? jobsData : browseCompanyJobs).map((item) => ({
+          ...item,
+          categories: normalizeCategories(item.categories),
+        })),
+      );
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [jobId]);
+
+  const companyDetails = useMemo(
+    () => buildBrowseCompanyDetailsFromJobs(companyId, allJobs),
+    [allJobs, companyId],
+  );
+
+  const company = useMemo(() => {
+    const baseCompany = companyDetails.company;
+    if (!job) return baseCompany;
+
+    return {
+      ...baseCompany,
+      name: job.company || baseCompany.name,
+      logo: job.logo || baseCompany.logo,
+      color: job.color || baseCompany.color,
+      jobs: companyDetails.jobs.length || baseCompany.jobs,
+    };
+  }, [companyDetails, job]);
+
+  const companyRouteId = getCompanyRouteId(company);
+
+  const similarJobs = useMemo(() => {
+    const jobsSource = allJobs.length ? allJobs : browseCompanyJobs;
+    return jobsSource
+      .filter((item) => String(item.id) !== String(job.id) && item.company === company.name)
+      .concat(jobsSource.filter((item) => String(item.id) !== String(job.id) && item.company !== company.name))
+      .slice(0, 4);
+  }, [allJobs, company.name, job.id]);
 
   const handleApply = () => {
     if (!user) {
@@ -30,7 +96,7 @@ export default function CompanyJobDetail() {
           {' / '}
           <Link to="/browse-companies" className="hover:text-blue-600">Companies</Link>
           {' / '}
-          <Link to={`/companies/${company.id}`} className="hover:text-blue-600">{company.name}</Link>
+          <Link to={`/companies/${companyRouteId}`} className="hover:text-blue-600">{company.name}</Link>
           {' / '}
           <span className="text-gray-700">{job.title}</span>
         </p>
@@ -129,7 +195,7 @@ export default function CompanyJobDetail() {
               <div className={`${company.color} text-white rounded-xl w-12 h-12 flex items-center justify-center font-bold text-xl mb-3`}>{company.logo}</div>
               <h3 className="font-semibold text-gray-900">{company.name}</h3>
               <p className="text-sm text-gray-500 mt-1">{company.description}</p>
-              <Link to={`/companies/${company.id}`} className="text-blue-600 text-sm mt-3 block hover:underline">
+              <Link to={`/companies/${companyRouteId}`} className="text-blue-600 text-sm mt-3 block hover:underline">
                 Read more about {company.name} →
               </Link>
             </div>
@@ -143,7 +209,30 @@ export default function CompanyJobDetail() {
             <Link to="/find-jobs" className="text-blue-600 text-sm hover:underline">Show all jobs →</Link>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            {jobs.filter(j => j.id !== job.id).slice(0, 4).map(j => <JobCard key={j.id} job={j} />)}
+            {similarJobs.map((item) => (
+              <Link
+                key={item.id}
+                to={`/companies/${getCompanyRouteId({ name: item.company })}/jobs/${item.id}`}
+                className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition block"
+              >
+                <div className="flex items-start gap-3 mb-3">
+                  <div className={`${item.color} text-white rounded-xl w-11 h-11 flex items-center justify-center font-bold text-base flex-shrink-0`}>
+                    {item.logo}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900 text-sm">{item.title}</h3>
+                    <p className="text-xs text-gray-500 mt-0.5">{item.company} • {item.location}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {item.categories.map((category) => (
+                    <span key={category} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded px-2 py-0.5">
+                      {category}
+                    </span>
+                  ))}
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </div>

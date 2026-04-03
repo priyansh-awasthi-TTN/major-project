@@ -1,11 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { allOfficeLocations, companies, getCompanyOfficeLocations } from '../../data/mockData';
+import {
+  buildBrowseCompaniesFromJobs,
+  getCompanyRouteId,
+} from '../../data/discoveryData';
 import DashTopBar from '../../components/DashTopBar';
+import apiService from '../../services/api';
 
 
-const INDUSTRIES = ['Advertising', 'Business Service', 'Blockchain', 'Cloud', 'Consumer Tech', 'Education', 'Fintech', 'Gaming', 'Food & Beverage', 'Healthcare', 'Hosting', 'Media', 'Technology'];
-const SIZES = ['1-50', '51-150', '151-250', '251-500', '501-1000', '1000+'];
 const SORT_OPTIONS = ['Most relevant', 'Most jobs', 'A-Z', 'Z-A'];
 const PAGE_SIZE = 6;
 
@@ -36,7 +38,7 @@ function CheckItem({ label, checked, onChange }) {
 function CompanyCard({ company, grid }) {
   if (grid) {
     return (
-      <Link to={`/dashboard/companies/${company.id}`} className="block">
+      <Link to={`/dashboard/companies/${getCompanyRouteId(company)}`} className="block">
         <div className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-blue-200 transition h-full flex flex-col">
           <div className="flex items-start justify-between mb-3">
             <div className={`${company.color} text-white rounded-xl w-12 h-12 flex items-center justify-center font-bold text-sm flex-shrink-0`}>
@@ -57,7 +59,7 @@ function CompanyCard({ company, grid }) {
   }
 
   return (
-    <Link to={`/dashboard/companies/${company.id}`} className="block">
+    <Link to={`/dashboard/companies/${getCompanyRouteId(company)}`} className="block">
       <div className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-blue-200 transition flex items-start gap-4">
         <div className={`${company.color} text-white rounded-xl w-14 h-14 flex items-center justify-center font-bold text-lg flex-shrink-0`}>
           {company.logo}
@@ -91,23 +93,56 @@ export default function DashCompanies() {
   const [page, setPage]             = useState(1);
   const [selIndustry, setSelIndustry] = useState([]);
   const [selSize, setSelSize]         = useState([]);
+  const [allCompanies, setAllCompanies] = useState(() => buildBrowseCompaniesFromJobs());
+
+  useEffect(() => {
+    apiService.getJobs()
+      .then((jobsData) => {
+        if (jobsData?.length) {
+          setAllCompanies(buildBrowseCompaniesFromJobs(jobsData));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const allOfficeLocations = useMemo(
+    () => [...new Set(allCompanies.flatMap((company) => company.officeLocations || []))].sort((left, right) => left.localeCompare(right)),
+    [allCompanies],
+  );
+
+  const industries = useMemo(() => {
+    const counts = allCompanies.reduce((accumulator, company) => {
+      accumulator[company.industry] = (accumulator[company.industry] || 0) + 1;
+      return accumulator;
+    }, {});
+
+    return Object.keys(counts).sort((left, right) => left.localeCompare(right));
+  }, [allCompanies]);
+
+  const sizes = useMemo(() => {
+    const order = ['1-50', '51-150', '151-250', '251-500', '501-1000', '1001+'];
+    const availableSizes = new Set(allCompanies.map((company) => company.size));
+    return order.filter((size) => availableSizes.has(size));
+  }, [allCompanies]);
 
   const toggle = (arr, setArr, val) =>
     setArr(prev => prev.includes(val) ? prev.filter(x => x !== val) : [...prev, val]);
 
   // Dynamic counts
   const industryCounts = useMemo(() =>
-    Object.fromEntries(INDUSTRIES.map(i => [i, companies.filter(c => c.industry === i).length])), []);
+    Object.fromEntries(industries.map((industry) => [industry, allCompanies.filter((company) => company.industry === industry).length])),
+  [allCompanies, industries]);
   const sizeCounts = useMemo(() =>
-    Object.fromEntries(SIZES.map(s => [s, companies.filter(c => c.size === s).length])), []);
+    Object.fromEntries(sizes.map((size) => [size, allCompanies.filter((company) => company.size === size).length])),
+  [allCompanies, sizes]);
 
   const filtered = useMemo(() => {
-    let result = companies.filter(c => {
+    let result = allCompanies.filter(c => {
       const q = search.toLowerCase();
       const matchSearch = !q || c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q) || c.tags.some(t => t.toLowerCase().includes(q));
       const matchIndustry = selIndustry.length === 0 || selIndustry.includes(c.industry);
       const matchSize     = selSize.length === 0     || selSize.includes(c.size);
-      const matchLoc      = !location || getCompanyOfficeLocations(c.id).includes(location);
+      const matchLoc      = !location || (c.officeLocations || []).includes(location);
       return matchSearch && matchIndustry && matchSize && matchLoc;
     });
 
@@ -116,7 +151,7 @@ export default function DashCompanies() {
     else if (sortBy === 'Z-A')  result = [...result].sort((a, b) => b.name.localeCompare(a.name));
 
     return result;
-  }, [search, location, selIndustry, selSize, sortBy]);
+  }, [allCompanies, search, location, selIndustry, selSize, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -159,7 +194,7 @@ export default function DashCompanies() {
             Search
           </button>
         </div>
-        <p className="text-gray-400 text-xs mt-2">Popular: Twitter, Microsoft, Apple, Facebook</p>
+        <p className="text-gray-400 text-xs mt-2">Popular: Revolut, Canva, Terraform, Dropbox</p>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
@@ -171,7 +206,7 @@ export default function DashCompanies() {
           </div>
 
           <FilterSection title="Industry">
-            {INDUSTRIES.map(i => (
+            {industries.map(i => (
               <CheckItem key={i} label={`${i} (${industryCounts[i] || 0})`}
                 checked={selIndustry.includes(i)}
                 onChange={() => { toggle(selIndustry, setSelIndustry, i); setPage(1); }} />
@@ -179,7 +214,7 @@ export default function DashCompanies() {
           </FilterSection>
 
           <FilterSection title="Company Size">
-            {SIZES.map(s => (
+            {sizes.map(s => (
               <CheckItem key={s} label={`${s} (${sizeCounts[s] || 0})`}
                 checked={selSize.includes(s)}
                 onChange={() => { toggle(selSize, setSelSize, s); setPage(1); }} />

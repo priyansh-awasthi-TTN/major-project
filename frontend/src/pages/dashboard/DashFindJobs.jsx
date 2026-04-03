@@ -1,14 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import DashTopBar from '../../components/DashTopBar';
+import { findJobsFallback } from '../../data/discoveryData';
 import apiService from '../../services/api';
-
-// Extended job dataset matching Figma — used as fallback only
-const fallbackJobs = [
-  { id: 1,  title: 'Social Media Assistant',  company: 'Nomad',      location: 'Paris, France',        type: 'Full-Time',  categories: ['Marketing', 'Design'],       logo: 'N',  color: 'bg-emerald-500', level: 'Entry Level',  salary: 700,  applied: 5,  capacity: 10 },
-  { id: 2,  title: 'Brand Designer',           company: 'Dropbox',    location: 'San Francisco, USA',   type: 'Full-Time',  categories: ['Design', 'Business'],        logo: 'D',  color: 'bg-blue-500',    level: 'Mid Level',    salary: 1200, applied: 2,  capacity: 8  },
-  { id: 3,  title: 'Interactive Developer',    company: 'Terraform',  location: 'Hamburg, Germany',     type: 'Full-Time',  categories: ['Marketing', 'Design'],       logo: 'T',  color: 'bg-purple-500',  level: 'Senior Level', salary: 1500, applied: 7,  capacity: 12 },
-];
 
 const EMPLOYMENT_TYPES = ['Full-Time', 'Part-Time', 'Remote', 'Internship', 'Contract'];
 const CATEGORIES = ['Design', 'Sales', 'Marketing', 'Business', 'Human Resource', 'Finance', 'Engineering', 'Technology'];
@@ -140,7 +134,7 @@ export default function DashFindJobs() {
   const [location, setLocation] = useState('');
   const [sortBy, setSortBy] = useState('Most relevant');
   const [page, setPage] = useState(1);
-  const [allJobs, setAllJobs] = useState(fallbackJobs);
+  const [allJobs, setAllJobs] = useState(findJobsFallback);
   const [loadingJobs, setLoadingJobs] = useState(true);
   const [appliedJobsIds, setAppliedJobsIds] = useState([]);
 

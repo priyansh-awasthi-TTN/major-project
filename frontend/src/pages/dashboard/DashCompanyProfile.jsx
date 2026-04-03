@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { companies, getCompanyOfficeLocations } from '../../data/mockData';
+import {
+  buildBrowseCompanyDetailsFromJobs,
+} from '../../data/discoveryData';
 import DashTopBar from '../../components/DashTopBar';
 import apiService from '../../services/api';
 
@@ -28,36 +30,28 @@ const avatarColors = ['bg-blue-400', 'bg-purple-400', 'bg-pink-400', 'bg-indigo-
 export default function DashCompanyProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
-  let company = companies.find(c => c.id === Number(id) || String(c.name).toLowerCase() === String(id).toLowerCase());
-
-  if (!company) {
-    company = {
-      id,
-      name: String(id),
-      logo: String(id).substring(0, 1).toUpperCase(),
-      color: 'bg-indigo-500',
-      description: '',
-      industry: 'Technology',
-      jobs: 0,
-    };
-  }
-
-  const [realJobs, setRealJobs] = useState([]);
+  const [companyDetails, setCompanyDetails] = useState(() => buildBrowseCompanyDetailsFromJobs(id));
 
   useEffect(() => {
     apiService.getJobs()
-      .then(data => {
-        if (data) {
-          setRealJobs(data.filter(job => (job.company || '').toLowerCase() === company.name.toLowerCase()));
+      .then((jobsData) => {
+        if (jobsData?.length) {
+          setCompanyDetails(buildBrowseCompanyDetailsFromJobs(id, jobsData));
+        } else {
+          setCompanyDetails(buildBrowseCompanyDetailsFromJobs(id));
         }
       })
-      .catch(console.error);
-  }, [company.name]);
+      .catch(() => {
+        setCompanyDetails(buildBrowseCompanyDetailsFromJobs(id));
+      });
+  }, [id]);
 
-  const officeLocations = getCompanyOfficeLocations(company.id);
+  const { company, jobs: realJobs } = companyDetails;
+  const officeLocations = company.officeLocations || [];
   const officeLocationSummary = officeLocations.length === 1
     ? '1 office location'
     : `${officeLocations.length} office locations`;
+  const displayJobCount = realJobs.length || company.jobs;
 
   return (
     <div className="flex-1 flex flex-col h-full bg-gray-50">
@@ -82,7 +76,7 @@ export default function DashCompanyProfile() {
                     <div className={`${company.color} text-white rounded-xl w-16 h-16 flex items-center justify-center font-bold text-2xl border-4 border-white flex-shrink-0`}>
                       {company.logo}
                     </div>
-                    <span className="text-xs bg-blue-50 text-blue-600 border border-blue-200 rounded-full px-3 py-1 mb-1">{company.jobs} Jobs</span>
+                    <span className="text-xs bg-blue-50 text-blue-600 border border-blue-200 rounded-full px-3 py-1 mb-1">{displayJobCount} Jobs</span>
                   </div>
                   <h1 className="text-xl font-bold text-gray-900">{company.name}</h1>
                   <p className="text-sm text-blue-500 mb-3">https://{company.name.toLowerCase().replace(/\s/g, '')}.com</p>

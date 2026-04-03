@@ -6,7 +6,7 @@ spring:
     name: jobhuntly-backend
   
   datasource:
-    url: jdbc:mysql://localhost:3310/jobhuntly?createDatabaseIfNotExist=true&serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3310/jobhuntly
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
     password: root

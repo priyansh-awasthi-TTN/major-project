@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import DashTopBar from '../components/DashTopBar';
 import { useToast } from '../components/Toast';
 import apiService from '../services/api';
@@ -165,7 +165,18 @@ export default function ApplicationDetail() {
                   {application.logo || companyName.slice(0, 2).toUpperCase()}
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">{jobTitle}</h1>
+                  {hasJobPosting ? (
+                    <h1 className="text-2xl font-bold">
+                      <Link
+                        to={`/dashboard/jobs/${application.jobId}`}
+                        className="text-gray-900 transition-colors hover:text-blue-600 hover:underline underline-offset-4 focus:outline-none focus-visible:text-blue-600 focus-visible:underline"
+                      >
+                        {jobTitle}
+                      </Link>
+                    </h1>
+                  ) : (
+                    <h1 className="text-2xl font-bold text-gray-900">{jobTitle}</h1>
+                  )}
                   <p className="text-gray-500 mt-1">{companyName} • {location}</p>
                   <div className="flex flex-wrap gap-2 mt-4">
                     <span className="text-xs border border-gray-200 text-gray-600 rounded-full px-3 py-1">{type}</span>
@@ -174,16 +185,6 @@ export default function ApplicationDetail() {
                     </span>
                   </div>
                 </div>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row lg:flex-col lg:min-w-60">
-                <button
-                  onClick={() => navigate(`/dashboard/jobs/${application.jobId}`)}
-                  disabled={!hasJobPosting}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-lg transition-colors"
-                >
-                  View Job Posting
-                </button>
               </div>
             </div>
           </div>
