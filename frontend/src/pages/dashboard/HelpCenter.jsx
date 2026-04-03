@@ -304,6 +304,10 @@ export default function HelpCenter() {
   const [loading, setLoading] = useState(true);
   const [pendingAction, setPendingAction] = useState({});
   const [openTicketCount, setOpenTicketCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const contentRef = useRef(null);
 
   const showToast = (message) => setToast(message);
 
@@ -371,6 +375,39 @@ export default function HelpCenter() {
 
     return list;
   }, [activeCategory, articles, search, sort]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedArticles = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(startIndex, startIndex + itemsPerPage);
+  }, [filtered, currentPage, itemsPerPage]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeCategory, search, sort]);
+
+  // Handle scroll for back to top button
+  useEffect(() => {
+    const handleScroll = () => {
+      if (contentRef.current) {
+        // Show button when scrolled down more than 300px, hide when at top
+        setShowBackToTop(contentRef.current.scrollTop > 300);
+      }
+    };
+
+    const content = contentRef.current;
+    if (content) {
+      content.addEventListener('scroll', handleScroll);
+      return () => content.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
+
+  const scrollToTop = () => {
+    if (contentRef.current) {
+      contentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   const setArticlePending = (articleId, isPending) => {
     setPendingAction((current) => ({ ...current, [articleId]: isPending }));
@@ -449,6 +486,20 @@ export default function HelpCenter() {
   return (
     <div className="flex h-full flex-1 flex-col bg-white">
       <DashTopBar title="Help Center" />
+      
+      {/* Back to Top Button - positioned at top right */}
+      {showBackToTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed right-8 top-20 z-40 flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition hover:bg-indigo-700 hover:shadow-xl"
+          aria-label="Back to top"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+          </svg>
+        </button>
+      )}
+
       <div className="flex flex-1 overflow-hidden">
         <div className="flex w-72 flex-shrink-0 flex-col gap-6 overflow-y-auto border-r border-gray-200 px-6 py-8">
           <div>
@@ -512,7 +563,7 @@ export default function HelpCenter() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-8 py-8">
+        <div ref={contentRef} className="flex-1 overflow-y-auto px-8 py-8">
           <div className="mb-6 flex items-center gap-2">
             <span className="text-sm text-gray-500">Sort by:</span>
             <div className="relative">
@@ -534,8 +585,9 @@ export default function HelpCenter() {
           {loading ? (
             <div className="py-16 text-center text-sm text-gray-400">Loading help articles...</div>
           ) : (
-            <div className="space-y-4">
-              {filtered.map((article) => (
+            <>
+              <div className="space-y-4">
+                {paginatedArticles.map((article) => (
                 <div
                   key={article.id}
                   id={`article-${article.id}`}
@@ -606,15 +658,72 @@ export default function HelpCenter() {
                 </div>
               ))}
 
-              {filtered.length === 0 ? (
-                <div className="py-16 text-center">
-                  <p className="mb-3 text-sm text-gray-400">No articles found for "{search}"</p>
-                  <button onClick={() => { setSearch(''); setShowContact(true); }} className="text-sm text-indigo-600 hover:underline">
-                    Contact support instead →
-                  </button>
+                {filtered.length === 0 ? (
+                  <div className="py-16 text-center">
+                    <p className="mb-3 text-sm text-gray-400">No articles found for "{search}"</p>
+                    <button onClick={() => { setSearch(''); setShowContact(true); }} className="text-sm text-indigo-600 hover:underline">
+                      Contact support instead →
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+
+              {totalPages > 1 && (
+                <div className="mt-8 mb-24 flex items-center justify-between border-t border-gray-200 pt-6">
+                  <p className="text-sm text-gray-500">
+                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} articles
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    
+                    {[...Array(totalPages)].map((_, index) => {
+                      const pageNum = index + 1;
+                      // Show first page, last page, current page, and pages around current
+                      if (
+                        pageNum === 1 ||
+                        pageNum === totalPages ||
+                        (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                      ) {
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition ${
+                              currentPage === pageNum
+                                ? 'bg-indigo-600 text-white'
+                                : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      } else if (pageNum === currentPage - 2 || pageNum === currentPage + 2) {
+                        return <span key={pageNum} className="px-1 text-gray-400">...</span>;
+                      }
+                      return null;
+                    })}
+
+                    <button
+                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-              ) : null}
-            </div>
+              )}
+            </>
           )}
         </div>
       </div>
