@@ -2,22 +2,19 @@ package com.jobhuntly.backend.dto;
 
 import java.util.List;
 
-public class UserDTO {
-    private Long id;
+public class UserProfileUpdateRequest {
     private String fullName;
-    private String email;
-    private String userType;
-    private String location;
-    private String description;
-    private String website;
-    private String industry;
-    private String companySize;
     private String title;
     private String company;
+    private String location;
+    private String about;
     private String phone;
     private String languages;
     private String instagram;
     private String twitter;
+    private String website;
+    private String industry;
+    private String companySize;
     private String profilePhotoUrl;
     private String coverPhotoUrl;
     private Boolean openToOpportunities;
@@ -25,76 +22,12 @@ public class UserDTO {
     private List<ProfileExperienceDTO> experiences;
     private List<ProfileEducationDTO> educations;
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public String getFullName() {
         return fullName;
     }
 
     public void setFullName(String fullName) {
         this.fullName = fullName;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getUserType() {
-        return userType;
-    }
-
-    public void setUserType(String userType) {
-        this.userType = userType;
-    }
-
-    public String getLocation() {
-        return location;
-    }
-
-    public void setLocation(String location) {
-        this.location = location;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getWebsite() {
-        return website;
-    }
-
-    public void setWebsite(String website) {
-        this.website = website;
-    }
-
-    public String getIndustry() {
-        return industry;
-    }
-
-    public void setIndustry(String industry) {
-        this.industry = industry;
-    }
-
-    public String getCompanySize() {
-        return companySize;
-    }
-
-    public void setCompanySize(String companySize) {
-        this.companySize = companySize;
     }
 
     public String getTitle() {
@@ -111,6 +44,22 @@ public class UserDTO {
 
     public void setCompany(String company) {
         this.company = company;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public String getAbout() {
+        return about;
+    }
+
+    public void setAbout(String about) {
+        this.about = about;
     }
 
     public String getPhone() {
@@ -143,6 +92,30 @@ public class UserDTO {
 
     public void setTwitter(String twitter) {
         this.twitter = twitter;
+    }
+
+    public String getWebsite() {
+        return website;
+    }
+
+    public void setWebsite(String website) {
+        this.website = website;
+    }
+
+    public String getIndustry() {
+        return industry;
+    }
+
+    public void setIndustry(String industry) {
+        this.industry = industry;
+    }
+
+    public String getCompanySize() {
+        return companySize;
+    }
+
+    public void setCompanySize(String companySize) {
+        this.companySize = companySize;
     }
 
     public String getProfilePhotoUrl() {

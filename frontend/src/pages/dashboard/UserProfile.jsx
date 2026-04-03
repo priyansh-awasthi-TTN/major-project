@@ -92,22 +92,41 @@ export default function UserProfile() {
     if (networkUser) {
       const isCompany = networkUser.userType === 'COMPANY';
       const name = networkUser.fullName || `User ${userId}`;
+      const title = networkUser.title || networkUser.industry || (isCompany ? 'Hiring Team' : 'Job Seeker');
+      const companyName = networkUser.company || (isCompany ? name : 'JobHuntly Member');
       const websiteUrl = buildWebsiteUrl(networkUser.website);
-      const title = networkUser.industry || (isCompany ? 'Hiring Team' : 'Job Seeker');
       const bio = networkUser.description
         || (isCompany
           ? `${name} is active on JobHuntly for hiring and networking conversations.`
           : `${name} is active on JobHuntly and open to connecting about relevant opportunities.`);
+      const skills = Array.isArray(networkUser.skills) ? networkUser.skills.filter(Boolean) : [];
+      const experiences = Array.isArray(networkUser.experiences) && networkUser.experiences.length > 0
+        ? networkUser.experiences.map((exp) => ({
+            role: exp.role || title,
+            company: exp.company || companyName,
+            period: [exp.start, exp.end].filter(Boolean).join(' - ') || exp.duration || 'Current',
+            desc: exp.desc || bio,
+          }))
+        : isCompany
+          ? []
+          : [
+              {
+                role: title,
+                company: companyName,
+                period: 'Current',
+                desc: bio,
+              },
+            ];
+      const educations = Array.isArray(networkUser.educations) ? networkUser.educations : [];
       const tags = Array.from(
-        new Set(
-          [
-            networkUser.industry,
-            networkUser.companySize,
-            networkUser.location,
-            isCompany ? 'Hiring' : 'Open to work',
-          ].filter(Boolean),
-        ),
-      ).slice(0, 4);
+        new Set([
+          ...skills,
+          networkUser.industry,
+          networkUser.companySize,
+          networkUser.location,
+          isCompany ? 'Hiring' : 'Open to work',
+        ].filter(Boolean)),
+      ).slice(0, 6);
 
       return {
         id: networkUser.id,
@@ -116,14 +135,16 @@ export default function UserProfile() {
         name,
         email: networkUser.email,
         title,
+        company: companyName,
         location: networkUser.location,
         avatar: getInitials(name),
         avatarColor: getColorClass(networkUser.id),
+        profilePhotoUrl: networkUser.profilePhotoUrl ? apiService.resolveFileUrl(networkUser.profilePhotoUrl) : '',
         badge: getInitials(name),
         badgeColor: getColorClass((networkUser.id || 0) + 1),
         aboutItems: [
           { label: isCompany ? 'Industry' : 'Current Role', value: title },
-          { label: isCompany ? 'Company' : 'Name', value: name },
+          { label: 'Company', value: companyName },
           ...(networkUser.companySize
             ? [{ label: isCompany ? 'Company Size' : 'Experience Level', value: networkUser.companySize }]
             : []),
@@ -133,23 +154,14 @@ export default function UserProfile() {
           { label: 'Bio', value: bio, multiline: true },
         ],
         tags: tags.length > 0 ? tags : [isCompany ? 'Hiring' : 'Open to work', 'Networking', 'Collaboration'],
-        experience: isCompany
-          ? []
-          : [
-              {
-                role: title,
-                company: 'JobHuntly Member',
-                period: 'Current',
-                desc: bio,
-              },
-            ],
+        experience: experiences,
+        educationEntries: educations,
         highlights: Array.from(
           new Set(
             [
-              isCompany
-                ? (networkUser.industry ? `Hiring in ${networkUser.industry}` : null)
-                : (networkUser.industry ? `Interested in ${networkUser.industry}` : null),
-              networkUser.companySize,
+              networkUser.openToOpportunities ? 'Open to opportunities' : null,
+              networkUser.languages ? `Languages: ${networkUser.languages}` : null,
+              isCompany && networkUser.industry ? `Hiring in ${networkUser.industry}` : null,
               !isCompany ? 'Available on JobHuntly chat' : null,
             ].filter(Boolean),
           ),
@@ -159,7 +171,10 @@ export default function UserProfile() {
         contactRows: [
           { icon: '📧', value: networkUser.email, href: `mailto:${networkUser.email}` },
           ...(networkUser.location ? [{ icon: '📍', value: networkUser.location }] : []),
+          ...(networkUser.phone ? [{ icon: '📞', value: networkUser.phone }] : []),
           ...(websiteUrl ? [{ icon: '🌐', value: websiteUrl, href: websiteUrl }] : []),
+          ...(networkUser.instagram ? [{ icon: '📸', value: networkUser.instagram, href: buildWebsiteUrl(networkUser.instagram) }] : []),
+          ...(networkUser.twitter ? [{ icon: '🐦', value: networkUser.twitter, href: buildWebsiteUrl(networkUser.twitter) }] : []),
           ...(networkUser.industry ? [{ icon: '🏢', value: networkUser.industry }] : []),
           ...(networkUser.companySize ? [{ icon: '👥', value: networkUser.companySize }] : []),
         ],
@@ -180,9 +195,11 @@ export default function UserProfile() {
       name: mockUser.name,
       email: recruiterEmail,
       title,
+      company: mockUser.company,
       location: mockProfile?.location,
       avatar: mockUser.avatar,
       avatarColor: mockUser.avatarColor,
+      profilePhotoUrl: '',
       badge: mockCompany?.logo || getInitials(mockUser.company),
       badgeColor: mockCompany?.color || getColorClass(mockUser.id + 1),
       aboutItems: [
@@ -200,6 +217,7 @@ export default function UserProfile() {
       ],
       tags: mockProfile?.skills || ['Communication', 'Leadership', 'Recruitment', 'Strategy'],
       experience: mockProfile?.experience || [],
+      educationEntries: [],
       highlights: mockProfile?.openRoles || [],
       companyPath: mockCompany ? `/dashboard/companies/${mockCompany.id}` : null,
       websiteUrl: '',
@@ -289,8 +307,20 @@ export default function UserProfile() {
 
           <div className="bg-white rounded-xl p-8 border border-gray-200">
             <div className="flex items-start gap-6">
-              <div className={`w-20 h-20 rounded-full ${profileData.avatarColor} flex items-center justify-center text-white text-2xl font-bold flex-shrink-0`}>
-                {profileData.avatar}
+              <div className={`w-20 h-20 rounded-full ${profileData.avatarColor} flex items-center justify-center text-white text-2xl font-bold flex-shrink-0 overflow-hidden`}>
+                {profileData.profilePhotoUrl ? (
+                  <a
+                    href={profileData.profilePhotoUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`Open ${profileData.name} profile photo`}
+                    className="block w-full h-full"
+                  >
+                    <img src={profileData.profilePhotoUrl} alt={`${profileData.name} profile photo`} className="w-full h-full object-cover" />
+                  </a>
+                ) : (
+                  profileData.avatar
+                )}
               </div>
               <div className="flex-1">
                 <h1 className="text-2xl font-bold text-gray-900">{profileData.name}</h1>
@@ -377,6 +407,27 @@ export default function UserProfile() {
                       <p className="font-medium text-gray-900">{exp.role}</p>
                       <p className="text-sm text-blue-600">{exp.company} · {exp.period}</p>
                       <p className="text-sm text-gray-500 mt-1">{exp.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {profileData.educationEntries.length > 0 && (
+            <div className="bg-white rounded-xl p-6 border border-gray-200">
+              <h2 className="font-semibold text-gray-900 mb-4">Education</h2>
+              <div className="space-y-4">
+                {profileData.educationEntries.map((edu, index) => (
+                  <div key={`${edu.school}-${edu.degree}-${index}`} className="flex gap-4">
+                    <div className="w-2 h-2 rounded-full bg-indigo-500 mt-2 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-gray-900">{edu.school || 'Institution'}</p>
+                      <p className="text-sm text-blue-600">{edu.degree || 'Degree / Certificate'}</p>
+                      {(edu.start || edu.end) && (
+                        <p className="text-sm text-gray-500">{[edu.start, edu.end].filter(Boolean).join(' - ')}</p>
+                      )}
+                      {edu.desc && <p className="text-sm text-gray-500 mt-1">{edu.desc}</p>}
                     </div>
                   </div>
                 ))}

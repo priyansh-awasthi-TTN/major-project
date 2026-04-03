@@ -1,20 +1,52 @@
-import { useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import DashTopBar from '../../components/DashTopBar';
 import { useAuth } from '../../context/AuthContext';
 import BlockedUsersList from '../../components/messaging/BlockedUsersList';
+import apiService from '../../services/api';
 
 const tabs = ['My Profile', 'Login Details', 'Notifications', 'Blocked Users'];
 
-function ProfilePhotoSection() {
-  const [photo, setPhoto] = useState(null);
+function ProfilePhotoSection({ user }) {
+  const [photo, setPhoto] = useState('');
   const [dragging, setDragging] = useState(false);
+  const [saving, setSaving] = useState(false);
   const inputRef = useRef();
 
-  const handleFile = (file) => {
+  useEffect(() => {
+    let ignore = false;
+
+    const fetchProfile = async () => {
+      try {
+        const data = await apiService.getMyProfile();
+        if (!ignore) {
+          setPhoto(data?.profilePhotoUrl ? apiService.resolveFileUrl(data.profilePhotoUrl) : '');
+        }
+      } catch (error) {
+        if (!ignore) {
+          setPhoto('');
+        }
+      }
+    };
+
+    fetchProfile();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const handleFile = async (file) => {
     if (!file || !file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = (e) => setPhoto(e.target.result);
-    reader.readAsDataURL(file);
+
+    setSaving(true);
+    try {
+      const uploadResponse = await apiService.uploadFile(file);
+      const savedProfile = await apiService.updateMyProfile({ profilePhotoUrl: uploadResponse.url });
+      setPhoto(savedProfile?.profilePhotoUrl ? apiService.resolveFileUrl(savedProfile.profilePhotoUrl) : '');
+    } catch (error) {
+      console.error('Failed to update profile photo', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const onDrop = (e) => {
@@ -37,7 +69,12 @@ function ProfilePhotoSection() {
             ) : (
               <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center">
                 <div className="w-16 h-16 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-bold text-lg">
-                  JG
+                  {(user?.fullName || 'User')
+                    .split(' ')
+                    .map((part) => part[0])
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase()}
                 </div>
               </div>
             )}
@@ -58,7 +95,7 @@ function ProfilePhotoSection() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Click to replace or drag and drop</p>
+            <p className="text-sm text-gray-600 mb-1">{saving ? 'Uploading profile photo...' : 'Click to replace or drag and drop'}</p>
             <p className="text-xs text-gray-400">SVG, PNG, JPG or GIF (max. 400 x 400px)</p>
           </div>
 
@@ -75,7 +112,7 @@ function ProfilePhotoSection() {
   );
 }
 
-function PersonalDetailsForm() {
+function PersonalDetailsForm({ user }) {
   const [accountType, setAccountType] = useState('jobSeeker');
 
   return (
@@ -271,10 +308,10 @@ export default function Settings() {
             <div className="p-6">
               <div className="grid grid-cols-5 gap-8">
                 <div className="col-span-2">
-                  <ProfilePhotoSection />
+                  <ProfilePhotoSection user={user} />
                 </div>
                 <div className="col-span-3">
-                  <PersonalDetailsForm />
+                  <PersonalDetailsForm user={user} />
                 </div>
               </div>
             </div>
