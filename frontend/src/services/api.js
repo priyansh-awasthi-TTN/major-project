@@ -264,6 +264,35 @@ class ApiService {
   async getNetworkUser(userId) {
     return this.request(`/network/users/${userId}`);
   }
+
+  // Help center endpoints
+  async getHelpCenterArticles() {
+    return this.request('/help-center/articles');
+  }
+
+  async submitHelpArticleFeedback(articleId, helpful) {
+    return this.request(`/help-center/articles/${articleId}/feedback`, {
+      method: 'POST',
+      body: JSON.stringify({ helpful }),
+    });
+  }
+
+  async reportHelpArticle(articleId) {
+    return this.request(`/help-center/articles/${articleId}/report`, {
+      method: 'POST',
+    });
+  }
+
+  async createHelpSupportTicket(data) {
+    return this.request('/help-center/tickets', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getHelpSupportTickets() {
+    return this.request('/help-center/tickets');
+  }
 }
 
 export default new ApiService();

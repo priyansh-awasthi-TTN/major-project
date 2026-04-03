@@ -1,15 +1,53 @@
 import { useState } from 'react';
 
-export default function MessageRecruiterModal({ recruiterEmail, recruiterName, jobTitle, company, senderName, onClose, onSuccess }) {
-  const [subject, setSubject] = useState(`Regarding ${jobTitle} Position at ${company}`);
-  const [body, setBody] = useState(
-    `Dear ${recruiterName || 'Hiring Manager'},\n\nI hope this email finds you well. I am writing to follow up on my application for the ${jobTitle} position at ${company}.\n\nI am very excited about this opportunity and would love to discuss how my skills and experience align with your team's needs.\n\nThank you for your time and consideration.\n\nBest regards,\n${senderName || 'Applicant'}`
-  );
+function buildDefaultSubject({ initialSubject, jobTitle, company }) {
+  if (initialSubject) return initialSubject;
+  if (jobTitle && company) return `Regarding ${jobTitle} Position at ${company}`;
+  if (company) return `Regarding opportunities at ${company}`;
+  return 'Regarding your open role';
+}
+
+function buildDefaultBody({ initialBody, recruiterName, jobTitle, company, senderName }) {
+  if (initialBody) return initialBody;
+
+  const greeting = recruiterName || 'Hiring Manager';
+
+  if (jobTitle && company) {
+    return `Dear ${greeting},\n\nI hope this email finds you well. I am writing to follow up on my application for the ${jobTitle} position at ${company}.\n\nI am very excited about this opportunity and would love to discuss how my skills and experience align with your team's needs.\n\nThank you for your time and consideration.\n\nBest regards,\n${senderName || 'Applicant'}`;
+  }
+
+  return `Dear ${greeting},\n\nI hope this email finds you well. I am reaching out after viewing your company profile and would like to learn more about current opportunities.\n\nI would appreciate the chance to connect and understand where my background could be a strong fit.\n\nThank you for your time and consideration.\n\nBest regards,\n${senderName || 'Applicant'}`;
+}
+
+export default function MessageRecruiterModal({
+  recruiterEmail,
+  recruiterName,
+  jobTitle,
+  company,
+  senderName,
+  onClose,
+  onSuccess,
+  title = 'Message Recruiter',
+  subtitle,
+  initialSubject,
+  initialBody,
+  submitLabel = 'Send via Gmail',
+}) {
+  const [subject, setSubject] = useState(() => buildDefaultSubject({ initialSubject, jobTitle, company }));
+  const [body, setBody] = useState(() => buildDefaultBody({ initialBody, recruiterName, jobTitle, company, senderName }));
 
   const handleSend = () => {
     const encodedSubject = encodeURIComponent(subject);
-    const encodedBody    = encodeURIComponent(body);
-    window.location.href = `mailto:${recruiterEmail}?subject=${encodedSubject}&body=${encodedBody}`;
+    const encodedBody = encodeURIComponent(body);
+    const encodedTo = encodeURIComponent(recruiterEmail);
+    const gmailComposeUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodedTo}&su=${encodedSubject}&body=${encodedBody}`;
+    const mailtoUrl = `mailto:${recruiterEmail}?subject=${encodedSubject}&body=${encodedBody}`;
+    const composeWindow = window.open(gmailComposeUrl, '_blank', 'noopener,noreferrer');
+
+    if (!composeWindow) {
+      window.location.href = mailtoUrl;
+    }
+
     onSuccess?.();
     onClose();
   };
@@ -20,8 +58,8 @@ export default function MessageRecruiterModal({ recruiterEmail, recruiterName, j
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div>
-            <h2 className="font-bold text-gray-900">Message Recruiter</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Sending to {recruiterEmail}</p>
+            <h2 className="font-bold text-gray-900">{title}</h2>
+            <p className="text-xs text-gray-400 mt-0.5">{subtitle || `Sending to ${recruiterEmail}`}</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
         </div>
@@ -68,7 +106,7 @@ export default function MessageRecruiterModal({ recruiterEmail, recruiterName, j
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" strokeLinejoin="round" strokeLinecap="round"/>
             </svg>
-            Send via Gmail
+            {submitLabel}
           </button>
         </div>
       </div>

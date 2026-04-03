@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import MessageRecruiterModal from './MessageRecruiterModal';
+import { useToast } from './Toast';
 
 const EMPLOYEE_RANGE_BY_SIZE = {
   '1-50': '25-50',
@@ -247,9 +250,9 @@ function buildEmployeeRange(size) {
 function buildContactLinks(company, website) {
   const slug = slugify(company.name || 'company');
   return [
-    { icon: '🌐', label: website.replace(/^https?:\/\//, ''), href: website, external: true },
-    { icon: '✉️', label: `hello@${slug}.com`, href: `mailto:hello@${slug}.com`, external: false },
-    { icon: '💼', label: `linkedin.com/company/${slug}`, href: `https://linkedin.com/company/${slug}`, external: true },
+    { icon: '🌐', label: website.replace(/^https?:\/\//, ''), href: website, external: true, kind: 'website' },
+    { icon: '✉️', label: `hello@${slug}.com`, href: `mailto:hello@${slug}.com`, external: false, kind: 'email' },
+    { icon: '💼', label: `linkedin.com/company/${slug}`, href: `https://linkedin.com/company/${slug}`, external: true, kind: 'linkedin' },
   ];
 }
 
@@ -526,11 +529,14 @@ export default function CompanyProfileDetails({
   browseJobsHref,
   jobHrefBuilder,
 }) {
+  const { user } = useAuth();
+  const { showToast } = useToast();
   const [showAllTeam, setShowAllTeam] = useState(false);
   const [showAllTech, setShowAllTech] = useState(false);
   const [showAllLocations, setShowAllLocations] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [showAllJobs, setShowAllJobs] = useState(false);
+  const [contactEmail, setContactEmail] = useState('');
 
   useEffect(() => {
     setShowAllTeam(false);
@@ -546,41 +552,44 @@ export default function CompanyProfileDetails({
   const visibleLocations = showAllLocations ? profile.officeEntries : profile.officeEntries.slice(0, 2);
   const visibleReviews = showAllReviews ? profile.reviews : profile.reviews.slice(0, 2);
   const visibleJobs = showAllJobs ? jobs : jobs.slice(0, DEFAULT_VISIBLE_JOB_COUNT);
+  const initialContactSubject = `Regarding opportunities at ${company.name}`;
+  const initialContactBody = `Dear Hiring Team,\n\nI hope this email finds you well. I am reaching out after viewing ${company.name}'s company profile and would like to learn more about current opportunities and the team.\n\nI would appreciate the chance to connect and understand where my background could be a strong fit.\n\nThank you for your time and consideration.\n\nBest regards,\n${user?.fullName || 'Applicant'}`;
 
   return (
-    <div className="max-w-6xl mx-auto px-8 py-8">
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-            <div className="h-28 bg-gradient-to-r from-blue-500 to-purple-600" />
-            <div className="px-6 pb-6">
-              <div className="-mt-8 mb-4 flex items-end justify-between gap-4">
-                <div className={`${company.color || 'bg-blue-600'} flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl border-4 border-white text-2xl font-bold text-white`}>
-                  {company.logo || company.name.slice(0, 2).toUpperCase()}
+    <>
+      <div className="max-w-6xl mx-auto px-8 py-8">
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+              <div className="h-28 bg-gradient-to-r from-blue-500 to-purple-600" />
+              <div className="px-6 pb-6">
+                <div className="-mt-8 mb-4 flex items-end justify-between gap-4">
+                  <div className={`${company.color || 'bg-blue-600'} flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl border-4 border-white text-2xl font-bold text-white`}>
+                    {company.logo || company.name.slice(0, 2).toUpperCase()}
+                  </div>
+                  <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs text-blue-600">
+                    {profile.displayJobCount} Job{profile.displayJobCount === 1 ? '' : 's'}
+                  </span>
                 </div>
-                <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs text-blue-600">
-                  {profile.displayJobCount} Job{profile.displayJobCount === 1 ? '' : 's'}
-                </span>
-              </div>
 
-              <h1 className="text-xl font-bold text-gray-900">{company.name}</h1>
-              <a
-                href={profile.website}
-                target="_blank"
-                rel="noreferrer"
-                className="mb-3 mt-1 inline-flex text-sm text-blue-500 hover:underline"
-              >
-                {profile.website}
-              </a>
+                <h1 className="text-xl font-bold text-gray-900">{company.name}</h1>
+                <a
+                  href={profile.website}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mb-3 mt-1 inline-flex text-sm text-blue-500 hover:underline"
+                >
+                  {profile.website}
+                </a>
 
-              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-500">
-                <span>📅 Founded: {profile.founded}</span>
-                <span>👥 {profile.employees}</span>
-                <span>📍 {profile.officeLocationSummary}</span>
-                <span>🏷️ {company.industry}</span>
+                <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-500">
+                  <span>📅 Founded: {profile.founded}</span>
+                  <span>👥 {profile.employees}</span>
+                  <span>📍 {profile.officeLocationSummary}</span>
+                  <span>🏷️ {company.industry}</span>
+                </div>
               </div>
             </div>
-          </div>
 
           <div className="rounded-xl border border-gray-200 bg-white p-6">
             <h2 className="mb-3 font-bold text-gray-900">Company Profile</h2>
@@ -589,16 +598,28 @@ export default function CompanyProfileDetails({
             <h3 className="mb-3 text-sm font-semibold text-gray-900">Contact</h3>
             <div className="flex flex-wrap gap-3">
               {profile.contacts.map((contact) => (
-                <a
-                  key={contact.label}
-                  href={contact.href}
-                  target={contact.external ? '_blank' : undefined}
-                  rel={contact.external ? 'noreferrer' : undefined}
-                  className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-                >
-                  <span>{contact.icon}</span>
-                  <span>{contact.label}</span>
-                </a>
+                contact.kind === 'email' ? (
+                  <button
+                    key={contact.label}
+                    type="button"
+                    onClick={() => setContactEmail(contact.label)}
+                    className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-50"
+                  >
+                    <span>{contact.icon}</span>
+                    <span>{contact.label}</span>
+                  </button>
+                ) : (
+                  <a
+                    key={contact.label}
+                    href={contact.href}
+                    target={contact.external ? '_blank' : undefined}
+                    rel={contact.external ? 'noreferrer' : undefined}
+                    className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                  >
+                    <span>{contact.icon}</span>
+                    <span>{contact.label}</span>
+                  </a>
+                )
               ))}
             </div>
 
@@ -762,58 +783,73 @@ export default function CompanyProfileDetails({
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="rounded-xl border border-gray-200 bg-white p-5">
-            <h3 className="mb-4 font-semibold text-gray-900">Tech Stack</h3>
-            <div className="flex flex-wrap gap-2">
-              {visibleTechStack.map((tech) => (
-                <span key={tech.name} className={`rounded px-2 py-1 text-xs ${tech.toneClass}`}>
-                  ⚙️ {tech.name}
-                </span>
-              ))}
-            </div>
-            {profile.techStack.length > 6 && (
-              <button
-                onClick={() => setShowAllTech((current) => !current)}
-                className="mt-3 text-xs text-blue-600 hover:underline"
-              >
-                {showAllTech ? 'Show less tech stack' : `View tech stack (${profile.techStack.length}) →`}
-              </button>
-            )}
-          </div>
-
-          <div className="rounded-xl border border-gray-200 bg-white p-5">
-            <h3 className="mb-4 font-semibold text-gray-900">Office Location</h3>
-            <p className="mb-3 text-sm text-gray-500">
-              {profile.officeEntries.length > 0
-                ? `${company.name} operates across ${profile.officeLocationSummary}`
-                : `${company.name} will share office locations soon`}
-            </p>
-
-            <div className="space-y-3 text-sm">
-              {profile.officeEntries.length > 0 ? (
-                visibleLocations.map((location) => (
-                  <div key={`${location.label}-${location.type}`}>
-                    <p className="font-medium text-gray-700">{location.label}</p>
-                    <p className="text-xs text-gray-400">{location.type} • {location.summary}</p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-400">Office locations coming soon</p>
+          <div className="space-y-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <h3 className="mb-4 font-semibold text-gray-900">Tech Stack</h3>
+              <div className="flex flex-wrap gap-2">
+                {visibleTechStack.map((tech) => (
+                  <span key={tech.name} className={`rounded px-2 py-1 text-xs ${tech.toneClass}`}>
+                    ⚙️ {tech.name}
+                  </span>
+                ))}
+              </div>
+              {profile.techStack.length > 6 && (
+                <button
+                  onClick={() => setShowAllTech((current) => !current)}
+                  className="mt-3 text-xs text-blue-600 hover:underline"
+                >
+                  {showAllTech ? 'Show less tech stack' : `View tech stack (${profile.techStack.length}) →`}
+                </button>
               )}
             </div>
 
-            {profile.officeEntries.length > 2 && (
-              <button
-                onClick={() => setShowAllLocations((current) => !current)}
-                className="mt-3 text-xs text-blue-600 hover:underline"
-              >
-                {showAllLocations ? 'Show fewer locations' : `View locations (${profile.officeEntries.length}) →`}
-              </button>
-            )}
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <h3 className="mb-4 font-semibold text-gray-900">Office Location</h3>
+              <p className="mb-3 text-sm text-gray-500">
+                {profile.officeEntries.length > 0
+                  ? `${company.name} operates across ${profile.officeLocationSummary}`
+                  : `${company.name} will share office locations soon`}
+              </p>
+
+              <div className="space-y-3 text-sm">
+                {profile.officeEntries.length > 0 ? (
+                  visibleLocations.map((location) => (
+                    <div key={`${location.label}-${location.type}`}>
+                      <p className="font-medium text-gray-700">{location.label}</p>
+                      <p className="text-xs text-gray-400">{location.type} • {location.summary}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-400">Office locations coming soon</p>
+                )}
+              </div>
+
+              {profile.officeEntries.length > 2 && (
+                <button
+                  onClick={() => setShowAllLocations((current) => !current)}
+                  className="mt-3 text-xs text-blue-600 hover:underline"
+                >
+                  {showAllLocations ? 'Show fewer locations' : `View locations (${profile.officeEntries.length}) →`}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+      {contactEmail && (
+        <MessageRecruiterModal
+          recruiterEmail={contactEmail}
+          recruiterName="Hiring Team"
+          company={company.name}
+          senderName={user?.fullName}
+          title="Message Company"
+          subtitle={`Sending to ${contactEmail}`}
+          initialSubject={initialContactSubject}
+          initialBody={initialContactBody}
+          onClose={() => setContactEmail('')}
+          onSuccess={() => showToast('Email compose opened!', 'success')}
+        />
+      )}
+    </>
   );
 }
