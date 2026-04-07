@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import DashTopBar from '../../components/DashTopBar';
 import apiService from '../../services/api';
+import {
+  applications as mockApplications,
+  companies as mockCompanies,
+  jobs as mockJobs,
+  recruiterProfiles as mockRecruiterProfiles,
+} from '../../data/mockData';
 
 function EditIcon({ className = 'w-4 h-4' }) {
   return (
@@ -284,6 +291,82 @@ function getInitials(value) {
     .toUpperCase();
 }
 
+function buildSortedOptions(values) {
+  return [...new Set(
+    values
+      .map((value) => (typeof value === 'string' ? value.trim() : ''))
+      .filter(Boolean),
+  )].sort((left, right) => left.localeCompare(right));
+}
+
+const GENERIC_EXPERIENCE_TITLES = [
+  'Software Engineer',
+  'Frontend Developer',
+  'Backend Developer',
+  'Full Stack Developer',
+  'Product Manager',
+  'Project Manager',
+  'Business Analyst',
+  'Data Analyst',
+  'Marketing Specialist',
+  'Sales Executive',
+  'Customer Success Manager',
+  'HR Manager',
+  'Operations Manager',
+  'QA Engineer',
+  'DevOps Engineer',
+  'UI/UX Designer',
+  'Graphic Designer',
+  'Intern',
+];
+
+const EXPERIENCE_TITLE_OPTIONS = buildSortedOptions([
+  ...GENERIC_EXPERIENCE_TITLES,
+  ...mockJobs.map((job) => job.title),
+  ...mockApplications.map((application) => application.title),
+  ...Object.values(mockRecruiterProfiles).flatMap((profile) => [
+    profile.title,
+    ...(profile.openRoles || []),
+    ...((profile.experience || []).map((experience) => experience.role)),
+  ]),
+]);
+
+const EXPERIENCE_COMPANY_OPTIONS = buildSortedOptions([
+  ...mockCompanies.map((company) => company.name),
+  ...mockJobs.map((job) => job.company),
+  ...mockApplications.map((application) => application.company),
+  ...Object.values(mockRecruiterProfiles).flatMap((profile) => [
+    profile.company,
+    ...((profile.experience || []).map((experience) => experience.company)),
+  ]),
+]);
+
+const EXPERIENCE_COMPANY_METADATA = (() => {
+  const metadata = new Map();
+
+  const registerCompany = (name, logo, color) => {
+    if (!name) {
+      return;
+    }
+
+    const normalizedName = name.trim().toLowerCase();
+    if (!normalizedName || metadata.has(normalizedName)) {
+      return;
+    }
+
+    metadata.set(normalizedName, {
+      logo: logo || getInitials(name),
+      logoBg: color ? `${color} text-white` : 'bg-gray-100 text-gray-600',
+    });
+  };
+
+  mockCompanies.forEach((company) => registerCompany(company.name, company.logo, company.color));
+  mockJobs.forEach((job) => registerCompany(job.company, job.logo, job.color));
+  mockApplications.forEach((application) => registerCompany(application.company, application.logo, application.color));
+
+  return metadata;
+})();
+
 function normalizeExperiences(entries) {
   return (Array.isArray(entries) ? entries : []).map((entry, index) => ({
     id: entry?.id ?? index + 1,
@@ -363,6 +446,31 @@ function buildEmptyState(displayName, userEmail) {
   };
 }
 
+function buildEmptyExperienceDraft() {
+  return {
+    role: '',
+    company: '',
+    type: '',
+    start: '',
+    end: '',
+    duration: '',
+    location: '',
+    desc: '',
+    notifyNetwork: false,
+    currentlyWorking: false,
+    endCurrentPosition: false,
+    startMonth: '',
+    startYear: '',
+    endMonth: '',
+    endYear: '',
+    locationType: '',
+    headline: '',
+    jobSource: '',
+    skills: [],
+    media: [],
+  };
+}
+
 function SectionActionButton({ onClick, children, disabled = false }) {
   return (
     <button
@@ -380,8 +488,11 @@ function SectionActionButton({ onClick, children, disabled = false }) {
 
 export default function Profile() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const displayName = user?.fullName || 'User Name';
   const userEmail = user?.email || 'user@email.com';
+  const isExperiencePage = location.pathname === '/dashboard/profile/experience';
 
   const initialState = buildEmptyState(displayName, userEmail);
 
@@ -444,6 +555,67 @@ export default function Profile() {
     'Remote', 'Hybrid'
   ];
 
+  const trimmedSkills = Array.isArray(tmp.skills)
+    ? tmp.skills.map((item) => String(item).trim()).filter(Boolean)
+    : String(tmp.skills || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  const isProfileSaveDisabled = submitting || !tmp.name?.trim();
+  const isAboutSaveDisabled = submitting || !tmp.about?.trim();
+  const isSkillsSaveDisabled = submitting || trimmedSkills.length === 0;
+  const isExperienceSaveDisabled = submitting
+    || !tmp.role?.trim()
+    || !tmp.company?.trim()
+    || !tmp.startMonth
+    || !tmp.startYear
+    || (!tmp.currentlyWorking && (!tmp.endMonth || !tmp.endYear));
+  const isEducationSaveDisabled = submitting || !tmp.school?.trim();
+
+  const getProfileValidationError = () => {
+    if (!tmp.name?.trim()) {
+      return 'Full name is required.';
+    }
+    return '';
+  };
+
+  const getAboutValidationError = () => {
+    if (!tmp.about?.trim()) {
+      return 'About Me cannot be empty.';
+    }
+    return '';
+  };
+
+  const getSkillsValidationError = () => {
+    if (trimmedSkills.length === 0) {
+      return 'Add at least one skill before saving.';
+    }
+    return '';
+  };
+
+  const getExperienceValidationError = () => {
+    if (!tmp.role?.trim()) {
+      return 'Experience title is required.';
+    }
+    if (!tmp.company?.trim()) {
+      return 'Company or organization is required.';
+    }
+    if (!tmp.startMonth || !tmp.startYear) {
+      return 'Start month and year are required.';
+    }
+    if (!tmp.currentlyWorking && (!tmp.endMonth || !tmp.endYear)) {
+      return 'End month and year are required unless this is your current role.';
+    }
+    return '';
+  };
+
+  const getEducationValidationError = () => {
+    if (!tmp.school?.trim()) {
+      return 'School is required.';
+    }
+    return '';
+  };
+
   const openModal = (key, initial) => {
     // Parse start/end dates back into month/year if they exist
     let parsedInitial = { ...initial };
@@ -501,6 +673,7 @@ export default function Profile() {
     setLocationSuggestions([]);
     setShowLocationDropdown(false);
     setHasUnsavedChanges(false);
+    setErrorMessage('');
     
     // Store initial state for comparison
     setInitialFormState({
@@ -512,7 +685,32 @@ export default function Profile() {
     setModal(key);
   };
 
+  const dismissModal = () => {
+    setModal(null);
+    setShowDiscardDialog(false);
+    setHasUnsavedChanges(false);
+    setInitialFormState(null);
+    setTmp({});
+    setTmpSkills([]);
+    setNewSkill('');
+    setSkillSuggestions([]);
+    setShowSkillDropdown(false);
+    setLocationSuggestions([]);
+    setShowLocationDropdown(false);
+    setMediaFiles([]);
+    setUploadingMedia(false);
+  };
+
   const closeModal = () => {
+    if (!modal) {
+      return;
+    }
+
+    if (!initialFormState) {
+      dismissModal();
+      return;
+    }
+
     // Check if there are unsaved changes
     const currentState = {
       tmp,
@@ -525,18 +723,12 @@ export default function Profile() {
     if (hasChanges && !showDiscardDialog) {
       setShowDiscardDialog(true);
     } else {
-      setModal(null);
-      setShowDiscardDialog(false);
-      setHasUnsavedChanges(false);
-      setInitialFormState(null);
+      dismissModal();
     }
   };
 
   const confirmDiscard = () => {
-    setModal(null);
-    setShowDiscardDialog(false);
-    setHasUnsavedChanges(false);
-    setInitialFormState(null);
+    dismissModal();
   };
 
   const cancelDiscard = () => {
@@ -686,6 +878,12 @@ export default function Profile() {
   };
 
   const saveProfile = async () => {
+    const validationError = getProfileValidationError();
+    if (validationError) {
+      setErrorMessage(validationError);
+      return;
+    }
+
     await persistProfile(
       {
         fullName: tmp.name,
@@ -695,12 +893,18 @@ export default function Profile() {
       },
       'Profile header updated.',
     );
-    closeModal();
+    dismissModal();
   };
 
   const saveAbout = async () => {
+    const validationError = getAboutValidationError();
+    if (validationError) {
+      setErrorMessage(validationError);
+      return;
+    }
+
     await persistProfile({ about: tmp.about }, 'About section updated.');
-    closeModal();
+    dismissModal();
   };
 
   const saveDetails = async () => {
@@ -711,7 +915,7 @@ export default function Profile() {
       },
       'Additional details updated.',
     );
-    closeModal();
+    dismissModal();
   };
 
   const saveSocials = async () => {
@@ -723,19 +927,28 @@ export default function Profile() {
       },
       'Social links updated.',
     );
-    closeModal();
+    dismissModal();
   };
 
   const saveSkills = async () => {
-    const nextSkills = (tmp.skills || '')
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
+    const validationError = getSkillsValidationError();
+    if (validationError) {
+      setErrorMessage(validationError);
+      return;
+    }
+
+    const nextSkills = trimmedSkills;
     await persistProfile({ skills: nextSkills }, 'Skills updated.');
-    closeModal();
+    dismissModal();
   };
 
   const saveExp = async () => {
+    const validationError = getExperienceValidationError();
+    if (validationError) {
+      setErrorMessage(validationError);
+      return;
+    }
+
     // Combine month and year into start/end strings
     const startDate = tmp.startMonth && tmp.startYear ? `${tmp.startMonth} ${tmp.startYear}` : tmp.start || '';
     const endDate = tmp.currentlyWorking ? 'Present' : (tmp.endMonth && tmp.endYear ? `${tmp.endMonth} ${tmp.endYear}` : tmp.end || '');
@@ -771,9 +984,7 @@ export default function Profile() {
       : experiences.map((entry) => (entry.id === normalizedEntry.id ? normalizedEntry : entry));
 
     await persistProfile({ experiences: nextExperiences }, modal === 'add-exp' ? 'Experience added.' : 'Experience updated.');
-    setShowDiscardDialog(false);
-    setHasUnsavedChanges(false);
-    setModal(null);
+    dismissModal();
   };
 
   const showToast = (message) => {
@@ -825,6 +1036,22 @@ export default function Profile() {
     setShowLocationDropdown(false);
   };
 
+  const handleExperienceRoleChange = (value) => {
+    setTmp((current) => ({ ...current, role: value }));
+  };
+
+  const handleExperienceCompanyChange = (value) => {
+    const normalizedValue = value.trim().toLowerCase();
+    const companyMetadata = EXPERIENCE_COMPANY_METADATA.get(normalizedValue);
+
+    setTmp((current) => ({
+      ...current,
+      company: value,
+      logo: value.trim() ? (companyMetadata?.logo || getInitials(value)) : '💼',
+      logoBg: companyMetadata?.logoBg || 'bg-gray-100 text-gray-600',
+    }));
+  };
+
   const handleMediaUpload = async (files) => {
     if (!files || files.length === 0) return;
 
@@ -856,6 +1083,12 @@ export default function Profile() {
   };
 
   const saveEdu = async () => {
+    const validationError = getEducationValidationError();
+    if (validationError) {
+      setErrorMessage(validationError);
+      return;
+    }
+
     // Combine month and year into start/end strings
     const startDate = tmp.startMonth && tmp.startYear ? `${tmp.startMonth} ${tmp.startYear}` : tmp.start || '';
     const endDate = tmp.endMonth && tmp.endYear ? `${tmp.endMonth} ${tmp.endYear}` : tmp.end || '';
@@ -886,9 +1119,7 @@ export default function Profile() {
       : educations.map((entry) => (entry.id === normalizedEntry.id ? normalizedEntry : entry));
 
     await persistProfile({ educations: nextEducations }, modal === 'add-edu' ? 'Education added.' : 'Education updated.');
-    setShowDiscardDialog(false);
-    setHasUnsavedChanges(false);
-    setModal(null);
+    dismissModal();
   };
 
   const deleteExp = async (id) => {
@@ -898,7 +1129,7 @@ export default function Profile() {
       },
       'Experience removed.',
     );
-    closeModal();
+    dismissModal();
   };
 
   const deleteEdu = async (id) => {
@@ -908,7 +1139,7 @@ export default function Profile() {
       },
       'Education removed.',
     );
-    closeModal();
+    dismissModal();
   };
 
   const toggleOpenForOpportunities = async () => {
@@ -1076,28 +1307,7 @@ export default function Profile() {
                 <h3 className="font-semibold text-gray-900">Experiences</h3>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => openModal('add-exp', { 
-                      role: '', 
-                      company: '', 
-                      type: '', 
-                      start: '', 
-                      end: '', 
-                      duration: '', 
-                      location: '', 
-                      desc: '',
-                      notifyNetwork: false,
-                      currentlyWorking: false,
-                      endCurrentPosition: false,
-                      startMonth: '',
-                      startYear: '',
-                      endMonth: '',
-                      endYear: '',
-                      locationType: '',
-                      headline: '',
-                      jobSource: '',
-                      skills: [],
-                      media: []
-                    })}
+                    onClick={() => openModal('add-exp', buildEmptyExperienceDraft())}
                     className="w-8 h-8 flex items-center justify-center rounded-lg text-blue-600 hover:bg-blue-50 border border-blue-100 transition text-xl font-light"
                     aria-label="Add experience"
                     disabled={submitting}
@@ -1105,7 +1315,7 @@ export default function Profile() {
                     +
                   </button>
                   <button
-                    onClick={() => setModal('edit-all-exp')}
+                    onClick={() => navigate('/dashboard/profile/experience')}
                     className="w-8 h-8 flex items-center justify-center rounded-lg text-blue-600 hover:bg-blue-50 border border-blue-100 transition"
                     aria-label="Edit experiences"
                     disabled={submitting}
@@ -1442,14 +1652,44 @@ export default function Profile() {
       {modal === 'profile' && (
         <Modal title="Edit Profile" onClose={closeModal}>
           <Field label="Full Name" value={tmp.name || ''} onChange={(value) => setTmp((current) => ({ ...current, name: value }))} />
-          <Field label="Job Title" value={tmp.title || ''} onChange={(value) => setTmp((current) => ({ ...current, title: value }))} />
-          <Field label="Company" value={tmp.company || ''} onChange={(value) => setTmp((current) => ({ ...current, company: value }))} />
+          <div className="mb-4">
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Job Title</label>
+            <input
+              type="text"
+              list="experience-title-options"
+              value={tmp.title || ''}
+              onChange={(event) => setTmp((current) => ({ ...current, title: event.target.value }))}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
+              placeholder="Select or type a title"
+            />
+            <datalist id="experience-title-options">
+              {EXPERIENCE_TITLE_OPTIONS.map((title) => (
+                <option key={title} value={title} />
+              ))}
+            </datalist>
+          </div>
+          <div className="mb-4">
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Company</label>
+            <input
+              type="text"
+              list="experience-company-options"
+              value={tmp.company || ''}
+              onChange={(event) => setTmp((current) => ({ ...current, company: event.target.value }))}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
+              placeholder="Select or type a company"
+            />
+            <datalist id="experience-company-options">
+              {EXPERIENCE_COMPANY_OPTIONS.map((company) => (
+                <option key={company} value={company} />
+              ))}
+            </datalist>
+          </div>
           <Field label="Location" value={tmp.location || ''} onChange={(value) => setTmp((current) => ({ ...current, location: value }))} />
           <div className="flex justify-end gap-3 mt-2">
             <button onClick={closeModal} className="border border-gray-300 text-gray-600 text-sm px-4 py-2 rounded-lg hover:bg-gray-50">
               Cancel
             </button>
-            <button onClick={saveProfile} disabled={submitting} className="bg-blue-600 text-white text-sm px-5 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-60">
+            <button onClick={saveProfile} disabled={isProfileSaveDisabled} className="bg-blue-600 text-white text-sm px-5 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-60">
               {submitting ? 'Saving...' : 'Save'}
             </button>
           </div>
@@ -1463,7 +1703,7 @@ export default function Profile() {
             <button onClick={closeModal} className="border border-gray-300 text-gray-600 text-sm px-4 py-2 rounded-lg hover:bg-gray-50">
               Cancel
             </button>
-            <button onClick={saveAbout} disabled={submitting} className="bg-blue-600 text-white text-sm px-5 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-60">
+            <button onClick={saveAbout} disabled={isAboutSaveDisabled} className="bg-blue-600 text-white text-sm px-5 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-60">
               {submitting ? 'Saving...' : 'Save'}
             </button>
           </div>
@@ -1517,7 +1757,7 @@ export default function Profile() {
             <button onClick={closeModal} className="border border-gray-300 text-gray-600 text-sm px-4 py-2 rounded-lg hover:bg-gray-50">
               Cancel
             </button>
-            <button onClick={saveSkills} disabled={submitting} className="bg-blue-600 text-white text-sm px-5 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-60">
+            <button onClick={saveSkills} disabled={isSkillsSaveDisabled} className="bg-blue-600 text-white text-sm px-5 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-60">
               {submitting ? 'Saving...' : 'Save'}
             </button>
           </div>
@@ -1554,7 +1794,22 @@ export default function Profile() {
 
           <p className="text-xs text-gray-500 mb-4">* Indicates required</p>
 
-          <Field label="Title*" value={tmp.role || ''} onChange={(value) => setTmp((current) => ({ ...current, role: value }))} />
+          <div className="mb-4">
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Title*</label>
+            <input
+              type="text"
+              list="experience-title-options"
+              value={tmp.role || ''}
+              onChange={(event) => handleExperienceRoleChange(event.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
+              placeholder="Select or type a title"
+            />
+            <datalist id="experience-title-options">
+              {EXPERIENCE_TITLE_OPTIONS.map((title) => (
+                <option key={title} value={title} />
+              ))}
+            </datalist>
+          </div>
           
           <div className="mb-4">
             <label className="block text-xs font-semibold text-gray-700 mb-1">Employment type</label>
@@ -1575,7 +1830,22 @@ export default function Profile() {
             </select>
           </div>
 
-          <Field label="Company or organization*" value={tmp.company || ''} onChange={(value) => setTmp((current) => ({ ...current, company: value }))} />
+          <div className="mb-4">
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Company or organization*</label>
+            <input
+              type="text"
+              list="experience-company-options"
+              value={tmp.company || ''}
+              onChange={(event) => handleExperienceCompanyChange(event.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
+              placeholder="Select or type a company"
+            />
+            <datalist id="experience-company-options">
+              {EXPERIENCE_COMPANY_OPTIONS.map((company) => (
+                <option key={company} value={company} />
+              ))}
+            </datalist>
+          </div>
           
           <div className="mb-4">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -1598,7 +1868,7 @@ export default function Profile() {
                   onChange={(e) => setTmp((current) => ({ ...current, endCurrentPosition: e.target.checked }))}
                   className="w-4 h-4 rounded border-gray-300 text-gray-600 focus:ring-gray-500"
                 />
-                <span className="text-sm text-gray-700">End current position as of now - DSA Member</span>
+                <span className="text-sm text-gray-700">End current position now</span>
               </label>
             </div>
           )}
@@ -1706,7 +1976,7 @@ export default function Profile() {
                 }}
                 onBlur={() => setTimeout(() => setShowLocationDropdown(false), 200)}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
-                placeholder="Ex: London, United Kingdom"
+                placeholder="City, state, or country"
               />
               {showLocationDropdown && locationSuggestions.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
@@ -1774,7 +2044,7 @@ export default function Profile() {
                 }
               }}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
-              placeholder="Ex-SDE Intern @airtel | Java 21 | Spring Boot | Spring Cloud | Backend-Focused | Python • JavaScript • ES7 | Op..."
+              placeholder="Example: Your role | Specialty | Key skills"
               maxLength={220}
             />
             <p className="text-xs text-gray-500 mt-1">Appears below your name at the top of your profile.</p>
@@ -1948,7 +2218,7 @@ export default function Profile() {
               <button onClick={closeModal} className="border border-gray-300 text-gray-600 text-sm px-4 py-2 rounded-lg hover:bg-gray-50">
                 Cancel
               </button>
-              <button onClick={saveExp} disabled={submitting} className="bg-blue-600 text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-blue-700 disabled:opacity-60">
+              <button onClick={saveExp} disabled={isExperienceSaveDisabled} className="bg-blue-600 text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-blue-700 disabled:opacity-60">
                 {submitting ? 'Saving...' : 'Save'}
               </button>
             </div>
@@ -2132,7 +2402,7 @@ export default function Profile() {
 
           <div className="mb-6">
             <h4 className="text-sm font-semibold text-gray-900 mb-2">Skills</h4>
-            <p className="text-xs text-gray-600 mb-3">We recommend adding your top 5 skills used in this experience. They'll also appear in your Skills section.</p>
+            <p className="text-xs text-gray-600 mb-3">We recommend adding your top 5 skills from this education entry. They'll also appear in your Skills section.</p>
             
             {tmpSkills.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-3">
@@ -2151,20 +2421,57 @@ export default function Profile() {
               </div>
             )}
 
-            <button
-              type="button"
-              onClick={() => {
-                // Open skill input - you can enhance this with a modal or inline input
-                const skill = prompt('Enter a skill:');
-                if (skill && skill.trim() && !tmpSkills.includes(skill.trim())) {
-                  setTmpSkills([...tmpSkills, skill.trim()]);
-                }
-              }}
-              className="flex items-center gap-1 text-sm text-blue-600 border border-blue-600 rounded-full px-4 py-1.5 hover:bg-blue-50 transition"
-            >
-              <span className="text-lg leading-none">+</span>
-              Add skill
-            </button>
+            <div className="flex gap-2 relative">
+              <div className="flex-1 relative">
+                <input
+                  ref={skillInputRef}
+                  type="text"
+                  value={newSkill}
+                  onChange={(e) => handleSkillInputChange(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addSkill(newSkill);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (newSkill.trim()) {
+                      const filtered = commonSkills.filter(skill => 
+                        skill.toLowerCase().includes(newSkill.toLowerCase()) &&
+                        !tmpSkills.includes(skill)
+                      );
+                      setSkillSuggestions(filtered.slice(0, 10));
+                      setShowSkillDropdown(filtered.length > 0);
+                    }
+                  }}
+                  onBlur={() => setTimeout(() => setShowSkillDropdown(false), 200)}
+                  placeholder="Type a skill and press Enter"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
+                />
+                {showSkillDropdown && skillSuggestions.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {skillSuggestions.map((skill, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => addSkill(skill)}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                      >
+                        {skill}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => addSkill(newSkill)}
+                className="flex items-center gap-1 text-sm text-blue-600 border border-blue-600 rounded-lg px-4 py-2 hover:bg-blue-50 transition"
+              >
+                <span className="text-lg leading-none">+</span>
+                Add
+              </button>
+            </div>
           </div>
 
           <div className="mb-6">
@@ -2209,6 +2516,20 @@ export default function Profile() {
               <span className="text-lg leading-none">+</span>
               {uploadingMedia ? 'Uploading...' : 'Add media'}
             </button>
+            <input
+              ref={mediaInputRef}
+              type="file"
+              accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const files = Array.from(e.target.files || []);
+                if (files.length > 0) {
+                  handleMediaUpload(files);
+                }
+                e.target.value = '';
+              }}
+            />
           </div>
 
           <div className="flex justify-between items-center pt-4 border-t border-gray-100">
@@ -2225,7 +2546,7 @@ export default function Profile() {
               <button onClick={closeModal} className="border border-gray-300 text-gray-600 text-sm px-4 py-2 rounded-lg hover:bg-gray-50">
                 Cancel
               </button>
-              <button onClick={saveEdu} disabled={submitting} className="bg-blue-600 text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-blue-700 disabled:opacity-60">
+              <button onClick={saveEdu} disabled={isEducationSaveDisabled} className="bg-blue-600 text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-blue-700 disabled:opacity-60">
                 {submitting ? 'Saving...' : 'Save'}
               </button>
             </div>
@@ -2236,7 +2557,7 @@ export default function Profile() {
       {showDiscardDialog && (
         <ConfirmDialog
           title="Discard changes"
-          message="All unsaved changes will be discarded, and you'll return to your profile."
+          message={isExperiencePage ? 'All unsaved changes will be discarded.' : "All unsaved changes will be discarded, and you'll return to your profile."}
           onConfirm={confirmDiscard}
           onCancel={cancelDiscard}
           confirmText="Discard"
@@ -2244,34 +2565,14 @@ export default function Profile() {
         />
       )}
       
-      {modal === 'edit-all-exp' && (
-        <div className="fixed inset-0 z-50 bg-gray-50 overflow-y-auto">
-          {/* LinkedIn-style Navigation Bar */}
-          <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-            <div className="max-w-7xl mx-auto px-6 py-2 flex items-center justify-between">
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">in</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-6 text-sm text-gray-600">
-                  <button className="hover:text-gray-900">Home</button>
-                  <button className="hover:text-gray-900">My Network</button>
-                  <button className="hover:text-gray-900">Jobs</button>
-                  <button className="hover:text-gray-900">Messaging</button>
-                  <button className="hover:text-gray-900">Notifications</button>
-                </div>
-              </div>
-            </div>
-          </div>
-
+      {isExperiencePage && (
+        <div className="fixed inset-0 z-40 bg-gray-50 overflow-y-auto">
           {/* Profile Header */}
           <div className="bg-white border-b border-gray-200">
             <div className="max-w-4xl mx-auto px-6 py-4">
               <div className="flex items-center gap-4">
                 <button
-                  onClick={() => setModal(null)}
+                  onClick={() => navigate('/dashboard/profile')}
                   className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition"
                   aria-label="Go back"
                 >
@@ -2309,29 +2610,7 @@ export default function Profile() {
               <h2 className="text-2xl font-bold text-gray-900">Experience</h2>
               <button
                 onClick={() => {
-                  setModal(null);
-                  openModal('add-exp', { 
-                    role: '', 
-                    company: '', 
-                    type: '', 
-                    start: '', 
-                    end: '', 
-                    duration: '', 
-                    location: '', 
-                    desc: '',
-                    notifyNetwork: false,
-                    currentlyWorking: false,
-                    endCurrentPosition: false,
-                    startMonth: '',
-                    startYear: '',
-                    endMonth: '',
-                    endYear: '',
-                    locationType: '',
-                    headline: '',
-                    jobSource: '',
-                    skills: [],
-                    media: []
-                  });
+                  openModal('add-exp', buildEmptyExperienceDraft());
                 }}
                 className="w-10 h-10 flex items-center justify-center rounded-lg text-blue-600 hover:bg-blue-50 border border-blue-100 transition text-xl font-light"
                 aria-label="Add experience"
@@ -2367,8 +2646,7 @@ export default function Profile() {
                           </div>
                           <button
                             onClick={() => {
-                              setModal(null);
-                              setTimeout(() => openModal(`exp-${exp.id}`, { ...exp }), 100);
+                              openModal(`exp-${exp.id}`, { ...exp });
                             }}
                             className="w-9 h-9 flex items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 transition flex-shrink-0"
                             aria-label="Edit experience"
@@ -2435,29 +2713,7 @@ export default function Profile() {
                   <p className="text-gray-500 mb-4">No experience entries yet.</p>
                   <button
                     onClick={() => {
-                      setModal(null);
-                      openModal('add-exp', { 
-                        role: '', 
-                        company: '', 
-                        type: '', 
-                        start: '', 
-                        end: '', 
-                        duration: '', 
-                        location: '', 
-                        desc: '',
-                        notifyNetwork: false,
-                        currentlyWorking: false,
-                        endCurrentPosition: false,
-                        startMonth: '',
-                        startYear: '',
-                        endMonth: '',
-                        endYear: '',
-                        locationType: '',
-                        headline: '',
-                        jobSource: '',
-                        skills: [],
-                        media: []
-                      });
+                      openModal('add-exp', buildEmptyExperienceDraft());
                     }}
                     className="text-blue-600 hover:underline"
                   >

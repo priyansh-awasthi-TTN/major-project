@@ -123,6 +123,7 @@ export default function App() {
         <Route path="/dashboard/companies" element={<JobseekerRoute><DashboardLayout><DashCompanies /></DashboardLayout></JobseekerRoute>} />
         <Route path="/dashboard/companies/:id" element={<JobseekerRoute><DashboardLayout><DashCompanyProfile /></DashboardLayout></JobseekerRoute>} />
         <Route path="/dashboard/profile" element={<JobseekerRoute><DashboardLayout><Profile /></DashboardLayout></JobseekerRoute>} />
+        <Route path="/dashboard/profile/experience" element={<JobseekerRoute><DashboardLayout><Profile /></DashboardLayout></JobseekerRoute>} />
         <Route path="/dashboard/profile/:userId" element={<JobseekerRoute><DashboardLayout><UserProfile /></DashboardLayout></JobseekerRoute>} />
         <Route path="/dashboard/settings" element={<JobseekerRoute><DashboardLayout><Settings /></DashboardLayout></JobseekerRoute>} />
         <Route path="/dashboard/help" element={<JobseekerRoute><DashboardLayout><HelpCenter /></DashboardLayout></JobseekerRoute>} />
