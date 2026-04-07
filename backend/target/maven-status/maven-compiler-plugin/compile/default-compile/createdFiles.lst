@@ -2,8 +2,8 @@ com/jobhuntly/backend/dto/HelpSupportTicketRequest.class
 com/jobhuntly/backend/entity/JobAction.class
 com/jobhuntly/backend/service/ProfileService.class
 com/jobhuntly/backend/dto/UserProfileUpdateRequest.class
-com/jobhuntly/backend/entity/HelpSupportTicket.class
 com/jobhuntly/backend/dto/ApplicationDetailsDTO$RecruiterMessageDTO.class
+com/jobhuntly/backend/entity/HelpSupportTicket.class
 com/jobhuntly/backend/service/ProfileService$3.class
 com/jobhuntly/backend/dto/HelpArticleFeedbackRequest.class
 com/jobhuntly/backend/repository/HelpArticleFeedbackRepository.class
@@ -23,8 +23,9 @@ com/jobhuntly/backend/repository/HelpSupportTicketRepository.class
 com/jobhuntly/backend/entity/JobAction$ActionType.class
 com/jobhuntly/backend/dto/ApplicationDetailsDTO$InterviewScheduleDTO.class
 com/jobhuntly/backend/service/ChatService.class
-com/jobhuntly/backend/service/ProfileService$1.class
+com/jobhuntly/backend/dto/MediaFileDTO.class
 com/jobhuntly/backend/entity/HelpArticleFeedback.class
+com/jobhuntly/backend/service/ProfileService$1.class
 com/jobhuntly/backend/repository/JobActionRepository.class
 com/jobhuntly/backend/entity/HelpSupportTicket$Status.class
 com/jobhuntly/backend/entity/HelpArticle.class

@@ -1,5 +1,7 @@
 package com.jobhuntly.backend.dto;
 
+import java.util.List;
+
 public class ProfileExperienceDTO {
     private Long id;
     private String role;
@@ -12,6 +14,20 @@ public class ProfileExperienceDTO {
     private String duration;
     private String location;
     private String desc;
+    
+    // New fields for enhanced experience
+    private Boolean notifyNetwork;
+    private Boolean currentlyWorking;
+    private Boolean endCurrentPosition;
+    private String startMonth;
+    private String startYear;
+    private String endMonth;
+    private String endYear;
+    private String locationType;
+    private String headline;
+    private String jobSource;
+    private List<String> skills;
+    private List<MediaFileDTO> media;
 
     public Long getId() {
         return id;
@@ -99,5 +115,101 @@ public class ProfileExperienceDTO {
 
     public void setDesc(String desc) {
         this.desc = desc;
+    }
+
+    public Boolean getNotifyNetwork() {
+        return notifyNetwork;
+    }
+
+    public void setNotifyNetwork(Boolean notifyNetwork) {
+        this.notifyNetwork = notifyNetwork;
+    }
+
+    public Boolean getCurrentlyWorking() {
+        return currentlyWorking;
+    }
+
+    public void setCurrentlyWorking(Boolean currentlyWorking) {
+        this.currentlyWorking = currentlyWorking;
+    }
+
+    public Boolean getEndCurrentPosition() {
+        return endCurrentPosition;
+    }
+
+    public void setEndCurrentPosition(Boolean endCurrentPosition) {
+        this.endCurrentPosition = endCurrentPosition;
+    }
+
+    public String getStartMonth() {
+        return startMonth;
+    }
+
+    public void setStartMonth(String startMonth) {
+        this.startMonth = startMonth;
+    }
+
+    public String getStartYear() {
+        return startYear;
+    }
+
+    public void setStartYear(String startYear) {
+        this.startYear = startYear;
+    }
+
+    public String getEndMonth() {
+        return endMonth;
+    }
+
+    public void setEndMonth(String endMonth) {
+        this.endMonth = endMonth;
+    }
+
+    public String getEndYear() {
+        return endYear;
+    }
+
+    public void setEndYear(String endYear) {
+        this.endYear = endYear;
+    }
+
+    public String getLocationType() {
+        return locationType;
+    }
+
+    public void setLocationType(String locationType) {
+        this.locationType = locationType;
+    }
+
+    public String getHeadline() {
+        return headline;
+    }
+
+    public void setHeadline(String headline) {
+        this.headline = headline;
+    }
+
+    public String getJobSource() {
+        return jobSource;
+    }
+
+    public void setJobSource(String jobSource) {
+        this.jobSource = jobSource;
+    }
+
+    public List<String> getSkills() {
+        return skills;
+    }
+
+    public void setSkills(List<String> skills) {
+        this.skills = skills;
+    }
+
+    public List<MediaFileDTO> getMedia() {
+        return media;
+    }
+
+    public void setMedia(List<MediaFileDTO> media) {
+        this.media = media;
     }
 }
