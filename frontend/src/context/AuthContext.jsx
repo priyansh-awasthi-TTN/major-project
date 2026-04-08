@@ -7,6 +7,20 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const applyAuthResponse = (response) => {
+    if (response?.accessToken) {
+      sessionStorage.setItem('accessToken', response.accessToken);
+    }
+
+    if (response?.refreshToken) {
+      sessionStorage.setItem('refreshToken', response.refreshToken);
+    }
+
+    if (response?.user) {
+      setUser(response.user);
+    }
+  };
+
   // Check if user is already logged in on app start
   useEffect(() => {
     const checkAuth = async () => {
@@ -35,13 +49,7 @@ export function AuthProvider({ children }) {
       const response = await apiService.login(credentials);
       
       if (response && response.accessToken && response.user) {
-        // Store tokens
-        sessionStorage.setItem('accessToken', response.accessToken);
-        sessionStorage.setItem('refreshToken', response.refreshToken);
-        
-        // Set user
-        setUser(response.user);
-        
+        applyAuthResponse(response);
         return response;
       } else {
         throw new Error('Invalid response from server');
@@ -57,19 +65,26 @@ export function AuthProvider({ children }) {
       console.log('Attempting to register user:', userData);
       const response = await apiService.register(userData);
       console.log('Registration successful:', response);
-      
-      // Store tokens
-      sessionStorage.setItem('accessToken', response.accessToken);
-      sessionStorage.setItem('refreshToken', response.refreshToken);
-      
-      // Set user
-      setUser(response.user);
-      
+      applyAuthResponse(response);
       return response;
     } catch (error) {
       console.error('Registration failed:', error);
       throw error;
     }
+  };
+
+  const refreshUser = async () => {
+    const response = await apiService.getCurrentUser();
+    if (response?.user) {
+      setUser(response.user);
+      return response.user;
+    }
+
+    return null;
+  };
+
+  const updateUser = (updates) => {
+    setUser((currentUser) => currentUser ? { ...currentUser, ...updates } : currentUser);
   };
 
   const logout = async () => {
@@ -96,6 +111,9 @@ export function AuthProvider({ children }) {
     login,
     register,
     logout,
+    refreshUser,
+    updateUser,
+    applyAuthResponse,
     loading
   };
 

@@ -18,7 +18,9 @@ com/jobhuntly/backend/dto/JobResponseDTO.class
 com/jobhuntly/backend/service/ProfileService$2.class
 com/jobhuntly/backend/service/HelpCenterSeederService.class
 com/jobhuntly/backend/dto/ApplicationDetailsDTO.class
+com/jobhuntly/backend/dto/NotificationPreferencesUpdateRequest.class
 com/jobhuntly/backend/controller/JobActionController$1.class
+com/jobhuntly/backend/entity/User$Gender.class
 com/jobhuntly/backend/repository/HelpSupportTicketRepository.class
 com/jobhuntly/backend/entity/JobAction$ActionType.class
 com/jobhuntly/backend/dto/ApplicationDetailsDTO$InterviewScheduleDTO.class
@@ -28,4 +30,5 @@ com/jobhuntly/backend/entity/HelpArticleFeedback.class
 com/jobhuntly/backend/dto/MediaFileDTO.class
 com/jobhuntly/backend/repository/JobActionRepository.class
 com/jobhuntly/backend/entity/HelpSupportTicket$Status.class
+com/jobhuntly/backend/dto/LoginDetailsUpdateRequest.class
 com/jobhuntly/backend/entity/HelpArticle.class

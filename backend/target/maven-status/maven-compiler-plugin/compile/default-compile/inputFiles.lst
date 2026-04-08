@@ -15,6 +15,7 @@
 /home/priyansh-awasthi/major-project/backend/src/main/java/com/jobhuntly/backend/service/UserDetailsServiceImpl.java
 /home/priyansh-awasthi/major-project/backend/src/main/java/com/jobhuntly/backend/service/AuthService.java
 /home/priyansh-awasthi/major-project/backend/src/main/java/com/jobhuntly/backend/entity/Application.java
+/home/priyansh-awasthi/major-project/backend/src/main/java/com/jobhuntly/backend/dto/NotificationPreferencesUpdateRequest.java
 /home/priyansh-awasthi/major-project/backend/src/main/java/com/jobhuntly/backend/config/WebSocketConfig.java
 /home/priyansh-awasthi/major-project/backend/src/main/java/com/jobhuntly/backend/repository/HelpArticleFeedbackRepository.java
 /home/priyansh-awasthi/major-project/backend/src/main/java/com/jobhuntly/backend/controller/ChatController.java
@@ -68,3 +69,4 @@
 /home/priyansh-awasthi/major-project/backend/src/main/java/com/jobhuntly/backend/repository/RefreshTokenRepository.java
 /home/priyansh-awasthi/major-project/backend/src/main/java/com/jobhuntly/backend/dto/ApplicationRequest.java
 /home/priyansh-awasthi/major-project/backend/src/main/java/com/jobhuntly/backend/entity/SavedJob.java
+/home/priyansh-awasthi/major-project/backend/src/main/java/com/jobhuntly/backend/dto/LoginDetailsUpdateRequest.java
