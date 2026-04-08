@@ -57,6 +57,7 @@ public class AuthResponse {
         private String fullName;
         private String email;
         private String userType;
+        private String profilePhotoUrl;
         
         public UserDto() {}
         
@@ -65,6 +66,7 @@ public class AuthResponse {
             this.fullName = user.getFullName();
             this.email = user.getEmail();
             this.userType = user.getUserType().name();
+            this.profilePhotoUrl = user.getProfilePhotoUrl();
         }
         
         // Getters and Setters
@@ -98,6 +100,14 @@ public class AuthResponse {
         
         public void setUserType(String userType) {
             this.userType = userType;
+        }
+
+        public String getProfilePhotoUrl() {
+            return profilePhotoUrl;
+        }
+
+        public void setProfilePhotoUrl(String profilePhotoUrl) {
+            this.profilePhotoUrl = profilePhotoUrl;
         }
     }
 }

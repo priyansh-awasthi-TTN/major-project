@@ -1,5 +1,8 @@
 package com.jobhuntly.backend.controller;
 
+import com.jobhuntly.backend.dto.AuthResponse;
+import com.jobhuntly.backend.dto.LoginDetailsUpdateRequest;
+import com.jobhuntly.backend.dto.NotificationPreferencesUpdateRequest;
 import com.jobhuntly.backend.dto.UserDTO;
 import com.jobhuntly.backend.dto.UserProfileUpdateRequest;
 import com.jobhuntly.backend.service.ProfileService;
@@ -36,5 +39,21 @@ public class ProfileController {
             @RequestBody UserProfileUpdateRequest request
     ) {
         return ResponseEntity.ok(profileService.updateCurrentProfile(authentication.getName(), request));
+    }
+
+    @PutMapping("/me/login-details")
+    public ResponseEntity<AuthResponse> updateLoginDetails(
+            Authentication authentication,
+            @RequestBody LoginDetailsUpdateRequest request
+    ) {
+        return ResponseEntity.ok(profileService.updateLoginDetails(authentication.getName(), request));
+    }
+
+    @PutMapping("/me/notifications")
+    public ResponseEntity<UserDTO> updateNotificationPreferences(
+            Authentication authentication,
+            @RequestBody NotificationPreferencesUpdateRequest request
+    ) {
+        return ResponseEntity.ok(profileService.updateNotificationPreferences(authentication.getName(), request));
     }
 }

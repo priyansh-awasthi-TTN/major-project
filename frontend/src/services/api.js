@@ -105,6 +105,20 @@ class ApiService {
     });
   }
 
+  async updateMyLoginDetails(loginDetails) {
+    return this.request('/profile/me/login-details', {
+      method: 'PUT',
+      body: JSON.stringify(loginDetails),
+    });
+  }
+
+  async updateMyNotificationPreferences(preferences) {
+    return this.request('/profile/me/notifications', {
+      method: 'PUT',
+      body: JSON.stringify(preferences),
+    });
+  }
+
   async uploadFile(file) {
     const formData = new FormData();
     formData.append('file', file);

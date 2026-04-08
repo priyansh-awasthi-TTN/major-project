@@ -8,6 +8,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -73,6 +74,13 @@ public class User implements UserDetails {
     @Column(name = "phone")
     private String phone;
 
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "gender")
+    private Gender gender;
+
     @Column(name = "languages")
     private String languages;
 
@@ -90,6 +98,15 @@ public class User implements UserDetails {
 
     @Column(name = "open_to_opportunities")
     private Boolean openToOpportunities = true;
+
+    @Column(name = "application_notifications")
+    private Boolean applicationNotifications = true;
+
+    @Column(name = "job_notifications")
+    private Boolean jobNotifications = true;
+
+    @Column(name = "recommendation_notifications")
+    private Boolean recommendationNotifications = true;
 
     @Lob
     @Column(name = "skills_json", columnDefinition = "TEXT")
@@ -111,6 +128,10 @@ public class User implements UserDetails {
     
     public enum UserType {
         JOBSEEKER, COMPANY
+    }
+
+    public enum Gender {
+        MALE, FEMALE, OTHER, PREFER_NOT_TO_SAY
     }
     
     // Constructors
@@ -309,6 +330,22 @@ public class User implements UserDetails {
         this.phone = phone;
     }
 
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
+
+    public Gender getGender() {
+        return gender;
+    }
+
+    public void setGender(Gender gender) {
+        this.gender = gender;
+    }
+
     public String getLanguages() {
         return languages;
     }
@@ -355,6 +392,30 @@ public class User implements UserDetails {
 
     public void setOpenToOpportunities(Boolean openToOpportunities) {
         this.openToOpportunities = openToOpportunities;
+    }
+
+    public Boolean getApplicationNotifications() {
+        return applicationNotifications;
+    }
+
+    public void setApplicationNotifications(Boolean applicationNotifications) {
+        this.applicationNotifications = applicationNotifications;
+    }
+
+    public Boolean getJobNotifications() {
+        return jobNotifications;
+    }
+
+    public void setJobNotifications(Boolean jobNotifications) {
+        this.jobNotifications = jobNotifications;
+    }
+
+    public Boolean getRecommendationNotifications() {
+        return recommendationNotifications;
+    }
+
+    public void setRecommendationNotifications(Boolean recommendationNotifications) {
+        this.recommendationNotifications = recommendationNotifications;
     }
 
     public String getSkillsJson() {

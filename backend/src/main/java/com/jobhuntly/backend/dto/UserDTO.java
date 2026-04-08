@@ -1,5 +1,6 @@
 package com.jobhuntly.backend.dto;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public class UserDTO {
@@ -15,12 +16,17 @@ public class UserDTO {
     private String title;
     private String company;
     private String phone;
+    private LocalDate dateOfBirth;
+    private String gender;
     private String languages;
     private String instagram;
     private String twitter;
     private String profilePhotoUrl;
     private String coverPhotoUrl;
     private Boolean openToOpportunities;
+    private Boolean applicationNotifications;
+    private Boolean jobNotifications;
+    private Boolean recommendationNotifications;
     private List<String> skills;
     private List<ProfileExperienceDTO> experiences;
     private List<ProfileEducationDTO> educations;
@@ -121,6 +127,22 @@ public class UserDTO {
         this.phone = phone;
     }
 
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
+
+    public String getGender() {
+        return gender;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
+
     public String getLanguages() {
         return languages;
     }
@@ -167,6 +189,30 @@ public class UserDTO {
 
     public void setOpenToOpportunities(Boolean openToOpportunities) {
         this.openToOpportunities = openToOpportunities;
+    }
+
+    public Boolean getApplicationNotifications() {
+        return applicationNotifications;
+    }
+
+    public void setApplicationNotifications(Boolean applicationNotifications) {
+        this.applicationNotifications = applicationNotifications;
+    }
+
+    public Boolean getJobNotifications() {
+        return jobNotifications;
+    }
+
+    public void setJobNotifications(Boolean jobNotifications) {
+        this.jobNotifications = jobNotifications;
+    }
+
+    public Boolean getRecommendationNotifications() {
+        return recommendationNotifications;
+    }
+
+    public void setRecommendationNotifications(Boolean recommendationNotifications) {
+        this.recommendationNotifications = recommendationNotifications;
     }
 
     public List<String> getSkills() {

@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useMessaging } from '../context/MessagingContext';
+import apiService from '../services/api';
 
 const navItems = [
   { label: 'Dashboard',       icon: '🏠', path: '/dashboard',             match: (p) => p === '/dashboard' },
@@ -31,6 +32,7 @@ export default function DashboardSidebar() {
   const displayName  = user?.fullName || 'User';
   const displayEmail = user?.email    || 'user@email.com';
   const initials     = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  const profilePhotoUrl = user?.profilePhotoUrl ? apiService.resolveFileUrl(user.profilePhotoUrl) : '';
 
   const handleLogout = async () => {
     console.log('Logout button clicked');
@@ -96,9 +98,13 @@ export default function DashboardSidebar() {
           Logout
         </button>
         <div className="flex items-center gap-3 px-3 py-3 border-t border-gray-200">
-          <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center text-sm font-bold text-blue-700 flex-shrink-0">
-            {initials}
-          </div>
+          {profilePhotoUrl ? (
+            <img src={profilePhotoUrl} alt={displayName} className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center text-sm font-bold text-blue-700 flex-shrink-0">
+              {initials}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-800 truncate">{displayName}</p>
             <p className="text-xs text-gray-400 truncate">{displayEmail}</p>
