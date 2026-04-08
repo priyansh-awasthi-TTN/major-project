@@ -1,0 +1,5 @@
+.idea
+.kiro
+.vscode
+/backend/target
+/backend/uploads
