@@ -543,12 +543,13 @@ function SectionActionButton({ onClick, children, disabled = false }) {
 }
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const displayName = user?.fullName || 'User Name';
   const userEmail = user?.email || 'user@email.com';
   const isExperiencePage = location.pathname === '/dashboard/profile/experience';
+  const routeRequestedExperienceModal = location.state?.openExperienceModal;
 
   const initialState = buildEmptyState(displayName, userEmail);
 
@@ -589,6 +590,7 @@ export default function Profile() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [initialFormState, setInitialFormState] = useState(null);
   const [skillsDetailExp, setSkillsDetailExp] = useState(null);
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
 
   const coverInputRef = useRef(null);
   const avatarInputRef = useRef(null);
@@ -598,6 +600,10 @@ export default function Profile() {
   const schoolInputRef = useRef(null);
   const degreeInputRef = useRef(null);
   const fieldOfStudyInputRef = useRef(null);
+
+  useEffect(() => {
+    setAvatarLoadFailed(false);
+  }, [avatarImg]);
 
   // Common skills list for autocomplete
   const commonSkills = [
@@ -852,15 +858,62 @@ export default function Profile() {
     'Sports Management', 'Physical Education', 'Aviation', 'Maritime Studies'
   ];
 
-  const trimmedSkills = Array.isArray(tmp.skills)
-    ? tmp.skills.map((item) => String(item).trim()).filter(Boolean)
-    : String(tmp.skills || '')
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
+  const normalizeSkillList = (value) => {
+    const rawSkills = Array.isArray(value) ? value : String(value || '').split(',');
+    const seen = new Set();
+
+    return rawSkills
+      .map((item) => String(item).trim())
+      .filter((item) => {
+        if (!item) {
+          return false;
+        }
+
+        const normalizedItem = item.toLowerCase();
+        if (seen.has(normalizedItem)) {
+          return false;
+        }
+
+        seen.add(normalizedItem);
+        return true;
+      });
+  };
+
+  const parseMonthYear = (month, year) => {
+    if (!month || !year) {
+      return null;
+    }
+
+    const parsedDate = new Date(`${month} 1, ${year}`);
+    return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+  };
+
+  const hasSkillAlreadySelected = (skill) => {
+    const normalizedSkill = String(skill || '').trim().toLowerCase();
+    return tmpSkills.some((selectedSkill) => selectedSkill.toLowerCase() === normalizedSkill);
+  };
+
+  const getFilteredSkillSuggestions = (value) => {
+    const normalizedValue = value.trim().toLowerCase();
+    if (!normalizedValue) {
+      return [];
+    }
+
+    return commonSkills.filter((skill) => (
+      skill.toLowerCase().includes(normalizedValue) && !hasSkillAlreadySelected(skill)
+    )).slice(0, 10);
+  };
+
+  const updateSkillSuggestions = (value) => {
+    const filteredSkills = getFilteredSkillSuggestions(value);
+    setSkillSuggestions(filteredSkills);
+    setShowSkillDropdown(filteredSkills.length > 0);
+  };
+
+  const trimmedSkills = normalizeSkillList(tmpSkills.length > 0 ? tmpSkills : tmp.skills);
   const isProfileSaveDisabled = submitting || !tmp.name?.trim();
   const isAboutSaveDisabled = submitting || !tmp.about?.trim();
-  const isSkillsSaveDisabled = submitting || trimmedSkills.length === 0;
+  const isSkillsSaveDisabled = submitting || trimmedSkills.length === 0 || trimmedSkills.length > 5;
   const isExperienceSaveDisabled = submitting
     || !tmp.role?.trim()
     || !tmp.company?.trim()
@@ -870,8 +923,13 @@ export default function Profile() {
   const isEducationSaveDisabled = submitting || !tmp.school?.trim();
 
   const getProfileValidationError = () => {
-    if (!tmp.name?.trim()) {
+    const normalizedName = tmp.name?.trim() || '';
+
+    if (!normalizedName) {
       return 'Full name is required.';
+    }
+    if (normalizedName.length < 2) {
+      return 'Full name must be at least 2 characters.';
     }
     return '';
   };
@@ -886,6 +944,9 @@ export default function Profile() {
   const getSkillsValidationError = () => {
     if (trimmedSkills.length === 0) {
       return 'Add at least one skill before saving.';
+    }
+    if (trimmedSkills.length > 5) {
+      return 'Add up to 5 skills only.';
     }
     return '';
   };
@@ -903,12 +964,34 @@ export default function Profile() {
     if (!tmp.currentlyWorking && (!tmp.endMonth || !tmp.endYear)) {
       return 'End month and year are required unless this is your current role.';
     }
+    const experienceStart = parseMonthYear(tmp.startMonth, tmp.startYear);
+    const experienceEnd = parseMonthYear(tmp.endMonth, tmp.endYear);
+    if (!tmp.currentlyWorking && experienceStart && experienceEnd && experienceEnd < experienceStart) {
+      return 'End date cannot be earlier than start date.';
+    }
+    if (normalizeSkillList(tmpSkills).length > 5) {
+      return 'Add up to 5 skills per experience entry.';
+    }
     return '';
   };
 
   const getEducationValidationError = () => {
     if (!tmp.school?.trim()) {
       return 'School is required.';
+    }
+    if ((tmp.startMonth || tmp.startYear) && (!tmp.startMonth || !tmp.startYear)) {
+      return 'Complete both start month and year.';
+    }
+    if ((tmp.endMonth || tmp.endYear) && (!tmp.endMonth || !tmp.endYear)) {
+      return 'Complete both end month and year.';
+    }
+    const educationStart = parseMonthYear(tmp.startMonth, tmp.startYear);
+    const educationEnd = parseMonthYear(tmp.endMonth, tmp.endYear);
+    if (educationStart && educationEnd && educationEnd < educationStart) {
+      return 'End date cannot be earlier than start date.';
+    }
+    if (normalizeSkillList(tmpSkills).length > 5) {
+      return 'Add up to 5 skills per education entry.';
     }
     return '';
   };
@@ -922,16 +1005,10 @@ export default function Profile() {
     // Parse start/end dates back into month/year if they exist
     let parsedInitial = { ...initial };
     
-    // Handle skills conversion for about modal
-    if (key === 'about') {
-      if (typeof parsedInitial.skills === 'string') {
-        parsedInitial.skills = parsedInitial.skills
-          .split(',')
-          .map(s => s.trim())
-          .filter(Boolean);
-      } else if (!Array.isArray(parsedInitial.skills)) {
-        parsedInitial.skills = [];
-      }
+    if (typeof parsedInitial.skills === 'string' || Array.isArray(parsedInitial.skills)) {
+      parsedInitial.skills = normalizeSkillList(parsedInitial.skills);
+    } else {
+      parsedInitial.skills = [];
     }
     
     if (key.startsWith('exp-') || key === 'add-exp') {
@@ -998,6 +1075,15 @@ export default function Profile() {
     
     setModal(key);
   };
+
+  useEffect(() => {
+    if (!isExperiencePage || routeRequestedExperienceModal !== 'add-exp' || modal) {
+      return;
+    }
+
+    openModal('add-exp', buildEmptyExperienceDraft());
+    navigate('/dashboard/profile/experience', { replace: true, state: null });
+  }, [isExperiencePage, routeRequestedExperienceModal, modal, navigate]);
 
   const dismissModal = () => {
     setModal(null);
@@ -1083,6 +1169,12 @@ export default function Profile() {
     setOpenForOpp(data?.openToOpportunities ?? true);
     setAvatarImg(data?.profilePhotoUrl || '');
     setCoverImg(data?.coverPhotoUrl || '');
+    updateUser({
+      fullName: data?.fullName || fallbackState.profile.name,
+      email: data?.email || fallbackState.details.email,
+      userType: data?.userType || user?.userType,
+      profilePhotoUrl: data?.profilePhotoUrl || '',
+    });
   };
 
   useEffect(() => {
@@ -1225,7 +1317,7 @@ export default function Profile() {
       return;
     }
 
-    await persistProfile({ about: tmp.about, skills: tmpSkills }, 'About section updated.');
+    await persistProfile({ about: tmp.about, skills: normalizeSkillList(tmpSkills) }, 'About section updated.');
     dismissModal();
   };
 
@@ -1259,7 +1351,7 @@ export default function Profile() {
       return;
     }
 
-    const nextSkills = trimmedSkills;
+    const nextSkills = normalizeSkillList(tmpSkills);
     await persistProfile({ skills: nextSkills }, 'Skills updated.');
     dismissModal();
   };
@@ -1297,7 +1389,7 @@ export default function Profile() {
       locationType: tmp.locationType || '',
       headline: tmp.headline || '',
       jobSource: tmp.jobSource || '',
-      skills: tmpSkills || [],
+      skills: normalizeSkillList(tmpSkills),
       media: mediaFiles || [],
     };
 
@@ -1317,12 +1409,7 @@ export default function Profile() {
   const handleSkillInputChange = (value) => {
     setNewSkill(value);
     if (value.trim()) {
-      const filtered = commonSkills.filter(skill => 
-        skill.toLowerCase().includes(value.toLowerCase()) &&
-        !tmpSkills.includes(skill)
-      );
-      setSkillSuggestions(filtered.slice(0, 10));
-      setShowSkillDropdown(filtered.length > 0);
+      updateSkillSuggestions(value);
     } else {
       setSkillSuggestions([]);
       setShowSkillDropdown(false);
@@ -1330,12 +1417,28 @@ export default function Profile() {
   };
 
   const addSkill = (skill) => {
-    if (skill.trim() && !tmpSkills.includes(skill.trim())) {
-      setTmpSkills([...tmpSkills, skill.trim()]);
+    const normalizedSkill = String(skill || '').trim();
+    if (!normalizedSkill) {
+      return;
+    }
+
+    if (hasSkillAlreadySelected(normalizedSkill)) {
       setNewSkill('');
       setSkillSuggestions([]);
       setShowSkillDropdown(false);
+      return;
     }
+
+    if (tmpSkills.length >= 5) {
+      setErrorMessage('Add up to 5 skills only.');
+      return;
+    }
+
+    setTmpSkills([...tmpSkills, normalizedSkill]);
+    setNewSkill('');
+    setSkillSuggestions([]);
+    setShowSkillDropdown(false);
+    setErrorMessage('');
   };
 
   const handleSkillDragStart = (index) => {
@@ -1513,7 +1616,7 @@ export default function Profile() {
       endYear: tmp.endYear || '',
       grade: tmp.grade || '',
       activities: tmp.activities || '',
-      skills: tmpSkills || [],
+      skills: normalizeSkillList(tmpSkills),
       media: mediaFiles || [],
     };
 
@@ -1559,7 +1662,7 @@ export default function Profile() {
   const visibleExp = experiences;
   const visibleEdu = showAllEdu ? educations : educations.slice(0, 2);
   const initials = getInitials(profile.name || displayName);
-  const resolvedAvatarUrl = avatarImg ? apiService.resolveFileUrl(avatarImg) : '';
+  const resolvedAvatarUrl = avatarImg && !avatarLoadFailed ? apiService.resolveFileUrl(avatarImg) : '';
   const resolvedCoverUrl = coverImg ? apiService.resolveFileUrl(coverImg) : '';
   const portfolioUrl = normalizeExternalUrl(socials.website);
   const aboutParagraphs = about.trim() ? about.split('\n\n') : [];
@@ -1748,6 +1851,7 @@ export default function Profile() {
     <div className="flex-1 flex flex-col h-full bg-gray-50">
       <DashTopBar title="My Profile" />
 
+      {!isExperiencePage && (
       <div className="overflow-y-auto flex-1 px-8 py-6">
         {statusMessage && (
           <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
@@ -1796,6 +1900,7 @@ export default function Profile() {
                             src={resolvedAvatarUrl}
                             alt={`${profile.name || displayName} profile photo`}
                             className="w-full h-full object-cover"
+                            onError={() => setAvatarLoadFailed(true)}
                           />
                         </a>
                       ) : (
@@ -1892,7 +1997,7 @@ export default function Profile() {
                 <h3 className="font-semibold text-gray-900">Experiences</h3>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => openModal('add-exp', buildEmptyExperienceDraft())}
+                    onClick={() => navigate('/dashboard/profile/experience', { state: { openExperienceModal: 'add-exp' } })}
                     className="w-8 h-8 flex items-center justify-center rounded-lg text-blue-600 hover:bg-blue-50 border border-blue-100 transition text-xl font-light"
                     aria-label="Add experience"
                     disabled={submitting}
@@ -1900,7 +2005,7 @@ export default function Profile() {
                     +
                   </button>
                   <button
-                    onClick={() => setModal('edit-all-exp')}
+                    onClick={() => navigate('/dashboard/profile/experience')}
                     className="w-8 h-8 flex items-center justify-center rounded-lg text-blue-600 hover:bg-blue-50 border border-blue-100 transition"
                     aria-label="Edit experiences"
                     disabled={submitting}
@@ -2112,7 +2217,7 @@ export default function Profile() {
             <div className="bg-white rounded-xl p-6 border border-gray-200">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-semibold text-gray-900">Skills</h3>
-                <EditBtn onClick={() => openModal('skills', { skills: skills.join(', ') })} ariaLabel="Edit skills section" />
+                <EditBtn onClick={() => openModal('skills', { skills })} ariaLabel="Edit skills section" />
               </div>
               {skills.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
@@ -2222,6 +2327,7 @@ export default function Profile() {
           </div>
         </div>
       </div>
+      )}
 
       {modal === 'profile' && (
         <Modal title="Edit Profile" onClose={closeModal}>
@@ -2344,12 +2450,7 @@ export default function Profile() {
                     }}
                     onFocus={() => {
                       if (newSkill.trim()) {
-                        const filtered = commonSkills.filter(skill => 
-                          skill.toLowerCase().includes(newSkill.toLowerCase()) &&
-                          !tmpSkills.includes(skill)
-                        );
-                        setSkillSuggestions(filtered.slice(0, 10));
-                        setShowSkillDropdown(filtered.length > 0);
+                        updateSkillSuggestions(newSkill);
                       }
                     }}
                     onBlur={() => setTimeout(() => setShowSkillDropdown(false), 200)}
@@ -2465,8 +2566,65 @@ export default function Profile() {
 
       {modal === 'skills' && (
         <Modal title="Edit Skills" onClose={closeModal}>
-          <p className="text-xs text-gray-400 mb-3">Enter skills separated by commas</p>
-          <Field label="Skills" value={tmp.skills || ''} onChange={(value) => setTmp((current) => ({ ...current, skills: value }))} rows={3} />
+          <div className="mb-6">
+            <p className="text-xs text-gray-600 mb-3">Start typing a skill to see matching options. Add up to 5 skills.</p>
+
+            {tmpSkills.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {tmpSkills.map((skill, index) => (
+                  <span key={index} className="inline-flex items-center gap-1 bg-orange-50 text-orange-700 text-xs px-3 py-1 rounded-full border border-orange-200">
+                    {skill}
+                    <button
+                      type="button"
+                      onClick={() => setTmpSkills(tmpSkills.filter((_, currentIndex) => currentIndex !== index))}
+                      className="text-orange-500 hover:text-orange-700 ml-1"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {tmpSkills.length < 5 && (
+              <div className="relative">
+                <input
+                  ref={skillInputRef}
+                  type="text"
+                  value={newSkill}
+                  onChange={(e) => handleSkillInputChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addSkill(newSkill);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (newSkill.trim()) {
+                      updateSkillSuggestions(newSkill);
+                    }
+                  }}
+                  onBlur={() => setTimeout(() => setShowSkillDropdown(false), 200)}
+                  placeholder="Type a skill or initials"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
+                />
+                {showSkillDropdown && skillSuggestions.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {skillSuggestions.map((skill, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => addSkill(skill)}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                      >
+                        {skill}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <div className="flex justify-end gap-3 mt-2">
             <button onClick={closeModal} className="border border-gray-300 text-gray-600 text-sm px-4 py-2 rounded-lg hover:bg-gray-50">
               Cancel
@@ -2478,7 +2636,7 @@ export default function Profile() {
         </Modal>
       )}
 
-      {(!parentModal && (modal?.startsWith('exp-') || modal === 'add-exp')) && (
+      {(!parentModal && !isExperiencePage && (modal?.startsWith('exp-') || modal === 'add-exp')) && (
         <Modal title={modal === 'add-exp' ? 'Add experience' : 'Edit experience'} onClose={closeModal}>
           {/* Notify Network Section */}
           <div className="mb-6 bg-gray-50 rounded-lg p-4">
@@ -2820,16 +2978,11 @@ export default function Profile() {
                       addSkill(newSkill);
                     }
                   }}
-                  onFocus={() => {
-                    if (newSkill.trim()) {
-                      const filtered = commonSkills.filter(skill => 
-                        skill.toLowerCase().includes(newSkill.toLowerCase()) &&
-                        !tmpSkills.includes(skill)
-                      );
-                      setSkillSuggestions(filtered.slice(0, 10));
-                      setShowSkillDropdown(filtered.length > 0);
-                    }
-                  }}
+                    onFocus={() => {
+                      if (newSkill.trim()) {
+                        updateSkillSuggestions(newSkill);
+                      }
+                    }}
                   onBlur={() => setTimeout(() => setShowSkillDropdown(false), 200)}
                   placeholder="Type a skill and press Enter"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
@@ -2940,7 +3093,7 @@ export default function Profile() {
         </Modal>
       )}
 
-      {(parentModal === 'edit-all-exp' && (modal?.startsWith('exp-') || modal === 'add-exp')) && (
+      {((parentModal === 'edit-all-exp' || isExperiencePage) && (modal?.startsWith('exp-') || modal === 'add-exp')) && (
         <Modal title={modal === 'add-exp' ? 'Add experience' : 'Edit experience'} onClose={closeModal}>
           {/* Notify Network Section */}
           <div className="mb-6 bg-gray-50 rounded-lg p-4">
@@ -3282,16 +3435,11 @@ export default function Profile() {
                       addSkill(newSkill);
                     }
                   }}
-                  onFocus={() => {
-                    if (newSkill.trim()) {
-                      const filtered = commonSkills.filter(skill => 
-                        skill.toLowerCase().includes(newSkill.toLowerCase()) &&
-                        !tmpSkills.includes(skill)
-                      );
-                      setSkillSuggestions(filtered.slice(0, 10));
-                      setShowSkillDropdown(filtered.length > 0);
-                    }
-                  }}
+                    onFocus={() => {
+                      if (newSkill.trim()) {
+                        updateSkillSuggestions(newSkill);
+                      }
+                    }}
                   onBlur={() => setTimeout(() => setShowSkillDropdown(false), 200)}
                   placeholder="Type a skill and press Enter"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
@@ -3731,16 +3879,11 @@ export default function Profile() {
                       addSkill(newSkill);
                     }
                   }}
-                  onFocus={() => {
-                    if (newSkill.trim()) {
-                      const filtered = commonSkills.filter(skill => 
-                        skill.toLowerCase().includes(newSkill.toLowerCase()) &&
-                        !tmpSkills.includes(skill)
-                      );
-                      setSkillSuggestions(filtered.slice(0, 10));
-                      setShowSkillDropdown(filtered.length > 0);
-                    }
-                  }}
+                    onFocus={() => {
+                      if (newSkill.trim()) {
+                        updateSkillSuggestions(newSkill);
+                      }
+                    }}
                   onBlur={() => setTimeout(() => setShowSkillDropdown(false), 200)}
                   placeholder="Type a skill and press Enter"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
@@ -4171,16 +4314,11 @@ export default function Profile() {
                       addSkill(newSkill);
                     }
                   }}
-                  onFocus={() => {
-                    if (newSkill.trim()) {
-                      const filtered = commonSkills.filter(skill => 
-                        skill.toLowerCase().includes(newSkill.toLowerCase()) &&
-                        !tmpSkills.includes(skill)
-                      );
-                      setSkillSuggestions(filtered.slice(0, 10));
-                      setShowSkillDropdown(filtered.length > 0);
-                    }
-                  }}
+                    onFocus={() => {
+                      if (newSkill.trim()) {
+                        updateSkillSuggestions(newSkill);
+                      }
+                    }}
                   onBlur={() => setTimeout(() => setShowSkillDropdown(false), 200)}
                   placeholder="Type a skill and press Enter"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
@@ -4324,6 +4462,7 @@ export default function Profile() {
                         src={resolvedAvatarUrl}
                         alt={profile.name || displayName}
                         className="w-full h-full object-cover"
+                        onError={() => setAvatarLoadFailed(true)}
                       />
                     ) : (
                       initials
@@ -4485,6 +4624,7 @@ export default function Profile() {
                         src={resolvedAvatarUrl}
                         alt={profile.name || displayName}
                         className="w-full h-full object-cover"
+                        onError={() => setAvatarLoadFailed(true)}
                       />
                     ) : (
                       initials

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useMessaging } from '../context/MessagingContext';
@@ -24,6 +25,7 @@ export default function DashboardSidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { totalUnreadCount } = useMessaging();
+  const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
   const searchParams = new URLSearchParams(search);
   const suppressFindJobsHighlight = pathname === '/dashboard/find-jobs' && searchParams.get('origin') === 'company-profile';
   const suppressCompaniesHighlight = pathname.startsWith('/dashboard/companies') && state?.suppressSidebarItem === 'companies';
@@ -33,6 +35,10 @@ export default function DashboardSidebar() {
   const displayEmail = user?.email    || 'user@email.com';
   const initials     = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   const profilePhotoUrl = user?.profilePhotoUrl ? apiService.resolveFileUrl(user.profilePhotoUrl) : '';
+
+  useEffect(() => {
+    setPhotoLoadFailed(false);
+  }, [profilePhotoUrl]);
 
   const handleLogout = async () => {
     console.log('Logout button clicked');
@@ -98,8 +104,13 @@ export default function DashboardSidebar() {
           Logout
         </button>
         <div className="flex items-center gap-3 px-3 py-3 border-t border-gray-200">
-          {profilePhotoUrl ? (
-            <img src={profilePhotoUrl} alt={displayName} className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+          {profilePhotoUrl && !photoLoadFailed ? (
+            <img
+              src={profilePhotoUrl}
+              alt={displayName}
+              className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+              onError={() => setPhotoLoadFailed(true)}
+            />
           ) : (
             <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center text-sm font-bold text-blue-700 flex-shrink-0">
               {initials}
