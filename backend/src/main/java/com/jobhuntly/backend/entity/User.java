@@ -96,6 +96,37 @@ public class User implements UserDetails {
     @Column(name = "cover_photo_url", length = 1024)
     private String coverPhotoUrl;
 
+    // Edit intro modal fields
+    @Column(name = "first_name", length = 50)
+    private String firstName;
+
+    @Column(name = "last_name", length = 50)
+    private String lastName;
+
+    @Column(name = "additional_name", length = 50)
+    private String additionalName;
+
+    @Column(name = "pronouns", length = 50)
+    private String pronouns;
+
+    @Column(name = "pronouns_visibility", length = 20)
+    private String pronounsVisibility;
+
+    @Column(name = "current_position", length = 255)
+    private String currentPosition;
+
+    @Column(name = "show_current_company")
+    private Boolean showCurrentCompany = false;
+
+    @Column(name = "school", length = 255)
+    private String school;
+
+    @Column(name = "show_school")
+    private Boolean showSchool = false;
+
+    @Column(name = "country", length = 100)
+    private String country;
+
     @Column(name = "open_to_opportunities")
     private Boolean openToOpportunities = true;
 
@@ -440,5 +471,85 @@ public class User implements UserDetails {
 
     public void setEducationsJson(String educationsJson) {
         this.educationsJson = educationsJson;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getAdditionalName() {
+        return additionalName;
+    }
+
+    public void setAdditionalName(String additionalName) {
+        this.additionalName = additionalName;
+    }
+
+    public String getPronouns() {
+        return pronouns;
+    }
+
+    public void setPronouns(String pronouns) {
+        this.pronouns = pronouns;
+    }
+
+    public String getPronounsVisibility() {
+        return pronounsVisibility;
+    }
+
+    public void setPronounsVisibility(String pronounsVisibility) {
+        this.pronounsVisibility = pronounsVisibility;
+    }
+
+    public String getCurrentPosition() {
+        return currentPosition;
+    }
+
+    public void setCurrentPosition(String currentPosition) {
+        this.currentPosition = currentPosition;
+    }
+
+    public Boolean getShowCurrentCompany() {
+        return showCurrentCompany;
+    }
+
+    public void setShowCurrentCompany(Boolean showCurrentCompany) {
+        this.showCurrentCompany = showCurrentCompany;
+    }
+
+    public String getSchool() {
+        return school;
+    }
+
+    public void setSchool(String school) {
+        this.school = school;
+    }
+
+    public Boolean getShowSchool() {
+        return showSchool;
+    }
+
+    public void setShowSchool(Boolean showSchool) {
+        this.showSchool = showSchool;
+    }
+
+    public String getCountry() {
+        return country;
+    }
+
+    public void setCountry(String country) {
+        this.country = country;
     }
 }

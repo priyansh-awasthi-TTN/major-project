@@ -132,6 +132,38 @@ public class ProfileService {
             user.setOpenToOpportunities(request.getOpenToOpportunities());
         }
 
+        // Edit intro modal fields
+        if (request.getFirstName() != null) {
+            user.setFirstName(normalizeText(request.getFirstName()));
+        }
+        if (request.getLastName() != null) {
+            user.setLastName(normalizeText(request.getLastName()));
+        }
+        if (request.getAdditionalName() != null) {
+            user.setAdditionalName(normalizeText(request.getAdditionalName()));
+        }
+        if (request.getPronouns() != null) {
+            user.setPronouns(normalizeText(request.getPronouns()));
+        }
+        if (request.getPronounsVisibility() != null) {
+            user.setPronounsVisibility(normalizeText(request.getPronounsVisibility()));
+        }
+        if (request.getCurrentPosition() != null) {
+            user.setCurrentPosition(normalizeText(request.getCurrentPosition()));
+        }
+        if (request.getShowCurrentCompany() != null) {
+            user.setShowCurrentCompany(request.getShowCurrentCompany());
+        }
+        if (request.getSchool() != null) {
+            user.setSchool(normalizeText(request.getSchool()));
+        }
+        if (request.getShowSchool() != null) {
+            user.setShowSchool(request.getShowSchool());
+        }
+        if (request.getCountry() != null) {
+            user.setCountry(normalizeText(request.getCountry()));
+        }
+
         if (request.getSkills() != null) {
             user.setSkillsJson(writeJson(request.getSkills()));
         }
@@ -233,6 +265,19 @@ public class ProfileService {
         dto.setSkills(readJson(user.getSkillsJson(), new TypeReference<List<String>>() {}));
         dto.setExperiences(readJson(user.getExperiencesJson(), new TypeReference<List<ProfileExperienceDTO>>() {}));
         dto.setEducations(readJson(user.getEducationsJson(), new TypeReference<List<ProfileEducationDTO>>() {}));
+        
+        // Edit intro modal fields
+        dto.setFirstName(user.getFirstName());
+        dto.setLastName(user.getLastName());
+        dto.setAdditionalName(user.getAdditionalName());
+        dto.setPronouns(user.getPronouns());
+        dto.setPronounsVisibility(user.getPronounsVisibility());
+        dto.setCurrentPosition(user.getCurrentPosition());
+        dto.setShowCurrentCompany(user.getShowCurrentCompany());
+        dto.setSchool(user.getSchool());
+        dto.setShowSchool(user.getShowSchool());
+        dto.setCountry(user.getCountry());
+        
         return dto;
     }
 
