@@ -26,6 +26,18 @@ public class UserProfileUpdateRequest {
     private List<ProfileExperienceDTO> experiences;
     private List<ProfileEducationDTO> educations;
 
+    // Edit intro modal fields
+    private String firstName;
+    private String lastName;
+    private String additionalName;
+    private String pronouns;
+    private String pronounsVisibility;
+    private String currentPosition;
+    private Boolean showCurrentCompany;
+    private String school;
+    private Boolean showSchool;
+    private String country;
+
     public String getFullName() {
         return fullName;
     }
@@ -200,5 +212,85 @@ public class UserProfileUpdateRequest {
 
     public void setEducations(List<ProfileEducationDTO> educations) {
         this.educations = educations;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getAdditionalName() {
+        return additionalName;
+    }
+
+    public void setAdditionalName(String additionalName) {
+        this.additionalName = additionalName;
+    }
+
+    public String getPronouns() {
+        return pronouns;
+    }
+
+    public void setPronouns(String pronouns) {
+        this.pronouns = pronouns;
+    }
+
+    public String getPronounsVisibility() {
+        return pronounsVisibility;
+    }
+
+    public void setPronounsVisibility(String pronounsVisibility) {
+        this.pronounsVisibility = pronounsVisibility;
+    }
+
+    public String getCurrentPosition() {
+        return currentPosition;
+    }
+
+    public void setCurrentPosition(String currentPosition) {
+        this.currentPosition = currentPosition;
+    }
+
+    public Boolean getShowCurrentCompany() {
+        return showCurrentCompany;
+    }
+
+    public void setShowCurrentCompany(Boolean showCurrentCompany) {
+        this.showCurrentCompany = showCurrentCompany;
+    }
+
+    public String getSchool() {
+        return school;
+    }
+
+    public void setSchool(String school) {
+        this.school = school;
+    }
+
+    public Boolean getShowSchool() {
+        return showSchool;
+    }
+
+    public void setShowSchool(Boolean showSchool) {
+        this.showSchool = showSchool;
+    }
+
+    public String getCountry() {
+        return country;
+    }
+
+    public void setCountry(String country) {
+        this.country = country;
     }
 }

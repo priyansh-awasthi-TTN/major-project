@@ -397,6 +397,89 @@ const EXPERIENCE_COMPANY_OPTIONS = buildSortedOptions([
   ]),
 ]);
 
+const COUNTRIES = [
+  'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Argentina', 'Armenia', 'Australia', 'Austria', 'Azerbaijan',
+  'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bhutan', 'Bolivia', 'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi',
+  'Cambodia', 'Cameroon', 'Canada', 'Cape Verde', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia', 'Comoros', 'Congo', 'Costa Rica', 'Croatia', 'Cuba', 'Cyprus', 'Czech Republic',
+  'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic',
+  'Ecuador', 'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia',
+  'Fiji', 'Finland', 'France',
+  'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada', 'Guatemala', 'Guinea', 'Guinea-Bissau', 'Guyana',
+  'Haiti', 'Honduras', 'Hungary',
+  'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq', 'Ireland', 'Israel', 'Italy', 'Ivory Coast',
+  'Jamaica', 'Japan', 'Jordan',
+  'Kazakhstan', 'Kenya', 'Kiribati', 'Kosovo', 'Kuwait', 'Kyrgyzstan',
+  'Laos', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg',
+  'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Mauritania', 'Mauritius', 'Mexico', 'Micronesia', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco', 'Mozambique', 'Myanmar',
+  'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'New Zealand', 'Nicaragua', 'Niger', 'Nigeria', 'North Korea', 'North Macedonia', 'Norway',
+  'Oman',
+  'Pakistan', 'Palau', 'Palestine', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Poland', 'Portugal',
+  'Qatar',
+  'Romania', 'Russia', 'Rwanda',
+  'Saint Kitts and Nevis', 'Saint Lucia', 'Saint Vincent and the Grenadines', 'Samoa', 'San Marino', 'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 'Singapore', 'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia', 'South Africa', 'South Korea', 'South Sudan', 'Spain', 'Sri Lanka', 'Sudan', 'Suriname', 'Sweden', 'Switzerland', 'Syria',
+  'Taiwan', 'Tajikistan', 'Tanzania', 'Thailand', 'Timor-Leste', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan', 'Tuvalu',
+  'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States', 'Uruguay', 'Uzbekistan',
+  'Vanuatu', 'Vatican City', 'Venezuela', 'Vietnam',
+  'Yemen',
+  'Zambia', 'Zimbabwe'
+];
+
+const CITIES_BY_COUNTRY = {
+  'India': ['Ahmedabad', 'Bangalore', 'Chennai', 'Delhi', 'Gurugram', 'Hyderabad', 'Jaipur', 'Kolkata', 'Mumbai', 'Noida', 'Pune', 'Surat', 'Lucknow', 'Kanpur', 'Nagpur', 'Indore', 'Thane', 'Bhopal', 'Visakhapatnam', 'Pimpri-Chinchwad'],
+  'United States': ['Atlanta', 'Austin', 'Boston', 'Charlotte', 'Chicago', 'Dallas', 'Denver', 'Houston', 'Indianapolis', 'Las Vegas', 'Los Angeles', 'Miami', 'Minneapolis', 'Nashville', 'New Orleans', 'New York', 'Orlando', 'Philadelphia', 'Phoenix', 'Portland', 'San Antonio', 'San Diego', 'San Francisco', 'San Jose', 'Seattle', 'Tampa', 'Washington DC'],
+  'United Kingdom': ['Birmingham', 'Bristol', 'Edinburgh', 'Glasgow', 'Leeds', 'Liverpool', 'London', 'Manchester', 'Newcastle', 'Nottingham', 'Sheffield'],
+  'Canada': ['Calgary', 'Edmonton', 'Montreal', 'Ottawa', 'Toronto', 'Vancouver', 'Winnipeg'],
+  'Australia': ['Adelaide', 'Brisbane', 'Canberra', 'Melbourne', 'Perth', 'Sydney'],
+  'China': ['Beijing', 'Chengdu', 'Chongqing', 'Guangzhou', 'Hangzhou', 'Hong Kong', 'Shanghai', 'Shenzhen', 'Tianjin', 'Wuhan'],
+  'Japan': ['Fukuoka', 'Hiroshima', 'Kobe', 'Kyoto', 'Nagoya', 'Osaka', 'Sapporo', 'Tokyo', 'Yokohama'],
+  'Germany': ['Berlin', 'Cologne', 'Dortmund', 'Dresden', 'Düsseldorf', 'Essen', 'Frankfurt', 'Hamburg', 'Leipzig', 'Munich', 'Stuttgart'],
+  'France': ['Bordeaux', 'Lille', 'Lyon', 'Marseille', 'Montpellier', 'Nantes', 'Nice', 'Paris', 'Strasbourg', 'Toulouse'],
+  'Italy': ['Bologna', 'Florence', 'Genoa', 'Milan', 'Naples', 'Palermo', 'Rome', 'Turin', 'Venice', 'Verona'],
+  'Spain': ['Barcelona', 'Bilbao', 'Madrid', 'Malaga', 'Seville', 'Valencia', 'Zaragoza'],
+  'Brazil': ['Belo Horizonte', 'Brasilia', 'Curitiba', 'Fortaleza', 'Porto Alegre', 'Recife', 'Rio de Janeiro', 'Salvador', 'Sao Paulo'],
+  'Mexico': ['Guadalajara', 'Mexico City', 'Monterrey', 'Puebla', 'Tijuana'],
+  'Russia': ['Kazan', 'Moscow', 'Novosibirsk', 'Saint Petersburg', 'Yekaterinburg'],
+  'South Korea': ['Busan', 'Daegu', 'Incheon', 'Seoul'],
+  'Indonesia': ['Bandung', 'Jakarta', 'Medan', 'Surabaya'],
+  'Turkey': ['Ankara', 'Antalya', 'Bursa', 'Istanbul', 'Izmir'],
+  'Saudi Arabia': ['Dammam', 'Jeddah', 'Mecca', 'Medina', 'Riyadh'],
+  'United Arab Emirates': ['Abu Dhabi', 'Dubai', 'Sharjah'],
+  'Egypt': ['Alexandria', 'Cairo', 'Giza'],
+  'South Africa': ['Cape Town', 'Durban', 'Johannesburg', 'Pretoria'],
+  'Nigeria': ['Abuja', 'Ibadan', 'Kano', 'Lagos'],
+  'Kenya': ['Kisumu', 'Mombasa', 'Nairobi'],
+  'Pakistan': ['Faisalabad', 'Islamabad', 'Karachi', 'Lahore', 'Rawalpindi'],
+  'Bangladesh': ['Chittagong', 'Dhaka', 'Khulna'],
+  'Thailand': ['Bangkok', 'Chiang Mai', 'Pattaya', 'Phuket'],
+  'Vietnam': ['Da Nang', 'Hanoi', 'Ho Chi Minh City'],
+  'Philippines': ['Cebu City', 'Davao City', 'Manila', 'Quezon City'],
+  'Malaysia': ['Johor Bahru', 'Kuala Lumpur', 'Penang'],
+  'Singapore': ['Singapore'],
+  'Argentina': ['Buenos Aires', 'Cordoba', 'Mendoza', 'Rosario'],
+  'Colombia': ['Barranquilla', 'Bogota', 'Cali', 'Medellin'],
+  'Chile': ['Santiago', 'Valparaiso'],
+  'Peru': ['Arequipa', 'Lima', 'Trujillo'],
+  'Poland': ['Gdansk', 'Krakow', 'Lodz', 'Poznan', 'Warsaw', 'Wroclaw'],
+  'Netherlands': ['Amsterdam', 'Rotterdam', 'The Hague', 'Utrecht'],
+  'Belgium': ['Antwerp', 'Brussels', 'Ghent'],
+  'Sweden': ['Gothenburg', 'Malmo', 'Stockholm'],
+  'Norway': ['Bergen', 'Oslo', 'Trondheim'],
+  'Denmark': ['Aarhus', 'Copenhagen', 'Odense'],
+  'Finland': ['Espoo', 'Helsinki', 'Tampere'],
+  'Switzerland': ['Basel', 'Bern', 'Geneva', 'Zurich'],
+  'Austria': ['Graz', 'Linz', 'Salzburg', 'Vienna'],
+  'Portugal': ['Lisbon', 'Porto'],
+  'Greece': ['Athens', 'Thessaloniki'],
+  'Czech Republic': ['Brno', 'Prague'],
+  'Romania': ['Bucharest', 'Cluj-Napoca'],
+  'Ukraine': ['Dnipro', 'Kharkiv', 'Kiev', 'Lviv', 'Odessa'],
+  'Israel': ['Haifa', 'Jerusalem', 'Tel Aviv'],
+  'Iran': ['Isfahan', 'Mashhad', 'Shiraz', 'Tehran'],
+  'Iraq': ['Baghdad', 'Basra', 'Erbil', 'Mosul'],
+  'New Zealand': ['Auckland', 'Christchurch', 'Wellington'],
+  'Ireland': ['Cork', 'Dublin', 'Galway'],
+};
+
 const EXPERIENCE_COMPANY_METADATA = (() => {
   const metadata = new Map();
 
@@ -576,6 +659,8 @@ export default function Profile() {
   const [newSkill, setNewSkill] = useState('');
   const [skillSuggestions, setSkillSuggestions] = useState([]);
   const [showSkillDropdown, setShowSkillDropdown] = useState(false);
+  const [countrySuggestions, setCountrySuggestions] = useState([]);
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [locationSuggestions, setLocationSuggestions] = useState([]);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [schoolSuggestions, setSchoolSuggestions] = useState([]);
@@ -998,8 +1083,8 @@ export default function Profile() {
 
   const openModal = (key, initial) => {
     // Track parent modal if opening from edit-all views
-    if (modal === 'edit-all-edu' || modal === 'edit-all-exp') {
-      setParentModal(modal);
+    if (modal === 'edit-all-edu' || modal === 'edit-all-exp' || isExperiencePage) {
+      setParentModal(isExperiencePage ? 'edit-all-exp' : modal);
     }
     
     // Parse start/end dates back into month/year if they exist
@@ -1271,7 +1356,7 @@ export default function Profile() {
         }),
       );
       applyProfileData(response);
-      setStatusMessage(field === 'profilePhotoUrl' ? 'Profile photo updated.' : 'Cover photo updated.');
+      showToast(field === 'profilePhotoUrl' ? 'Profile photo updated.' : 'Cover photo updated.');
     } catch (error) {
       setErrorMessage(error.message || 'Failed to upload image.');
     } finally {
@@ -1304,8 +1389,19 @@ export default function Profile() {
         title: tmp.title,
         company: tmp.company,
         location: tmp.location,
+        firstName: tmp.firstName,
+        lastName: tmp.lastName,
+        additionalName: tmp.additionalName,
+        pronouns: tmp.pronouns,
+        pronounsVisibility: tmp.pronounsVisibility,
+        currentPosition: tmp.currentPosition,
+        showCurrentCompany: tmp.showCurrentCompany,
+        industry: tmp.industry,
+        school: tmp.school,
+        showSchool: tmp.showSchool,
+        country: tmp.country,
       },
-      'Profile header updated.',
+      'Profile updated.',
     );
     dismissModal();
   };
@@ -1540,6 +1636,49 @@ export default function Profile() {
     setTmp((current) => ({ ...current, fieldOfStudy: field }));
     setFieldOfStudySuggestions([]);
     setShowFieldOfStudyDropdown(false);
+  };
+
+  const handleCountryInputChange = (value) => {
+    setTmp((current) => ({ ...current, country: value }));
+    if (value.trim()) {
+      const searchTerm = value.toLowerCase();
+      const filtered = COUNTRIES.filter(country => 
+        country.toLowerCase().startsWith(searchTerm)
+      );
+      setCountrySuggestions(filtered.slice(0, 10));
+      setShowCountryDropdown(filtered.length > 0);
+    } else {
+      setCountrySuggestions([]);
+      setShowCountryDropdown(false);
+    }
+  };
+
+  const selectCountry = (country) => {
+    setTmp((current) => ({ ...current, country }));
+    setCountrySuggestions([]);
+    setShowCountryDropdown(false);
+  };
+
+  const handleCityInputChange = (value) => {
+    setTmp((current) => ({ ...current, location: value }));
+    if (value.trim() && tmp.country) {
+      const searchTerm = value.toLowerCase();
+      const countryCities = CITIES_BY_COUNTRY[tmp.country] || [];
+      const filtered = countryCities.filter(city => 
+        city.toLowerCase().startsWith(searchTerm)
+      );
+      setLocationSuggestions(filtered.slice(0, 10));
+      setShowLocationDropdown(filtered.length > 0);
+    } else {
+      setLocationSuggestions([]);
+      setShowLocationDropdown(false);
+    }
+  };
+
+  const selectCity = (city) => {
+    setTmp((current) => ({ ...current, location: city }));
+    setLocationSuggestions([]);
+    setShowLocationDropdown(false);
   };
 
   const handleExperienceRoleChange = (value) => {
@@ -1869,18 +2008,37 @@ export default function Profile() {
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <div className="h-28 relative overflow-hidden">
                 {resolvedCoverUrl ? (
-                  <img src={resolvedCoverUrl} alt="Profile cover" className="w-full h-full object-cover" />
+                  <>
+                    <img src={resolvedCoverUrl} alt="Profile cover" className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => coverInputRef.current?.click()}
+                      className="absolute top-3 right-3 bg-white hover:bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 flex items-center gap-2 text-gray-700 text-sm font-medium shadow-sm transition"
+                      aria-label="Upload cover photo"
+                      disabled={submitting}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span>Edit cover photo</span>
+                    </button>
+                  </>
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400" />
+                  <div className="w-full h-full bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400 flex items-center justify-center">
+                    <button
+                      onClick={() => coverInputRef.current?.click()}
+                      className="bg-white hover:bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 flex items-center gap-2 text-gray-700 text-sm font-medium shadow-md transition"
+                      aria-label="Upload cover photo"
+                      disabled={submitting}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span>Add cover photo</span>
+                    </button>
+                  </div>
                 )}
-                <button
-                  onClick={() => coverInputRef.current?.click()}
-                  className="absolute top-3 right-3 w-8 h-8 bg-white/20 hover:bg-white/50 border border-white/40 rounded-lg flex items-center justify-center text-white transition"
-                  aria-label="Upload cover photo"
-                  disabled={submitting}
-                >
-                  <EditIcon className="w-4 h-4" />
-                </button>
                 <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
               </div>
 
@@ -1929,9 +2087,6 @@ export default function Profile() {
                   {profile.company ? ` at ${profile.company}` : ''}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">{profile.location ? `📍 ${profile.location}` : 'Add your location'}</p>
-                {resolvedAvatarUrl && (
-                  <p className="text-xs text-blue-600 mt-2">Click the profile photo to open the full image.</p>
-                )}
                 <button
                   onClick={toggleOpenForOpportunities}
                   disabled={submitting}
@@ -1997,7 +2152,7 @@ export default function Profile() {
                 <h3 className="font-semibold text-gray-900">Experiences</h3>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => navigate('/dashboard/profile/experience', { state: { openExperienceModal: 'add-exp' } })}
+                    onClick={() => openModal('add-exp', buildEmptyExperienceDraft())}
                     className="w-8 h-8 flex items-center justify-center rounded-lg text-blue-600 hover:bg-blue-50 border border-blue-100 transition text-xl font-light"
                     aria-label="Add experience"
                     disabled={submitting}
@@ -2330,46 +2485,375 @@ export default function Profile() {
       )}
 
       {modal === 'profile' && (
-        <Modal title="Edit Profile" onClose={closeModal}>
-          <Field label="Full Name" value={tmp.name || ''} onChange={(value) => setTmp((current) => ({ ...current, name: value }))} />
-          <div className="mb-4">
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Job Title</label>
-            <input
-              type="text"
-              list="experience-title-options"
-              value={tmp.title || ''}
-              onChange={(event) => setTmp((current) => ({ ...current, title: event.target.value }))}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
-              placeholder="Select or type a title"
-            />
-            <datalist id="experience-title-options">
-              {EXPERIENCE_TITLE_OPTIONS.map((title) => (
-                <option key={title} value={title} />
-              ))}
-            </datalist>
-          </div>
-          <div className="mb-4">
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Company</label>
-            <input
-              type="text"
-              list="experience-company-options"
-              value={tmp.company || ''}
-              onChange={(event) => setTmp((current) => ({ ...current, company: event.target.value }))}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
-              placeholder="Select or type a company"
-            />
-            <datalist id="experience-company-options">
-              {EXPERIENCE_COMPANY_OPTIONS.map((company) => (
-                <option key={company} value={company} />
-              ))}
-            </datalist>
-          </div>
-          <Field label="Location" value={tmp.location || ''} onChange={(value) => setTmp((current) => ({ ...current, location: value }))} />
-          <div className="flex justify-end gap-3 mt-2">
-            <button onClick={closeModal} className="border border-gray-300 text-gray-600 text-sm px-4 py-2 rounded-lg hover:bg-gray-50">
-              Cancel
+        <Modal title="Edit intro" onClose={closeModal}>
+          {/* Premium Banner */}
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-amber-600">📦</span>
+                <h4 className="font-semibold text-gray-900">Enhance your profile with Premium</h4>
+              </div>
+              <button className="text-gray-400 hover:text-gray-600">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+            <p className="text-sm text-gray-700 mb-3">
+              Feature profile sections higher, add a custom button, get AI writing assistance and much more.
+            </p>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex -space-x-2">
+                <div className="w-6 h-6 rounded-full bg-blue-500 border-2 border-white"></div>
+                <div className="w-6 h-6 rounded-full bg-green-500 border-2 border-white"></div>
+                <div className="w-6 h-6 rounded-full bg-purple-500 border-2 border-white"></div>
+              </div>
+              <span className="text-xs text-gray-600">Mansab and millions of other members use Premium</span>
+            </div>
+            <button className="bg-amber-400 hover:bg-amber-500 text-gray-900 font-semibold text-sm px-4 py-2 rounded-full transition">
+              Try Premium for ₹0
             </button>
-            <button onClick={saveProfile} disabled={isProfileSaveDisabled} className="bg-blue-600 text-white text-sm px-5 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-60">
+            <p className="text-xs text-gray-600 mt-2">
+              1-month free trial. Cancel with ease. We'll remind you 7 days before your trial ends.
+            </p>
+          </div>
+
+          <p className="text-xs text-gray-500 mb-4">* Indicates required</p>
+
+          {/* Basic Info */}
+          <h3 className="font-semibold text-gray-900 mb-3">Basic info</h3>
+          
+          <div className="mb-4">
+            <label className="block text-sm text-gray-700 mb-1">First name*</label>
+            <input
+              type="text"
+              value={tmp.firstName || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value.length <= 50) {
+                  setTmp((current) => ({ ...current, firstName: value }));
+                }
+              }}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              maxLength={50}
+            />
+            <div className="text-right text-xs text-gray-400 mt-1">{(tmp.firstName || '').length}/50</div>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm text-gray-700 mb-1">Last name*</label>
+            <input
+              type="text"
+              value={tmp.lastName || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value.length <= 50) {
+                  setTmp((current) => ({ ...current, lastName: value }));
+                }
+              }}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              maxLength={50}
+            />
+            <div className="text-right text-xs text-gray-400 mt-1">{(tmp.lastName || '').length}/50</div>
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm text-gray-700 mb-1">Additional name</label>
+            <input
+              type="text"
+              value={tmp.additionalName || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value.length <= 50) {
+                  setTmp((current) => ({ ...current, additionalName: value }));
+                }
+              }}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              maxLength={50}
+            />
+            <div className="text-right text-xs text-gray-400 mt-1">{(tmp.additionalName || '').length}/50</div>
+          </div>
+
+          {/* Name Pronunciation */}
+          <div className="mb-4">
+            <label className="block text-sm text-gray-700 mb-1">Name pronunciation</label>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              <span>This can only be added using our mobile app</span>
+            </div>
+          </div>
+
+          {/* Pronouns */}
+          <div className="mb-4">
+            <label className="block text-sm text-gray-700 mb-1">Pronouns</label>
+            <select
+              value={tmp.pronouns || ''}
+              onChange={(e) => setTmp((current) => ({ ...current, pronouns: e.target.value }))}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="">Please select</option>
+              <option value="He/Him">He/Him</option>
+              <option value="She/Her">She/Her</option>
+              <option value="They/Them">They/Them</option>
+              <option value="Custom">Custom</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Let others know how to refer to you.{' '}
+              <a href="#" className="text-blue-600 hover:underline">Learn more about gender pronouns</a>.
+            </p>
+            <button 
+              type="button"
+              onClick={() => setTmp((current) => ({ ...current, showPronounsVisibility: !current.showPronounsVisibility }))}
+              className="mt-2 flex items-center gap-2 text-sm text-gray-700 border border-gray-300 rounded-full px-4 py-1.5 hover:bg-gray-50"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              All LinkedIn members
+            </button>
+            
+            {/* Pronouns Visibility Modal */}
+            {tmp.showPronounsVisibility && (
+              <div className="mt-3 border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
+                <h4 className="font-semibold text-gray-900 mb-3">Who can see your pronouns?</h4>
+                <label className="flex items-start gap-3 mb-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="pronounsVisibility"
+                    value="connections"
+                    checked={tmp.pronounsVisibility === 'connections'}
+                    onChange={(e) => setTmp((current) => ({ ...current, pronounsVisibility: e.target.value }))}
+                    className="mt-1 w-4 h-4 text-blue-600"
+                  />
+                  <div>
+                    <div className="font-medium text-gray-900">Your connections</div>
+                    <div className="text-sm text-gray-600">Only LinkedIn members directly connected to you.</div>
+                  </div>
+                </label>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="pronounsVisibility"
+                    value="all"
+                    checked={tmp.pronounsVisibility === 'all' || !tmp.pronounsVisibility}
+                    onChange={(e) => setTmp((current) => ({ ...current, pronounsVisibility: e.target.value }))}
+                    className="mt-1 w-4 h-4 text-blue-600"
+                  />
+                  <div>
+                    <div className="font-medium text-gray-900">All LinkedIn members</div>
+                    <div className="text-sm text-gray-600">Members signed into LinkedIn, including everyone in your network.</div>
+                  </div>
+                </label>
+              </div>
+            )}
+          </div>
+
+          {/* Headline */}
+          <div className="mb-6">
+            <label className="block text-sm text-gray-700 mb-1">Headline*</label>
+            <textarea
+              rows={3}
+              value={tmp.title || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value.length <= 220) {
+                  setTmp((current) => ({ ...current, title: value }));
+                }
+              }}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
+              maxLength={220}
+            />
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-xs text-gray-400">
+                <span className="text-amber-500">📦</span> <a href="#" className="text-blue-600 hover:underline">Get AI suggestions</a> with Premium
+              </span>
+              <span className="text-xs text-gray-400">{(tmp.title || '').length}/220</span>
+            </div>
+          </div>
+
+          {/* Current Position */}
+          <h3 className="font-semibold text-gray-900 mb-3">Current position</h3>
+          <div className="mb-4">
+            <label className="block text-sm text-gray-700 mb-1">Position*</label>
+            <select
+              value={tmp.currentPosition || ''}
+              onChange={(e) => setTmp((current) => ({ ...current, currentPosition: e.target.value }))}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="">Select position</option>
+              {experiences
+                .filter(exp => exp.end === 'Present' || exp.currentlyWorking)
+                .map((exp) => (
+                  <option key={exp.id} value={`${exp.role} at ${exp.company}`}>
+                    {exp.role} at {exp.company}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <button className="flex items-center gap-2 text-blue-600 hover:underline text-sm font-semibold mb-3">
+            <span className="text-lg">+</span> Add new position
+          </button>
+          <label className="flex items-center gap-2 mb-6 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={tmp.showCurrentCompany || false}
+              onChange={(e) => setTmp((current) => ({ ...current, showCurrentCompany: e.target.checked }))}
+              className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+            />
+            <span className="text-sm text-gray-900">Show current company in my intro</span>
+          </label>
+
+          {/* Industry */}
+          <div className="mb-6">
+            <label className="block text-sm text-gray-700 mb-1">Industry*</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </span>
+              <input
+                type="text"
+                value={tmp.industry || ''}
+                onChange={(e) => setTmp((current) => ({ ...current, industry: e.target.value }))}
+                className="w-full border border-gray-300 rounded px-3 py-2 pl-10 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                placeholder="Software Development"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Learn more about <a href="#" className="text-blue-600 hover:underline">industry options</a>.
+            </p>
+          </div>
+
+          {/* Education */}
+          <h3 className="font-semibold text-gray-900 mb-3">Education</h3>
+          <div className="mb-4">
+            <label className="block text-sm text-gray-700 mb-1">School*</label>
+            <select
+              value={tmp.school || ''}
+              onChange={(e) => setTmp((current) => ({ ...current, school: e.target.value }))}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="">Select school</option>
+              <option value="Guru Gobind Singh Indraprastha University (GGSIPU), Delhi">
+                Guru Gobind Singh Indraprastha University (GGSIPU), Delhi
+              </option>
+              {educations.map((edu) => (
+                <option key={edu.id} value={edu.school}>
+                  {edu.school}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button className="flex items-center gap-2 text-blue-600 hover:underline text-sm font-semibold mb-3">
+            <span className="text-lg">+</span> Add new education
+          </button>
+          <label className="flex items-center gap-2 mb-6 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={tmp.showSchool || false}
+              onChange={(e) => setTmp((current) => ({ ...current, showSchool: e.target.checked }))}
+              className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+            />
+            <span className="text-sm text-gray-900">Show school in my intro</span>
+          </label>
+
+          {/* Location */}
+          <h3 className="font-semibold text-gray-900 mb-3">Location</h3>
+          <div className="mb-4">
+            <label className="block text-sm text-gray-700 mb-1">Country/Region*</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </span>
+              <input
+                type="text"
+                value={tmp.country || ''}
+                onChange={(e) => handleCountryInputChange(e.target.value)}
+                onFocus={() => {
+                  if (tmp.country && tmp.country.trim()) {
+                    handleCountryInputChange(tmp.country);
+                  }
+                }}
+                onBlur={() => {
+                  setTimeout(() => {
+                    setShowCountryDropdown(false);
+                  }, 200);
+                }}
+                className="w-full border border-gray-300 rounded px-3 py-2 pl-10 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                placeholder="India"
+              />
+              {showCountryDropdown && countrySuggestions.length > 0 && (
+                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {countrySuggestions.map((country, index) => (
+                    <div
+                      key={index}
+                      onClick={() => selectCountry(country)}
+                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-900"
+                    >
+                      {country}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm text-gray-700 mb-1">City</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={tmp.location || ''}
+                onChange={(e) => handleCityInputChange(e.target.value)}
+                onFocus={() => {
+                  if (tmp.location && tmp.location.trim()) {
+                    handleCityInputChange(tmp.location);
+                  }
+                }}
+                onBlur={() => {
+                  setTimeout(() => {
+                    setShowLocationDropdown(false);
+                  }, 200);
+                }}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                placeholder="110001, Delhi, India"
+              />
+              {showLocationDropdown && locationSuggestions.length > 0 && (
+                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {locationSuggestions.map((city, index) => (
+                    <div
+                      key={index}
+                      onClick={() => selectCity(city)}
+                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-900"
+                    >
+                      {city}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Contact Info */}
+          <h3 className="font-semibold text-gray-900 mb-2">Contact info</h3>
+          <p className="text-sm text-gray-600 mb-3">Add or edit your profile URL, email, and more</p>
+          <button className="text-blue-600 hover:underline text-sm font-semibold mb-6">
+            Edit contact info
+          </button>
+
+          {/* Save Button */}
+          <div className="flex justify-end">
+            <button 
+              onClick={saveProfile} 
+              disabled={isProfileSaveDisabled || submitting}
+              className="bg-blue-600 text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
+            >
               {submitting ? 'Saving...' : 'Save'}
             </button>
           </div>
