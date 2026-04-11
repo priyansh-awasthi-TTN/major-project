@@ -610,6 +610,26 @@ function buildEmptyExperienceDraft() {
   };
 }
 
+function buildEmptyEducationDraft() {
+  return {
+    school: '',
+    degree: '',
+    start: '',
+    end: '',
+    desc: '',
+    notifyNetwork: false,
+    fieldOfStudy: '',
+    startMonth: '',
+    startYear: '',
+    endMonth: '',
+    endYear: '',
+    grade: '',
+    activities: '',
+    skills: [],
+    media: [],
+  };
+}
+
 function SectionActionButton({ onClick, children, disabled = false }) {
   return (
     <button
@@ -1083,8 +1103,8 @@ export default function Profile() {
 
   const openModal = (key, initial) => {
     // Track parent modal if opening from edit-all views
-    if (modal === 'edit-all-edu' || modal === 'edit-all-exp' || isExperiencePage) {
-      setParentModal(isExperiencePage ? 'edit-all-exp' : modal);
+    if (modal === 'edit-all-edu' || modal === 'edit-all-exp') {
+      setParentModal(modal);
     }
     
     // Parse start/end dates back into month/year if they exist
@@ -2693,7 +2713,11 @@ export default function Profile() {
                 ))}
             </select>
           </div>
-          <button className="flex items-center gap-2 text-blue-600 hover:underline text-sm font-semibold mb-3">
+          <button
+            type="button"
+            onClick={() => openModal('add-exp', buildEmptyExperienceDraft())}
+            className="flex items-center gap-2 text-blue-600 hover:underline text-sm font-semibold mb-3"
+          >
             <span className="text-lg">+</span> Add new position
           </button>
           <label className="flex items-center gap-2 mb-6 cursor-pointer">
@@ -2748,7 +2772,11 @@ export default function Profile() {
               ))}
             </select>
           </div>
-          <button className="flex items-center gap-2 text-blue-600 hover:underline text-sm font-semibold mb-3">
+          <button
+            type="button"
+            onClick={() => openModal('add-edu', buildEmptyEducationDraft())}
+            className="flex items-center gap-2 text-blue-600 hover:underline text-sm font-semibold mb-3"
+          >
             <span className="text-lg">+</span> Add new education
           </button>
           <label className="flex items-center gap-2 mb-6 cursor-pointer">

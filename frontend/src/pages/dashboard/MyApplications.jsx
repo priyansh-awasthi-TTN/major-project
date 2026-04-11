@@ -139,14 +139,6 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast }) {
   const [assessStarted, setAssessStarted] = useState(() => !!(loadLS(LS_ASSESS)[app?.id]));
   const [confirmDecline, setConfirmDecline] = useState(false);
 
-  useEffect(() => {
-    setNotes(loadNotes()[app?.id] || []);
-    setInput('');
-    setFollowupSent(!!(loadLS(LS_FOLLOWUP)[app?.id]));
-    setAssessStarted(!!(loadLS(LS_ASSESS)[app?.id]));
-    setConfirmDecline(false);
-  }, [app?.id]);
-
   if (!app) return null;
 
   const addNote = () => {
@@ -428,7 +420,9 @@ export default function MyApplications() {
         const end = new Date(start); end.setDate(end.getDate() + 6);
         return { start, end };
       }
-    } catch { }
+    } catch {
+      // Ignore invalid persisted calendar values and fall back to the default range.
+    }
     const end = new Date();
     const start = new Date(); start.setDate(start.getDate() - 6);
     return { start, end };
@@ -490,7 +484,7 @@ export default function MyApplications() {
       await apiService.deleteApplication(id);
       setApplications(prev => prev.filter(a => a.id !== id));
       setToast({ message: 'Application removed', type: 'success' });
-    } catch (e) {
+    } catch {
       setToast({ message: 'Failed to remove application', type: 'error' });
     }
   };
@@ -501,16 +495,7 @@ export default function MyApplications() {
     const matchSearch = !search || app.company.toLowerCase().includes(search.toLowerCase()) || app.title.toLowerCase().includes(search.toLowerCase());
     const matchType = !filterType || app.type === filterType;
 
-    // Date filter
-    let matchDate = true;
-    if (app.dateApplied) {
-      const d = new Date(app.dateApplied);
-      const startObj = new Date(selectedDateRange.start); startObj.setHours(0, 0, 0, 0);
-      const endObj = new Date(selectedDateRange.end); endObj.setHours(23, 59, 59, 999);
-      matchDate = d >= startObj && d <= endObj;
-    }
-
-    return matchTab && matchSearch && matchType && matchDate;
+    return matchTab && matchSearch && matchType;
   });
 
   if (sortBy === 'Company A-Z') filtered = [...filtered].sort((a, b) => (a.company || '').localeCompare(b.company || ''));
@@ -536,7 +521,7 @@ export default function MyApplications() {
         <div className="flex justify-between items-start mb-5">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Keep it up, {firstName} 💪</h2>
-            <p className="text-sm text-gray-500 mt-0.5">Here is job applications status from {dateLabel}.</p>
+            <p className="text-sm text-gray-500 mt-0.5">Showing all applied jobs. Dashboard calendar range: {dateLabel}.</p>
           </div>
           <div className="relative">
             <button onClick={() => setShowCalendar(v => !v)}
@@ -680,7 +665,7 @@ export default function MyApplications() {
         </div>
       </div>
 
-      <DetailDrawer app={selectedApp} onClose={() => setSelectedApp(null)} onStatusChange={handleStatusChange} onToast={handleToast} />
+      <DetailDrawer key={selectedApp?.id || 'empty'} app={selectedApp} onClose={() => setSelectedApp(null)} onStatusChange={handleStatusChange} onToast={handleToast} />
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       {recruiterModal && (
         <MessageRecruiterModal
