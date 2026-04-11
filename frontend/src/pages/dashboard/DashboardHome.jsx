@@ -274,7 +274,9 @@ export default function DashboardHome() {
         end.setDate(end.getDate() + 6);
         return { start, end };
       }
-    } catch {}
+    } catch {
+      // Ignore invalid persisted calendar values and fall back to the default range.
+    }
     const end = new Date();
     const start = new Date(); start.setDate(start.getDate() - 6);
     return { start, end };
@@ -310,23 +312,12 @@ export default function DashboardHome() {
   useEffect(() => {
     if (!apiApplications.length && loading) return;
 
-    const { start, end } = selectedDateRange;
-    const startObj = new Date(start); startObj.setHours(0,0,0,0);
-    const endObj = new Date(end); endObj.setHours(23,59,59,999);
-
-    const filtered = apiApplications.filter(app => {
-      if (!app.dateApplied) return false;
-      // Handle the strict date string 'Jul 20, 2024' or ISO format
-      const d = new Date(app.dateApplied);
-      return d >= startObj && d <= endObj;
-    });
-
     const byStatus = {};
     let totalApplied = 0;
     let interviewing = 0;
     let hired = 0;
 
-    filtered.forEach(app => {
+    apiApplications.forEach(app => {
       totalApplied++;
       byStatus[app.status] = (byStatus[app.status] || 0) + 1;
       if (app.status === 'Interviewing') interviewing++;
@@ -334,11 +325,15 @@ export default function DashboardHome() {
     });
 
     setStats({ totalApplied, interviewing, hired, byStatus });
-    
-    // Sort descending by date to get recent ones
-    const sorted = [...filtered].sort((a,b) => new Date(b.dateApplied) - new Date(a.dateApplied));
+
+    // Sort descending by date so the most recent applications stay at the top.
+    const sorted = [...apiApplications].sort((a, b) => {
+      const aTime = a?.dateApplied ? new Date(a.dateApplied).getTime() : 0;
+      const bTime = b?.dateApplied ? new Date(b.dateApplied).getTime() : 0;
+      return bTime - aTime;
+    });
     setApplications(sorted.slice(0, 5));
-  }, [apiApplications, selectedDateRange, loading]);
+  }, [apiApplications, loading]);
 
   // Compute donut chart percentages from real status data
   const total = stats.totalApplied || 0;
@@ -419,7 +414,7 @@ export default function DashboardHome() {
         <div className="flex justify-between items-start mb-6">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Good morning, {firstName} 👋</h2>
-            <p className="text-sm text-gray-500 mt-0.5">Here is what's happening with your job search applications from {formatDateRange(selectedDateRange.start, selectedDateRange.end)}.</p>
+            <p className="text-sm text-gray-500 mt-0.5">Showing all applied jobs. Dashboard calendar range: {formatDateRange(selectedDateRange.start, selectedDateRange.end)}.</p>
           </div>
           <div className="relative">
             <button 
