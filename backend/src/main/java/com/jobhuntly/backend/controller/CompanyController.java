@@ -64,6 +64,7 @@ public class CompanyController {
                 m.put("candidateEmail", a.getUser().getEmail());
                 m.put("dateApplied", a.getDateApplied() != null ? a.getDateApplied().toString() : null);
                 m.put("status", a.getStatus());
+                m.put("score", a.getScore() != null ? a.getScore() : 0.0);
                 m.put("resumeUrl", a.getResumeUrl());
                 m.put("coverLetter", a.getCoverLetter());
                 result.add(m);

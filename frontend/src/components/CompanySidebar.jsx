@@ -1,78 +1,220 @@
 import { Link, useLocation } from 'react-router-dom';
+import {
+  BriefcaseIcon,
+  BuildingOffice2Icon,
+  CalendarDaysIcon,
+  ChatBubbleLeftRightIcon,
+  ChevronDownIcon,
+  Cog6ToothIcon,
+  HomeIcon,
+  QuestionMarkCircleIcon,
+  UsersIcon,
+} from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
 import { useMessaging } from '../context/MessagingContext';
 
 const NAV = [
-  { label: 'Dashboard',       icon: '🏠', path: '/company/dashboard' },
-  { label: 'Messages',        icon: '💬', path: '/company/messages', badge: true },
-  { label: 'Company Profile', icon: '🏢', path: '/company/profile' },
-  { label: 'All Applicants',  icon: '👥', path: '/company/applicants' },
-  { label: 'Job Listing',     icon: '📋', path: '/company/jobs' },
-  { label: 'My Schedule',     icon: '📅', path: '/company/schedule' },
+  {
+    label: 'Dashboard',
+    path: '/company/dashboard',
+    icon: HomeIcon,
+    match: (pathname) => pathname === '/company/dashboard',
+  },
+  {
+    label: 'Messages',
+    path: '/company/messages',
+    icon: ChatBubbleLeftRightIcon,
+    badge: true,
+    match: (pathname) => pathname.startsWith('/company/messages'),
+  },
+  {
+    label: 'Company Profile',
+    path: '/company/profile',
+    icon: BuildingOffice2Icon,
+    match: (pathname) => pathname.startsWith('/company/profile'),
+  },
+  {
+    label: 'All Applicants',
+    path: '/company/applicants',
+    icon: UsersIcon,
+    match: (pathname) => pathname.startsWith('/company/applicants'),
+  },
+  {
+    label: 'Job Listing',
+    path: '/company/jobs',
+    icon: BriefcaseIcon,
+    match: (pathname) => pathname.startsWith('/company/jobs'),
+  },
+  {
+    label: 'My Schedule',
+    path: '/company/schedule',
+    icon: CalendarDaysIcon,
+    match: (pathname) => pathname.startsWith('/company/schedule'),
+  },
 ];
 
 const SETTINGS = [
-  { label: 'Settings',    icon: '⚙️', path: '/company/settings' },
-  { label: 'Help Center', icon: '❓', path: '/company/help' },
+  {
+    label: 'Settings',
+    path: '/company/settings',
+    icon: Cog6ToothIcon,
+    match: (pathname) => pathname.startsWith('/company/settings'),
+  },
+  {
+    label: 'Help Center',
+    path: '/company/help',
+    icon: QuestionMarkCircleIcon,
+    match: (pathname) => pathname.startsWith('/company/help'),
+  },
 ];
+
+function getInitials(name) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map((word) => word[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function SidebarLink({ item, active, unread, compact = false }) {
+  const Icon = item.icon;
+
+  if (compact) {
+    return (
+      <Link
+        to={item.path}
+        className={`relative flex min-w-0 flex-1 flex-col items-center gap-1 px-2 py-2 text-[11px] font-medium transition ${
+          active ? 'text-indigo-600' : 'text-slate-500'
+        }`}
+      >
+        <div className={`rounded-2xl p-2 transition ${active ? 'bg-indigo-50' : 'bg-transparent'}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <span className="truncate">{item.label.split(' ')[0]}</span>
+        {item.badge && unread > 0 ? (
+          <span className="absolute right-3 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-600 px-1 text-[10px] font-semibold text-white">
+            {unread > 9 ? '9+' : unread}
+          </span>
+        ) : null}
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      to={item.path}
+      className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition ${
+        active
+          ? 'bg-[#eef2ff] text-indigo-700 shadow-[inset_0_0_0_1px_rgba(99,102,241,0.12)]'
+          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+      }`}
+    >
+      <div
+        className={`flex h-9 w-9 items-center justify-center rounded-xl ${
+          active ? 'bg-white text-indigo-600 shadow-sm' : 'bg-slate-100 text-slate-500'
+        }`}
+      >
+        <Icon className="h-5 w-5" />
+      </div>
+      <span className="flex-1 truncate">{item.label}</span>
+      {item.badge && unread > 0 ? (
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-600 px-1.5 text-[11px] font-semibold text-white">
+          {unread > 99 ? '99+' : unread}
+        </span>
+      ) : null}
+    </Link>
+  );
+}
 
 export default function CompanySidebar() {
   const { pathname } = useLocation();
   const { user } = useAuth();
-  const { totalUnreadCount: unread } = useMessaging();
+  const { totalUnreadCount = 0 } = useMessaging();
 
-  const displayName = user?.fullName || 'Company';
-  const initials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  const companyName = user?.companyName || user?.fullName || 'Nomad';
+  const contactName = user?.fullName || 'Maria Kelly';
+  const contactEmail = user?.email || 'maria@email.com';
+  const initials = getInitials(companyName);
 
   return (
-    <aside className="w-60 h-screen bg-white border-r border-gray-200 flex flex-col justify-between py-6 px-4 flex-shrink-0 fixed left-0 top-0 z-10">
-      <div>
-        <Link to="/" className="flex items-center gap-2 font-bold text-lg mb-6 px-2">
-          <span className="bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">J</span>
-          JobHuntly
-        </Link>
+    <>
+      <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-60 lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white">
+        <div className="flex h-full flex-col px-4 py-5">
+          <Link to="/" className="flex items-center gap-2 px-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
+              J
+            </div>
+            <span className="text-lg font-semibold tracking-tight text-slate-900">JobHuntly</span>
+          </Link>
 
-        {/* Company selector */}
-        <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 mb-6 cursor-pointer hover:bg-gray-100">
-          <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center text-white text-xs font-bold">{initials}</div>
-          <span className="text-sm font-medium text-gray-800 flex-1 truncate">{displayName}</span>
-          <span className="text-gray-400 text-xs">▼</span>
+          <div className="mt-7 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Company</p>
+            <div className="mt-2 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500 text-sm font-bold text-white shadow-sm">
+                {initials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-slate-900">{companyName}</p>
+                <p className="truncate text-xs text-slate-500">Workspace</p>
+              </div>
+              <ChevronDownIcon className="h-4 w-4 flex-shrink-0 text-slate-400" />
+            </div>
+          </div>
+
+          <nav className="mt-6 space-y-1">
+            {NAV.map((item) => (
+              <SidebarLink
+                key={item.path}
+                item={item}
+                active={item.match(pathname)}
+                unread={totalUnreadCount}
+              />
+            ))}
+          </nav>
+
+          <div className="mt-8">
+            <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Settings</p>
+            <div className="mt-2 space-y-1">
+              {SETTINGS.map((item) => (
+                <SidebarLink
+                  key={item.path}
+                  item={item}
+                  active={item.match(pathname)}
+                  unread={totalUnreadCount}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-100 text-sm font-bold text-indigo-700">
+                {getInitials(contactName)}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-900">{contactName}</p>
+                <p className="truncate text-xs text-slate-500">{contactEmail}</p>
+              </div>
+            </div>
+          </div>
         </div>
+      </aside>
 
-        <nav className="space-y-1 overflow-y-auto flex-1">
-          {NAV.map(item => (
-            <Link key={item.path} to={item.path}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${pathname.startsWith(item.path) ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}>
-              <span>{item.icon}</span>
-              <span className="flex-1">{item.label}</span>
-              {item.badge && unread > 0 && (
-                <span className="bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{unread}</span>
-              )}
-            </Link>
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.35rem)] pt-2 backdrop-blur lg:hidden">
+        <div className="flex items-center justify-between gap-1">
+          {NAV.slice(0, 5).map((item) => (
+            <SidebarLink
+              key={item.path}
+              item={item}
+              active={item.match(pathname)}
+              unread={totalUnreadCount}
+              compact
+            />
           ))}
-        </nav>
-
-        <div className="mt-8">
-          <p className="text-xs text-gray-400 uppercase px-3 mb-2">Settings</p>
-          {SETTINGS.map(item => (
-            <Link key={item.path} to={item.path}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${pathname === item.path ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}>
-              <span>{item.icon}</span>
-              {item.label}
-            </Link>
-          ))}
         </div>
-      </div>
-
-      <div className="flex items-center gap-3 px-3 py-3 border-t border-gray-200 mt-4">
-        <div className="w-9 h-9 rounded-full bg-indigo-200 flex items-center justify-center text-sm font-bold text-indigo-700 flex-shrink-0">
-          {initials}
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-gray-800 truncate">{displayName}</p>
-          <p className="text-xs text-gray-400 truncate">{user?.email || ''}</p>
-        </div>
-      </div>
-    </aside>
+      </nav>
+    </>
   );
 }

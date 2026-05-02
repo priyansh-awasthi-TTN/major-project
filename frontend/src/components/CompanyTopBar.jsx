@@ -1,39 +1,45 @@
 import { Link } from 'react-router-dom';
+import { BellIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 
 export default function CompanyTopBar({ title, subtitle }) {
   const { user } = useAuth();
-  const companyName = user?.fullName || 'Company';
-  const initials = companyName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  const { unreadCount = 0 } = useNotifications();
+
+  const companyName = user?.companyName || user?.fullName || 'Nomad';
+  const heading = title || companyName;
+  const supportingText = subtitle || (title ? companyName : 'Company workspace');
 
   return (
-    <div className="bg-white border-b border-gray-200 px-8 py-3 flex items-center justify-between flex-shrink-0 fixed top-0 right-0 z-20" style={{ left: '240px' }}>
-      {/* Left: company identity */}
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-lg bg-emerald-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-          {initials}
+    <div className="fixed inset-x-0 top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur lg:left-60">
+      <div className="flex min-h-16 items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
+        <div className="min-w-0">
+          <h1 className="truncate text-base font-semibold tracking-tight text-slate-900 sm:text-lg">{heading}</h1>
+          <p className="truncate text-xs text-slate-500">{supportingText}</p>
         </div>
-        <div>
-          <p className="text-xs text-gray-400 leading-none mb-0.5">Company</p>
-          <div className="flex items-center gap-1">
-            <span className="text-sm font-semibold text-gray-900">{companyName}</span>
-            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-gray-400">
-              <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-        </div>
-      </div>
 
-      {/* Right: actions */}
-      <div className="flex items-center gap-3">
-        {title && <h1 className="text-lg font-bold text-gray-900 mr-4">{title}</h1>}
-        <button className="relative p-2 text-gray-400 hover:text-gray-600">
-          🔔
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-        </button>
-        <Link to="/company/jobs/post" className="bg-indigo-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center gap-1 font-medium">
-          + Post a Job
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="notifications"
+            className="relative inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
+          >
+            <BellIcon className="h-5 w-5" />
+            {unreadCount > 0 ? (
+              <span className="absolute right-2 top-2 flex h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
+            ) : null}
+          </button>
+
+          <Link
+            to="/company/jobs/post"
+            className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+          >
+            <PlusIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">Post a job</span>
+            <span className="sm:hidden">Post</span>
+          </Link>
+        </div>
       </div>
     </div>
   );

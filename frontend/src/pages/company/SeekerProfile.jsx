@@ -198,6 +198,19 @@ export default function SeekerProfile() {
     };
   }, [networkUser, numericSeekerId, seekerId]);
 
+  const openMessages = () => {
+    if (!profileData) return;
+
+    const params = new URLSearchParams({
+      user: String(networkUser?.id || numericSeekerId),
+      name: profileData.name,
+      email: profileData.email || '',
+      type: 'JOBSEEKER',
+    });
+
+    navigate(`/company/messages?${params.toString()}`);
+  };
+
   if (loading && !profileData) {
     return (
       <div className="flex-1 flex flex-col h-full bg-gray-50">
@@ -236,7 +249,7 @@ export default function SeekerProfile() {
       <div className="overflow-y-auto flex-1 px-8 py-6" style={{ marginTop: '60px' }}>
         <div className="max-w-2xl mx-auto space-y-5">
           <button
-            onClick={() => navigate('/company/messages')}
+            onClick={openMessages}
             className="flex items-center gap-1.5 text-gray-500 hover:text-blue-600 text-sm font-medium transition mb-2"
           >
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
@@ -270,7 +283,7 @@ export default function SeekerProfile() {
                 )}
                 <div className="flex gap-3 mt-4 flex-wrap">
                   <button
-                    onClick={() => navigate('/company/messages')}
+                    onClick={openMessages}
                     className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition flex items-center gap-2"
                   >
                     <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">

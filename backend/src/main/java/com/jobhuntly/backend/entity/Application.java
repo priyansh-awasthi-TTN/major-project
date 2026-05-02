@@ -55,6 +55,9 @@ public class Application {
     @Column(name = "cover_letter", columnDefinition = "TEXT")
     private String coverLetter;
 
+    @Column(name = "score")
+    private Double score;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -105,6 +108,8 @@ public class Application {
     public void setResumeUrl(String resumeUrl) { this.resumeUrl = resumeUrl; }
     public String getCoverLetter() { return coverLetter; }
     public void setCoverLetter(String coverLetter) { this.coverLetter = coverLetter; }
+    public Double getScore() { return score; }
+    public void setScore(Double score) { this.score = score; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 }
