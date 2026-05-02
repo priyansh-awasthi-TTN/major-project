@@ -41,9 +41,6 @@ import CompanyProfilePage from './pages/company/CompanyProfile';
 import AllApplicants from './pages/company/AllApplicants';
 import ApplicantProfile from './pages/company/ApplicantProfile';
 import JobListing from './pages/company/JobListing';
-import JobApplicantsKanban from './pages/company/JobApplicantsKanban';
-import CompanyDashJobDetail from './pages/company/JobDetail';
-import Analytics from './pages/company/Analytics';
 import MySchedule from './pages/company/MySchedule';
 import PostJob from './pages/company/PostJob';
 import CompanySettings from './pages/company/CompanySettings';
@@ -139,9 +136,9 @@ export default function App() {
         <Route path="/company/applicants/:id" element={<CompanyRoute><CompanyLayout><ApplicantProfile /></CompanyLayout></CompanyRoute>} />
         <Route path="/company/jobs" element={<CompanyRoute><CompanyLayout><JobListing /></CompanyLayout></CompanyRoute>} />
         <Route path="/company/jobs/post" element={<CompanyRoute><CompanyLayout><PostJob /></CompanyLayout></CompanyRoute>} />
-        <Route path="/company/jobs/:id/applicants" element={<CompanyRoute><CompanyLayout><JobApplicantsKanban /></CompanyLayout></CompanyRoute>} />
-        <Route path="/company/jobs/:id/detail" element={<CompanyRoute><CompanyLayout><CompanyDashJobDetail /></CompanyLayout></CompanyRoute>} />
-        <Route path="/company/jobs/:id/analytics" element={<CompanyRoute><CompanyLayout><Analytics /></CompanyLayout></CompanyRoute>} />
+        <Route path="/company/jobs/:id/applicants" element={<CompanyRoute><CompanyLayout><JobListing /></CompanyLayout></CompanyRoute>} />
+        <Route path="/company/jobs/:id/detail" element={<CompanyRoute><CompanyLayout><JobListing /></CompanyLayout></CompanyRoute>} />
+        <Route path="/company/jobs/:id/analytics" element={<CompanyRoute><CompanyLayout><JobListing /></CompanyLayout></CompanyRoute>} />
         <Route path="/company/schedule" element={<CompanyRoute><CompanyLayout><MySchedule /></CompanyLayout></CompanyRoute>} />
         <Route path="/company/settings" element={<CompanyRoute><CompanyLayout><CompanySettings /></CompanyLayout></CompanyRoute>} />
         <Route path="/company/seeker/:seekerId" element={<CompanyRoute><CompanyLayout><SeekerProfile /></CompanyLayout></CompanyRoute>} />
