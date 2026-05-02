@@ -40,7 +40,20 @@ function renderAttachment(message, isOwnMessage) {
   return message.text;
 }
 
-export default function ChatWindow({ selected, onTogglePin, onToggleStar, onToggleMute, onToggleArchive, onBlock, onDelete, onSend, onSendAttachment, openMenu, setOpenMenu }) {
+export default function ChatWindow({
+  selected,
+  onTogglePin,
+  onToggleStar,
+  onToggleMute,
+  onToggleArchive,
+  onBlock,
+  onDelete,
+  onSend,
+  onSendAttachment,
+  openMenu,
+  setOpenMenu,
+  buildProfilePath = (message) => `/dashboard/profile/${message.id}`,
+}) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [input, setInput] = useState('');
@@ -109,8 +122,15 @@ export default function ChatWindow({ selected, onTogglePin, onToggleStar, onTogg
     setPendingFiles(prev => prev.filter((_, index) => index !== indexToRemove));
   };
 
+  const profilePath = buildProfilePath(selected);
+  const handleOpenProfile = () => {
+    if (profilePath) {
+      navigate(profilePath);
+    }
+  };
+
   const headerMenu = [
-    { icon: '👤', label: 'View Profile', action: () => navigate(`/dashboard/profile/${selected.id}`) },
+    { icon: '👤', label: 'View Profile', action: handleOpenProfile },
     'divider',
     { icon: selected.isMuted ? '🔊' : '🔇', label: selected.isMuted ? 'Unmute' : 'Mute', action: () => onToggleMute(selected.id) },
     { icon: selected.isArchived ? '📤' : '📥', label: selected.isArchived ? 'Unarchive' : 'Archive', action: () => onToggleArchive(selected.id) },
@@ -125,7 +145,7 @@ export default function ChatWindow({ selected, onTogglePin, onToggleStar, onTogg
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
         <div
           className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition"
-          onClick={() => navigate(`/dashboard/profile/${selected.id}`)}
+          onClick={handleOpenProfile}
         >
           <div className={`w-10 h-10 rounded-full ${selected.avatarColor} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
             {selected.avatar}
@@ -187,8 +207,7 @@ export default function ChatWindow({ selected, onTogglePin, onToggleStar, onTogg
           </div>
           <p className="font-bold text-gray-900 text-lg">{selected.name}</p>
           <p className="text-sm text-gray-500">
-            {selected.role.split(' at ')[0]} at{' '}
-            <span className="text-blue-600">{selected.company}</span>
+            {selected.company && selected.company !== 'Platform User' ? `${selected.role} at ${selected.company}` : selected.role}
           </p>
           <p className="text-sm text-gray-400 mt-1">
             This is the very beginning of your direct message with{' '}

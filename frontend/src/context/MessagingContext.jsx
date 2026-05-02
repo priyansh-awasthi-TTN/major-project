@@ -9,6 +9,10 @@ const MessagingContext = createContext(null);
 const LS_READ    = 'jh_readMessages';
 const LS_BLOCKED = 'jh_blockedUsers';
 const LS_META    = 'jh_messageMeta';
+const USER_TYPE_LABELS = {
+  COMPANY: 'Company',
+  JOBSEEKER: 'Jobseeker',
+};
 
 function loadLS(key, fallback) {
   try { return JSON.parse(sessionStorage.getItem(key)) ?? fallback; }
@@ -22,6 +26,14 @@ function getAttachmentFallbackLabel(messageType) {
   if (messageType === 'IMAGE') return 'Image attachment';
   if (messageType === 'VIDEO') return 'Video attachment';
   return 'File attachment';
+}
+
+function getRoleLabel(userType) {
+  return USER_TYPE_LABELS[userType] || 'User';
+}
+
+function getPeerUserType(currentUserType) {
+  return currentUserType === 'COMPANY' ? 'JOBSEEKER' : 'COMPANY';
 }
 
 function getPreviewText(entry) {
@@ -128,7 +140,12 @@ export function MessagingProvider({ children }) {
             // Add to conversation list if brand new chat!
             setConversations(prev => {
               if (prev.find(c => c.userId === otherUserId)) return prev;
-              return [{ userId: otherUserId, userName: otherUserName, userEmail: dto.senderEmail, userType: 'COMPANY' }, ...prev];
+              return [{
+                userId: otherUserId,
+                userName: otherUserName,
+                userEmail: dto.senderEmail,
+                userType: getPeerUserType(user.userType),
+              }, ...prev];
             });
           }
         });
@@ -166,7 +183,7 @@ export function MessagingProvider({ children }) {
     return {
       id: c.userId,
       name: c.userName || 'Unknown User',
-      role: c.userType === 'COMPANY' ? 'Company' : 'Jobseeker',
+      role: getRoleLabel(c.userType),
       company: 'Platform User',
       avatar: (c.userName || 'AA').split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase(),
       avatarColor: colors[c.userId % colors.length],
