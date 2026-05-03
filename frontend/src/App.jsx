@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { ToastProvider } from './components/Toast';
 import Navbar from './components/Navbar';
@@ -45,6 +45,7 @@ import MySchedule from './pages/company/MySchedule';
 import PostJob from './pages/company/PostJob';
 import CompanySettings from './pages/company/CompanySettings';
 import SeekerProfile from './pages/company/SeekerProfile';
+import CompanyHelpCenter from './pages/company/CompanyHelpCenter';
 
 function PublicLayout({ children }) {
   return (
@@ -68,8 +69,11 @@ function DashboardLayout({ children }) {
 }
 
 function CompanyLayout({ children }) {
+  const { pathname } = useLocation();
+  const isApplicantsRoute = pathname.startsWith('/company/applicants');
+
   return (
-    <div className="min-h-screen bg-[#f5f7fb]">
+    <div className={isApplicantsRoute ? 'min-h-screen bg-[#fbfbfd]' : 'min-h-screen bg-[#f5f7fb]'}>
       <CompanySidebar />
       <div className="flex min-h-screen flex-col lg:ml-60">
         {children}
@@ -141,6 +145,7 @@ export default function App() {
         <Route path="/company/jobs/:id/analytics" element={<CompanyRoute><CompanyLayout><JobListing /></CompanyLayout></CompanyRoute>} />
         <Route path="/company/schedule" element={<CompanyRoute><CompanyLayout><MySchedule /></CompanyLayout></CompanyRoute>} />
         <Route path="/company/settings" element={<CompanyRoute><CompanyLayout><CompanySettings /></CompanyLayout></CompanyRoute>} />
+        <Route path="/company/help" element={<CompanyRoute><CompanyLayout><CompanyHelpCenter /></CompanyLayout></CompanyRoute>} />
         <Route path="/company/seeker/:seekerId" element={<CompanyRoute><CompanyLayout><SeekerProfile /></CompanyLayout></CompanyRoute>} />
       </Routes>
     </BrowserRouter>
