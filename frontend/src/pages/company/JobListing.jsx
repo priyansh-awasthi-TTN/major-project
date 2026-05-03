@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   AcademicCapIcon,
@@ -181,8 +181,9 @@ function SectionTabLink({ to, active, children }) {
   );
 }
 
-function MetricCard({ title, value, delta, positive, icon: Icon }) {
+function MetricCard({ title, value, delta, positive, icon }) {
   const TrendIcon = positive ? ArrowTrendingUpIcon : ArrowTrendingDownIcon;
+  const MetricIcon = icon;
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
@@ -198,7 +199,7 @@ function MetricCard({ title, value, delta, positive, icon: Icon }) {
           <p className="mt-1 text-xs text-slate-400">vs last 7 days</p>
         </div>
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-500">
-          <Icon className="h-5 w-5" />
+          <MetricIcon className="h-5 w-5" />
         </div>
       </div>
     </div>
@@ -462,6 +463,8 @@ export default function JobListing() {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const routeJobId = Number(id);
+  const hasFocusedJob = Number.isFinite(routeJobId) && routeJobId > 0;
 
   const [dateRange, setDateRange] = useState(DATE_RANGE_OPTIONS[0]);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -482,7 +485,6 @@ export default function JobListing() {
   const [applicantSortConfig, setApplicantSortConfig] = useState({ key: 'candidateName', direction: 'asc' });
 
   const activeTab = getTabFromPath(location.pathname);
-  const routeJobId = Number(id);
 
   const filteredJobs = useMemo(() => {
     const list = companyJobSectionJobs.filter((job) => {
@@ -508,21 +510,17 @@ export default function JobListing() {
     return sorted;
   }, [filters, sortConfig]);
 
-  useEffect(() => {
-    setJobCurrentPage(1);
-  }, [filters, sortConfig]);
-
   const selectedJob = useMemo(() => {
     const fromRoute = companyJobSectionJobs.find((job) => job.id === routeJobId);
     return fromRoute || companyJobSectionJobs[0];
   }, [routeJobId]);
 
-  const paginatedJobs = useMemo(() => {
-    const startIndex = (jobCurrentPage - 1) * jobItemsPerPage;
-    return filteredJobs.slice(startIndex, startIndex + jobItemsPerPage);
-  }, [filteredJobs, jobCurrentPage, jobItemsPerPage]);
-
   const totalJobPages = Math.max(1, Math.ceil(filteredJobs.length / jobItemsPerPage));
+  const safeJobCurrentPage = Math.min(jobCurrentPage, totalJobPages);
+  const paginatedJobs = useMemo(() => {
+    const startIndex = (safeJobCurrentPage - 1) * jobItemsPerPage;
+    return filteredJobs.slice(startIndex, startIndex + jobItemsPerPage);
+  }, [filteredJobs, safeJobCurrentPage, jobItemsPerPage]);
 
   const filteredApplicants = useMemo(() => {
     let list = [...selectedJob.applicantsData];
@@ -554,23 +552,19 @@ export default function JobListing() {
     });
   }, [applicantSearch, applicantSortConfig, applicantStageFilter, selectedJob]);
 
-  useEffect(() => {
-    setApplicantPage(1);
-    setSelectedApplicants([]);
-  }, [selectedJob.id, applicantSearch, applicantStageFilter, applicantSortConfig]);
-
-  const paginatedApplicants = useMemo(() => {
-    const startIndex = (applicantPage - 1) * applicantItemsPerPage;
-    return filteredApplicants.slice(startIndex, startIndex + applicantItemsPerPage);
-  }, [applicantItemsPerPage, applicantPage, filteredApplicants]);
-
   const totalApplicantPages = Math.max(1, Math.ceil(filteredApplicants.length / applicantItemsPerPage));
+  const safeApplicantPage = Math.min(applicantPage, totalApplicantPages);
+  const paginatedApplicants = useMemo(() => {
+    const startIndex = (safeApplicantPage - 1) * applicantItemsPerPage;
+    return filteredApplicants.slice(startIndex, startIndex + applicantItemsPerPage);
+  }, [applicantItemsPerPage, filteredApplicants, safeApplicantPage]);
 
   const handleJobSort = (key) => {
     setSortConfig((current) => ({
       key,
       direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc',
     }));
+    setJobCurrentPage(1);
   };
 
   const handleApplicantSort = (key) => {
@@ -578,10 +572,12 @@ export default function JobListing() {
       key,
       direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc',
     }));
+    setApplicantPage(1);
+    setSelectedApplicants([]);
   };
 
   const handleSelectJob = (jobId, nextTab = activeTab) => {
-    navigate(buildJobRoute(jobId, nextTab || 'detail'));
+    navigate(buildJobRoute(jobId, hasFocusedJob ? nextTab || 'detail' : 'detail'));
     setShowActionsMenu(null);
   };
 
@@ -611,9 +607,10 @@ export default function JobListing() {
     <div className="flex min-h-screen flex-1 flex-col bg-[#f5f7fb]">
       <CompanyTopBar title="Job Listing" subtitle={`Here is your jobs listing status from ${dateRange}.`} />
 
-      <div className="px-4 pb-24 pt-20 sm:px-6 lg:px-8 lg:pb-8">
-        <div className="mx-auto max-w-7xl space-y-8">
-          <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="px-4 pb-8 pt-20 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-none space-y-8">
+          {!hasFocusedJob ? (
+            <section className="flex min-h-[calc(100vh-12rem)] flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
               <div className="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-slate-900">Job List</h2>
@@ -670,7 +667,10 @@ export default function JobListing() {
                   <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Status</span>
                   <select
                     value={filters.status}
-                    onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}
+                    onChange={(event) => {
+                      setFilters((current) => ({ ...current, status: event.target.value }));
+                      setJobCurrentPage(1);
+                    }}
                     className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none"
                   >
                     {JOB_STATUS_OPTIONS.map((option) => (
@@ -685,7 +685,10 @@ export default function JobListing() {
                   <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Job Type</span>
                   <select
                     value={filters.jobType}
-                    onChange={(event) => setFilters((current) => ({ ...current, jobType: event.target.value }))}
+                    onChange={(event) => {
+                      setFilters((current) => ({ ...current, jobType: event.target.value }));
+                      setJobCurrentPage(1);
+                    }}
                     className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none"
                   >
                     {JOB_TYPE_OPTIONS.map((option) => (
@@ -699,7 +702,10 @@ export default function JobListing() {
                 <div className="flex items-end">
                   <button
                     type="button"
-                    onClick={() => setFilters({ status: 'all', jobType: 'all' })}
+                    onClick={() => {
+                      setFilters({ status: 'all', jobType: 'all' });
+                      setJobCurrentPage(1);
+                    }}
                     className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-white"
                   >
                     Reset Filters
@@ -708,7 +714,7 @@ export default function JobListing() {
               </div>
             ) : null}
 
-            <div className="overflow-x-auto">
+            <div className="min-h-0 flex-1 overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500">
                   <tr>
@@ -751,7 +757,7 @@ export default function JobListing() {
                     </tr>
                   ) : (
                     paginatedJobs.map((job) => {
-                      const isSelected = selectedJob.id === job.id;
+                      const isSelected = hasFocusedJob && selectedJob.id === job.id;
                       return (
                         <tr
                           key={job.id}
@@ -845,20 +851,20 @@ export default function JobListing() {
               </div>
 
               <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setJobCurrentPage((page) => Math.max(1, page - 1))}
-                  disabled={jobCurrentPage === 1}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 disabled:opacity-40"
-                >
+                  <button
+                    type="button"
+                    onClick={() => setJobCurrentPage((page) => Math.max(1, Math.min(page, totalJobPages) - 1))}
+                    disabled={safeJobCurrentPage === 1}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 disabled:opacity-40"
+                  >
                   <ChevronLeftIcon className="h-5 w-5" />
                 </button>
                 {Array.from({ length: Math.min(totalJobPages, 5) }, (_, index) => {
                   let pageNumber = index + 1;
                   if (totalJobPages > 5) {
-                    if (jobCurrentPage > 3 && jobCurrentPage < totalJobPages - 1) {
-                      pageNumber = jobCurrentPage - 2 + index;
-                    } else if (jobCurrentPage >= totalJobPages - 1) {
+                    if (safeJobCurrentPage > 3 && safeJobCurrentPage < totalJobPages - 1) {
+                      pageNumber = safeJobCurrentPage - 2 + index;
+                    } else if (safeJobCurrentPage >= totalJobPages - 1) {
                       pageNumber = totalJobPages - 4 + index;
                     }
                   }
@@ -868,7 +874,7 @@ export default function JobListing() {
                       type="button"
                       onClick={() => setJobCurrentPage(pageNumber)}
                       className={`inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-medium ${
-                        jobCurrentPage === pageNumber
+                        safeJobCurrentPage === pageNumber
                           ? 'bg-indigo-600 text-white'
                           : 'border border-slate-200 text-slate-600'
                       }`}
@@ -877,20 +883,22 @@ export default function JobListing() {
                     </button>
                   );
                 })}
-                <button
-                  type="button"
-                  onClick={() => setJobCurrentPage((page) => Math.min(totalJobPages, page + 1))}
-                  disabled={jobCurrentPage === totalJobPages}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 disabled:opacity-40"
-                >
+                  <button
+                    type="button"
+                    onClick={() => setJobCurrentPage((page) => Math.min(totalJobPages, Math.min(page, totalJobPages) + 1))}
+                    disabled={safeJobCurrentPage === totalJobPages}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 disabled:opacity-40"
+                  >
                   <ChevronRightIcon className="h-5 w-5" />
                 </button>
               </div>
             </div>
-          </section>
+            </section>
+          ) : null}
 
-          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-200 px-5 py-5">
+          {hasFocusedJob ? (
+            <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-200 px-5 py-5">
               <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                 <div className="flex items-start gap-4">
                   <button
@@ -964,7 +972,11 @@ export default function JobListing() {
                           <input
                             type="text"
                             value={applicantSearch}
-                            onChange={(event) => setApplicantSearch(event.target.value)}
+                          onChange={(event) => {
+                            setApplicantSearch(event.target.value);
+                            setApplicantPage(1);
+                            setSelectedApplicants([]);
+                          }}
                             placeholder="Search applicants"
                             className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none lg:w-72"
                           />
@@ -987,6 +999,8 @@ export default function JobListing() {
                                 onClick={() => {
                                   setApplicantStageFilter('all');
                                   setShowApplicantFilterMenu(false);
+                                  setApplicantPage(1);
+                                  setSelectedApplicants([]);
                                 }}
                                 className={`block w-full px-4 py-2 text-left text-sm ${applicantStageFilter === 'all' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'}`}
                               >
@@ -999,6 +1013,8 @@ export default function JobListing() {
                                   onClick={() => {
                                     setApplicantStageFilter(stage);
                                     setShowApplicantFilterMenu(false);
+                                    setApplicantPage(1);
+                                    setSelectedApplicants([]);
                                   }}
                                   className={`block w-full px-4 py-2 text-left text-sm ${
                                     applicantStageFilter === stage ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'
@@ -1194,8 +1210,8 @@ export default function JobListing() {
                         <div className="flex items-center gap-1">
                           <button
                             type="button"
-                            onClick={() => setApplicantPage((page) => Math.max(1, page - 1))}
-                            disabled={applicantPage === 1}
+                            onClick={() => setApplicantPage((page) => Math.max(1, Math.min(page, totalApplicantPages) - 1))}
+                            disabled={safeApplicantPage === 1}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 disabled:opacity-40"
                           >
                             <ChevronLeftIcon className="h-5 w-5" />
@@ -1203,9 +1219,9 @@ export default function JobListing() {
                           {Array.from({ length: Math.min(totalApplicantPages, 5) }, (_, index) => {
                             let pageNumber = index + 1;
                             if (totalApplicantPages > 5) {
-                              if (applicantPage > 3 && applicantPage < totalApplicantPages - 1) {
-                                pageNumber = applicantPage - 2 + index;
-                              } else if (applicantPage >= totalApplicantPages - 1) {
+                              if (safeApplicantPage > 3 && safeApplicantPage < totalApplicantPages - 1) {
+                                pageNumber = safeApplicantPage - 2 + index;
+                              } else if (safeApplicantPage >= totalApplicantPages - 1) {
                                 pageNumber = totalApplicantPages - 4 + index;
                               }
                             }
@@ -1215,7 +1231,7 @@ export default function JobListing() {
                                 type="button"
                                 onClick={() => setApplicantPage(pageNumber)}
                                 className={`inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-medium ${
-                                  applicantPage === pageNumber
+                                  safeApplicantPage === pageNumber
                                     ? 'bg-indigo-600 text-white'
                                     : 'border border-slate-200 text-slate-600'
                                 }`}
@@ -1226,8 +1242,8 @@ export default function JobListing() {
                           })}
                           <button
                             type="button"
-                            onClick={() => setApplicantPage((page) => Math.min(totalApplicantPages, page + 1))}
-                            disabled={applicantPage === totalApplicantPages}
+                            onClick={() => setApplicantPage((page) => Math.min(totalApplicantPages, Math.min(page, totalApplicantPages) + 1))}
+                            disabled={safeApplicantPage === totalApplicantPages}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 disabled:opacity-40"
                           >
                             <ChevronRightIcon className="h-5 w-5" />
@@ -1239,7 +1255,8 @@ export default function JobListing() {
                 </div>
               ) : null}
             </div>
-          </section>
+            </section>
+          ) : null}
         </div>
       </div>
     </div>
