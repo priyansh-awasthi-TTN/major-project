@@ -10,20 +10,25 @@ const DEFAULT_NOTIFICATION_PREFERENCES = {
   recommendations: true,
 };
 
-const POOL = [
-  { avatar: 'JM', avatarColor: 'bg-gray-500', name: 'Jan Mayer', text: 'invited you to interview with Nomad', badge: 'New', badgeColor: 'border border-yellow-400 text-yellow-600', type: 'interview', category: 'applications' },
-  { avatar: 'JA', avatarColor: 'bg-rose-400', name: 'Jana Alicia', text: 'updated your job application status at Udacity', badge: 'Shortlisted', badgeColor: 'border border-teal-400 text-teal-600', type: 'status', category: 'applications' },
-  { avatar: 'AW', avatarColor: 'bg-amber-400', name: 'Ally Wales', text: 'sent you an interview invitation for a Social Media Manager role', badge: null, type: 'interview_card', category: 'applications', card: { title: 'Interview', role: 'Social Media Manager Role', date: 'Mon, 20 July 2026', time: '12 PM - 12:30 PM' } },
-  { avatar: 'KL', avatarColor: 'bg-indigo-400', name: 'Kevin Lee', text: 'reviewed your Lead Engineer application at Stripe', badge: 'In Review', badgeColor: 'border border-yellow-400 text-yellow-600', type: 'status', category: 'applications' },
-  { avatar: 'SR', avatarColor: 'bg-green-500', name: 'Sarah Rowe', text: 'sent you a job offer for Product Designer', badge: 'Offered', badgeColor: 'border border-purple-400 text-purple-600', type: 'status', category: 'applications' },
-  { avatar: 'MB', avatarColor: 'bg-blue-500', name: 'Mike Brown', text: 'shared a new Brand Designer opening that matches your profile', badge: 'New Role', badgeColor: 'border border-blue-400 text-blue-600', type: 'status', category: 'jobs' },
-  { avatar: 'PC', avatarColor: 'bg-pink-500', name: 'Priya Chandra', text: 'recommended a Product Designer role based on your profile', badge: 'Recommended', badgeColor: 'border border-emerald-400 text-emerald-600', type: 'status', category: 'recommendations' },
-  { avatar: 'TN', avatarColor: 'bg-orange-400', name: 'Tom Nash', text: 'posted a new Email Marketing role in your city', badge: 'Nearby', badgeColor: 'border border-orange-400 text-orange-600', type: 'status', category: 'jobs' },
-  { avatar: 'EW', avatarColor: 'bg-cyan-500', name: 'Emma Wilson', text: 'invited you to a final round interview', badge: 'New', badgeColor: 'border border-yellow-400 text-yellow-600', type: 'interview', category: 'applications' },
-  { avatar: 'RG', avatarColor: 'bg-violet-500', name: 'Ryan Garcia', text: 'highlighted an Interactive Developer job for you', badge: 'Recommended', badgeColor: 'border border-emerald-400 text-emerald-600', type: 'status', category: 'recommendations' },
-  { avatar: 'LH', avatarColor: 'bg-lime-500', name: 'Lisa Huang', text: 'shared a Visual Designer role from Packer', badge: 'New Role', badgeColor: 'border border-blue-400 text-blue-600', type: 'status', category: 'jobs' },
-  { avatar: 'DK', avatarColor: 'bg-red-400', name: 'David Kim', text: 'recommended a frontend role that fits your recent searches', badge: 'Recommended', badgeColor: 'border border-emerald-400 text-emerald-600', type: 'status', category: 'recommendations' },
+const AVATAR_TONES = [
+  'bg-indigo-500',
+  'bg-emerald-500',
+  'bg-blue-500',
+  'bg-amber-500',
+  'bg-rose-500',
+  'bg-violet-500',
 ];
+
+const getInitials = (value) => {
+  const cleaned = String(value || '').trim();
+  if (!cleaned) return 'NA';
+  return cleaned.split(/\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
+};
+
+const getAvatarTone = (value) => {
+  const seed = String(value || '').split('').reduce((total, char) => total + char.charCodeAt(0), 0);
+  return AVATAR_TONES[seed % AVATAR_TONES.length];
+};
 
 function timeAgo(date) {
   const diff = Math.floor((Date.now() - date) / 1000);
@@ -33,23 +38,22 @@ function timeAgo(date) {
   return `${Math.floor(diff / 86400)} day${Math.floor(diff / 86400) > 1 ? 's' : ''} ago`;
 }
 
-let idCounter = 100;
-
-function makeNotification(template) {
+const normalizeNotification = (notification) => {
+  const actorName = notification.actorName || 'System';
   return {
-    ...template,
-    id: ++idCounter,
-    timestamp: Date.now(),
-    read: false,
+    id: notification.id,
+    name: actorName,
+    text: notification.text || '',
+    badge: notification.badge || null,
+    badgeColor: notification.badgeColor || 'border border-indigo-400 text-indigo-600',
+    type: notification.type || 'status',
+    category: notification.category || 'applications',
+    read: Boolean(notification.read),
+    timestamp: notification.createdAt ? new Date(notification.createdAt).getTime() : Date.now(),
+    avatar: getInitials(actorName),
+    avatarColor: getAvatarTone(actorName),
   };
-}
-
-const INITIAL = POOL.slice(0, 6).map((template, index) => ({
-  ...template,
-  id: index + 1,
-  timestamp: Date.now() - [720000, 259200000, 1209600000, 432000000, 604800000, 86400000][index],
-  read: [false, false, false, true, true, false][index],
-}));
+};
 
 function buildPreferencesFromProfile(profile) {
   return {
@@ -65,18 +69,10 @@ function isNotificationEnabled(notification, preferences) {
 
 export function NotificationProvider({ children }) {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState(INITIAL);
+  const [notifications, setNotifications] = useState([]);
   const [toast, setToast] = useState(null);
   const [notificationPreferences, setNotificationPreferences] = useState(DEFAULT_NOTIFICATION_PREFERENCES);
-  const usedIndices = useRef(new Set([0, 1, 2, 3, 4, 5]));
-
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setNotifications((currentNotifications) => [...currentNotifications]);
-    }, 30000);
-
-    return () => clearInterval(intervalId);
-  }, []);
+  const lastToastId = useRef(null);
 
   useEffect(() => {
     let ignore = false;
@@ -106,35 +102,58 @@ export function NotificationProvider({ children }) {
   }, [user?.id]);
 
   useEffect(() => {
-    const intervalId = setInterval(() => {
-      const available = POOL
-        .map((template, index) => ({ template, index }))
-        .filter(({ template, index }) => isNotificationEnabled(template, notificationPreferences) && !usedIndices.current.has(index));
+    let ignore = false;
 
-      if (available.length === 0) {
-        usedIndices.current.clear();
+    const loadNotifications = async () => {
+      if (!user) {
+        setNotifications([]);
         return;
       }
 
-      const chosen = available[Math.floor(Math.random() * available.length)];
-      usedIndices.current.add(chosen.index);
+      try {
+        const data = await apiService.getNotifications();
+        if (ignore) return;
+        const normalized = (Array.isArray(data) ? data : []).map(normalizeNotification);
+        setNotifications(normalized);
 
-      const nextNotification = makeNotification(chosen.template);
-      setNotifications((currentNotifications) => [nextNotification, ...currentNotifications].slice(0, 20));
-      setToast(nextNotification);
-    }, 30 * 60 * 1000);
+        const latestUnread = normalized.find((item) => !item.read);
+        if (latestUnread && latestUnread.id !== lastToastId.current) {
+          lastToastId.current = latestUnread.id;
+          setToast(latestUnread);
+        }
+      } catch (error) {
+        if (!ignore) {
+          setNotifications([]);
+        }
+      }
+    };
 
-    return () => clearInterval(intervalId);
-  }, [notificationPreferences]);
+    loadNotifications();
+    const intervalId = setInterval(loadNotifications, 30000);
 
-  const markAllRead = useCallback(() => {
-    setNotifications((currentNotifications) => currentNotifications.map((notification) => ({ ...notification, read: true })));
+    return () => {
+      ignore = true;
+      clearInterval(intervalId);
+    };
+  }, [user?.id]);
+
+  const markAllRead = useCallback(async () => {
+    try {
+      await apiService.markAllNotificationsRead();
+      setNotifications((currentNotifications) => currentNotifications.map((notification) => ({ ...notification, read: true })));
+    } catch (error) {
+      setNotifications((currentNotifications) => currentNotifications.map((notification) => ({ ...notification, read: true })));
+    }
   }, []);
 
-  const markRead = useCallback((id) => {
-    setNotifications((currentNotifications) => currentNotifications.map((notification) => (
-      notification.id === id ? { ...notification, read: true } : notification
-    )));
+  const markRead = useCallback(async (id) => {
+    try {
+      await apiService.markNotificationRead(id);
+    } finally {
+      setNotifications((currentNotifications) => currentNotifications.map((notification) => (
+        notification.id === id ? { ...notification, read: true } : notification
+      )));
+    }
   }, []);
 
   const dismissToast = useCallback(() => setToast(null), []);

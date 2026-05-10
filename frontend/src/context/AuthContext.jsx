@@ -93,7 +93,7 @@ export function AuthProvider({ children }) {
     setUser(null);
 
     // Clear all app sessionStorage keys
-    ['accessToken', 'refreshToken', 'jh_readMessages', 'jh_blockedUsers', 'jh_messageMeta', 'jh_calendarDate'].forEach(k =>
+    ['accessToken', 'refreshToken', 'jh_readMessages', 'jh_unreadMessages', 'jh_blockedUsers', 'jh_messageMeta', 'jh_calendarDate'].forEach(k =>
       sessionStorage.removeItem(k)
     );
 

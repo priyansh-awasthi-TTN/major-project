@@ -1,5 +1,6 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { jobs, categories } from '../data/mockData';
+import apiService from '../services/api';
 
 const brands = [
   { name: 'vodafone', style: 'text-red-500 font-bold' },
@@ -14,29 +15,76 @@ const categoryIcons = {
   Technology: '💻', Engineering: '</>', Business: '💼', 'Human Resource': '👥',
 };
 
-const featuredJobs = [
-  { id: 1, title: 'Email Marketing', company: 'Revolut', location: 'Madrid, Spain', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'R', color: 'bg-red-500' },
-  { id: 2, title: 'Brand Designer', company: 'Dropbox', location: 'San Francisco, USA', type: 'Full-Time', categories: ['Design', 'Business'], logo: 'D', color: 'bg-blue-500' },
-  { id: 3, title: 'Email Marketing', company: 'Pitch', location: 'Berlin, Germany', type: 'Full-Time', categories: ['Marketing'], logo: 'P', color: 'bg-orange-500' },
-  { id: 4, title: 'Visual Designer', company: 'Blinklist', location: 'Granada, Spain', type: 'Full-Time', categories: ['Design', 'Business'], logo: 'B', color: 'bg-green-500' },
-  { id: 5, title: 'Product Designer', company: 'ClassPass', location: 'Berlin, Germany', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'C', color: 'bg-purple-500' },
-  { id: 6, title: 'Lead Designer', company: 'Canva', location: 'Ankara, Turkey', type: 'Full-Time', categories: ['Design', 'Business'], logo: 'C', color: 'bg-teal-500' },
-  { id: 7, title: 'Brand Strategist', company: 'GoDaddy', location: 'Marseille, France', type: 'Full-Time', categories: ['Marketing', 'Business'], logo: 'G', color: 'bg-green-600' },
-  { id: 8, title: 'Data Analyst', company: 'Twitter', location: 'San Jose, USA', type: 'Full-Time', categories: ['Marketing'], logo: 'T', color: 'bg-sky-500' },
-];
+const featuredJobsFallback = [];
 
-const latestJobs = [
-  { id: 1, title: 'Social Media Assistant', company: 'Nomad', location: 'Paris, France', type: 'Full-Time', categories: ['Full-Time', 'Marketing', 'Design'], logo: 'N', color: 'bg-emerald-500' },
-  { id: 2, title: 'Social Media Assistant', company: 'Udacity', location: 'New York, USA', type: 'Full-Time', categories: ['Full-Time', 'Marketing', 'Design'], logo: 'U', color: 'bg-cyan-500' },
-  { id: 3, title: 'Brand Designer', company: 'Dropbox', location: 'San Francisco, USA', type: 'Full-Time', categories: ['Full-Time', 'Marketing', 'Design'], logo: 'D', color: 'bg-blue-500' },
-  { id: 4, title: 'Brand Designer', company: 'Maze', location: 'San Francisco, USA', type: 'Full-Time', categories: ['Full-Time', 'Marketing', 'Design'], logo: 'M', color: 'bg-purple-500' },
-  { id: 5, title: 'Interactive Developer', company: 'Terraform', location: 'Hamburg, Germany', type: 'Full-Time', categories: ['Full-Time', 'Marketing', 'Design'], logo: 'T', color: 'bg-indigo-500' },
-  { id: 6, title: 'Interactive Developer', company: 'Canva', location: 'Hamburg, Germany', type: 'Full-Time', categories: ['Full-Time', 'Marketing', 'Design'], logo: 'C', color: 'bg-pink-500' },
-  { id: 7, title: 'HR Manager', company: 'Twitter', location: 'Zurich, Switzerland', type: 'Full-Time', categories: ['Full-Time', 'Marketing', 'Design'], logo: 'T', color: 'bg-sky-500' },
-  { id: 8, title: 'HR Manager', company: 'Webflow', location: 'Zurich, Switzerland', type: 'Full-Time', categories: ['Full-Time', 'Marketing', 'Design'], logo: 'W', color: 'bg-blue-700' },
-];
+const latestJobsFallback = [];
+
+const normalizeDelimitedList = (value) => {
+  if (Array.isArray(value)) return value;
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const normalizeJob = (job) => {
+  const categories = normalizeDelimitedList(job.categories);
+  const types = normalizeDelimitedList(job.type);
+  return {
+    ...job,
+    categories,
+    type: types[0] || job.type || 'Full-Time',
+    logo: job.logo || (job.company || 'CO').slice(0, 2).toUpperCase(),
+    color: job.color || 'bg-blue-600',
+  };
+};
+
+const isCompanyJob = (job) => job?.postedByUserId !== null && job?.postedByUserId !== undefined;
 
 export default function Home() {
+  const [featuredJobs, setFeaturedJobs] = useState(featuredJobsFallback);
+  const [latestJobs, setLatestJobs] = useState(latestJobsFallback);
+  const [allJobs, setAllJobs] = useState([]);
+
+  const categories = useMemo(() => {
+    if (!allJobs.length) return [];
+    const counts = allJobs.reduce((accumulator, job) => {
+      const categories = normalizeDelimitedList(job.categories);
+      categories.forEach((category) => {
+        accumulator[category] = (accumulator[category] || 0) + 1;
+      });
+      return accumulator;
+    }, {});
+
+    return Object.entries(counts)
+      .sort(([, leftCount], [, rightCount]) => rightCount - leftCount)
+      .map(([name, jobs]) => ({ name, jobs }))
+      .slice(0, 8);
+  }, [allJobs]);
+
+  useEffect(() => {
+    let active = true;
+
+    apiService.getJobs()
+      .then((data) => {
+        if (!active) return;
+        const normalized = Array.isArray(data) ? data.filter(isCompanyJob).map(normalizeJob) : [];
+        setAllJobs(normalized);
+        setFeaturedJobs(normalized.slice(0, 8));
+        setLatestJobs(normalized.slice(0, 8));
+      })
+      .catch(() => {
+        if (!active) return;
+        setAllJobs([]);
+        setFeaturedJobs([]);
+        setLatestJobs([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <div className="bg-white">
       {/* Hero - dark navy */}
@@ -82,7 +130,11 @@ export default function Home() {
           <Link to="/find-jobs" className="text-blue-600 text-sm hover:underline flex items-center gap-1">Show all jobs →</Link>
         </div>
         <div className="grid grid-cols-4 gap-4">
-          {categories.map(cat => (
+          {categories.length === 0 ? (
+            <div className="col-span-4 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center text-sm text-gray-500">
+              No company jobs posted yet.
+            </div>
+          ) : categories.map(cat => (
             <Link to="/find-jobs" key={cat.name}
               className={`p-5 rounded-xl border transition hover:border-blue-500 hover:shadow-sm cursor-pointer ${cat.name === 'Marketing' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-800'}`}>
               <div className="text-2xl mb-3">{categoryIcons[cat.name] || '💼'}</div>
@@ -121,7 +173,11 @@ export default function Home() {
           <Link to="/find-jobs" className="text-blue-600 text-sm hover:underline">Show all jobs →</Link>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          {featuredJobs.map(job => (
+          {featuredJobs.length === 0 ? (
+            <div className="col-span-2 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center text-sm text-gray-500">
+              No company jobs posted yet.
+            </div>
+          ) : featuredJobs.map(job => (
             <Link to={`/jobs/${job.id}`} key={job.id} className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition block">
               <div className="flex items-start justify-between mb-3">
                 <span className="text-xs border border-blue-500 text-blue-600 rounded px-2 py-0.5">{job.type}</span>
@@ -150,7 +206,11 @@ export default function Home() {
           <Link to="/find-jobs" className="text-blue-600 text-sm hover:underline">Show all jobs →</Link>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          {latestJobs.map((job, i) => (
+          {latestJobs.length === 0 ? (
+            <div className="col-span-2 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center text-sm text-gray-500">
+              No company jobs posted yet.
+            </div>
+          ) : latestJobs.map((job, i) => (
             <Link to={`/jobs/${job.id}`} key={i} className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition flex items-start gap-4 block">
               <div className={`${job.color} text-white rounded-xl w-11 h-11 flex items-center justify-center font-bold text-base flex-shrink-0`}>{job.logo}</div>
               <div className="flex-1">

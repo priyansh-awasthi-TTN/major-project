@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 const API_ORIGIN = new URL(API_BASE_URL).origin;
 
 class ApiService {
@@ -119,6 +119,18 @@ class ApiService {
     });
   }
 
+  async getNotifications() {
+    return this.request('/notifications');
+  }
+
+  async markNotificationRead(id) {
+    return this.request(`/notifications/${id}/read`, { method: 'PATCH' });
+  }
+
+  async markAllNotificationsRead() {
+    return this.request('/notifications/read-all', { method: 'POST' });
+  }
+
   async uploadFile(file) {
     const formData = new FormData();
     formData.append('file', file);
@@ -166,6 +178,10 @@ class ApiService {
   // Company endpoints
   async getCompanyApplications() {
     return this.request('/company/applications');
+  }
+
+  async getCompanyJobs() {
+    return this.request('/company/applications/jobs');
   }
 
   async updateCompanyApplicationStatus(id, status) {

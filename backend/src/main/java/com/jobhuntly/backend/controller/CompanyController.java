@@ -3,8 +3,10 @@ package com.jobhuntly.backend.controller;
 import com.jobhuntly.backend.entity.Application;
 import com.jobhuntly.backend.entity.Job;
 import com.jobhuntly.backend.entity.User;
+import com.jobhuntly.backend.entity.Notification;
 import com.jobhuntly.backend.repository.ApplicationRepository;
 import com.jobhuntly.backend.repository.JobRepository;
+import com.jobhuntly.backend.repository.NotificationRepository;
 import com.jobhuntly.backend.repository.UserRepository;
 import com.jobhuntly.backend.service.JwtService;
 import com.jobhuntly.backend.service.TokenService;
@@ -18,14 +20,46 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/company/applications")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:3000"})
+@CrossOrigin(origins = {"http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174", "http://localhost:3000", "http://127.0.0.1:3000"})
 public class CompanyController {
 
     @Autowired private ApplicationRepository applicationRepository;
     @Autowired private JobRepository jobRepository;
+    @Autowired private NotificationRepository notificationRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private JwtService jwtService;
     @Autowired private TokenService tokenService;
+
+    private Map<String, Object> toJobMap(Job job) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", job.getId());
+        result.put("title", job.getTitle());
+        result.put("company", job.getCompany());
+        result.put("logo", job.getLogo());
+        result.put("color", job.getColor());
+        result.put("location", job.getLocation());
+        result.put("type", job.getType());
+        result.put("categories", job.getCategories() != null ? Arrays.stream(job.getCategories().split(","))
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .toList() : List.of());
+        result.put("level", job.getLevel());
+        result.put("salary", job.getSalary());
+        result.put("applied", job.getApplied() != null ? job.getApplied() : 0);
+        result.put("capacity", job.getCapacity() != null ? job.getCapacity() : 0);
+        result.put("description", job.getDescription());
+        result.put("postedByCompany", job.getPostedByCompany());
+        result.put("postedByUserId", job.getPostedByUserId());
+        result.put("createdAt", job.getCreatedAt() != null ? job.getCreatedAt().toString() : null);
+        result.put("status", isJobClosed(job) ? "Closed" : "Live");
+        return result;
+    }
+
+    private boolean isJobClosed(Job job) {
+        Integer capacity = job.getCapacity();
+        Integer applied = job.getApplied();
+        return capacity != null && capacity > 0 && applied != null && applied >= capacity;
+    }
 
     private User resolveUser(HttpServletRequest request) {
         String header = request.getHeader("Authorization");
@@ -75,6 +109,24 @@ public class CompanyController {
         }
     }
 
+    @GetMapping("/jobs")
+    public ResponseEntity<?> getCompanyJobs(HttpServletRequest request) {
+        try {
+            User companyUser = resolveUser(request);
+            if (companyUser.getUserType() != User.UserType.COMPANY) {
+                return ResponseEntity.status(403).body(Map.of("message", "Only companies can access this"));
+            }
+
+            List<Job> jobs = jobRepository.findByPostedByUserIdOrderByCreatedAtDesc(companyUser.getId());
+            List<Map<String, Object>> result = jobs.stream()
+                    .map(this::toJobMap)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<?> updateApplicantStatus(@PathVariable Long id, @RequestBody Map<String, String> body, HttpServletRequest request) {
         try {
@@ -86,12 +138,35 @@ public class CompanyController {
             Application app = applicationRepository.findById(id).orElseThrow(() -> new RuntimeException("Application not found"));
             Job job = jobRepository.findById(app.getJobId()).orElseThrow(() -> new RuntimeException("Job not found"));
 
-            if (!job.getPostedByUserId().equals(companyUser.getId())) {
+            if (job.getPostedByUserId() == null || !job.getPostedByUserId().equals(companyUser.getId())) {
                 return ResponseEntity.status(403).body(Map.of("message", "Not your job applicant"));
             }
 
-            app.setStatus(body.get("status"));
+            String nextStatus = body.get("status");
+            app.setStatus(nextStatus);
             applicationRepository.save(app);
+
+            Notification candidateNotification = new Notification();
+            candidateNotification.setRecipient(app.getUser());
+            candidateNotification.setActorUserId(companyUser.getId());
+            candidateNotification.setActorName(job.getCompany());
+            candidateNotification.setCategory("applications");
+            candidateNotification.setType("status");
+            candidateNotification.setText("updated your application status for " + job.getTitle());
+            candidateNotification.setBadge(nextStatus);
+            candidateNotification.setBadgeColor("border border-indigo-400 text-indigo-600");
+
+            Notification companyNotification = new Notification();
+            companyNotification.setRecipient(companyUser);
+            companyNotification.setActorUserId(app.getUser().getId());
+            companyNotification.setActorName(app.getUser().getFullName());
+            companyNotification.setCategory("applications");
+            companyNotification.setType("status");
+            companyNotification.setText("moved an applicant to " + nextStatus + " for " + job.getTitle());
+            companyNotification.setBadge(nextStatus);
+            companyNotification.setBadgeColor("border border-indigo-400 text-indigo-600");
+
+            notificationRepository.saveAll(List.of(candidateNotification, companyNotification));
 
             return ResponseEntity.ok(Map.of("message", "Status updated successfully", "status", app.getStatus()));
         } catch (Exception e) {

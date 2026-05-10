@@ -6,9 +6,11 @@ import apiService from '../services/api';
 
 const MessagingContext = createContext(null);
 
-const LS_READ    = 'jh_readMessages';
+const LS_UNREAD  = 'jh_unreadMessages';
 const LS_BLOCKED = 'jh_blockedUsers';
 const LS_META    = 'jh_messageMeta';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+const WS_ORIGIN = new URL(API_BASE_URL).origin;
 const USER_TYPE_LABELS = {
   COMPANY: 'Company',
   JOBSEEKER: 'Jobseeker',
@@ -71,15 +73,21 @@ export function MessagingProvider({ children }) {
   const [chatMap, setChatMap] = useState({}); // { [userId]: [{from, text, time, date}] }
   const [historyLoaded, setHistoryLoaded] = useState({}); // { [userId]: boolean }
 
-  const [readMap, setReadMap] = useState(() => loadLS(LS_READ, {}));
+  const [unreadCountMap, setUnreadCountMap] = useState(() => loadLS(LS_UNREAD, {}));
   const [blockedIds, setBlockedIds] = useState(() => loadLS(LS_BLOCKED, []));
   const [metaMap, setMetaMap] = useState(() => loadLS(LS_META, {}));
 
   const stompClient = useRef(null);
 
-  useEffect(() => { saveLS(LS_READ, readMap); }, [readMap]);
+  useEffect(() => { saveLS(LS_UNREAD, unreadCountMap); }, [unreadCountMap]);
   useEffect(() => { saveLS(LS_BLOCKED, blockedIds); }, [blockedIds]);
   useEffect(() => { saveLS(LS_META, metaMap); }, [metaMap]);
+
+  const readMap = useMemo(() => {
+    return Object.fromEntries(
+      Object.entries(unreadCountMap).map(([id, count]) => [id, Number(count) <= 0]),
+    );
+  }, [unreadCountMap]);
 
   // Load existing conversations on mount
   useEffect(() => {
@@ -91,16 +99,16 @@ export function MessagingProvider({ children }) {
         
         // Populate chatMap with lastMessages if available
         const initMap = {};
-        const initRead = {...readMap};
+        const initUnread = {};
         data.forEach(conv => {
           if (conv.lastMessage) {
             initMap[conv.userId] = [createChatEntry(conv.lastMessage, user.id)];
-            if (conv.unreadCount > 0) initRead[conv.userId] = false;
           }
+          initUnread[conv.userId] = Number(conv.unreadCount) || 0;
         });
         // Dont overwrite full chat history if already loaded
         setChatMap(prev => ({ ...initMap, ...prev }));
-        setReadMap(prev => ({ ...initRead, ...prev }));
+        setUnreadCountMap(prev => ({ ...prev, ...initUnread }));
       } catch (e) {
         console.error('Failed to fetch conversations', e);
       }
@@ -116,7 +124,7 @@ export function MessagingProvider({ children }) {
     // Connect to WebSocket using the appropriate fallback logic
     const client = new Client({
       // We use base 8080 API port
-      webSocketFactory: () => new SockJS(`http://localhost:8080/ws?token=${token}`),
+      webSocketFactory: () => new SockJS(`${WS_ORIGIN}/ws?token=${token}`),
       connectHeaders: {
         Authorization: `Bearer ${token}`
       },
@@ -136,7 +144,7 @@ export function MessagingProvider({ children }) {
           }));
           
           if (!isMe) {
-            setReadMap(prev => ({ ...prev, [otherUserId]: false }));
+            setUnreadCountMap(prev => ({ ...prev, [otherUserId]: (Number(prev[otherUserId]) || 0) + 1 }));
             // Add to conversation list if brand new chat!
             setConversations(prev => {
               if (prev.find(c => c.userId === otherUserId)) return prev;
@@ -179,6 +187,7 @@ export function MessagingProvider({ children }) {
   const messages = conversations.map(c => {
     const userChats = chatMap[c.userId] || [];
     const lastChat = userChats[userChats.length - 1];
+    const unreadCount = Number(unreadCountMap[c.userId] ?? c.unreadCount ?? 0);
     
     return {
       id: c.userId,
@@ -187,7 +196,8 @@ export function MessagingProvider({ children }) {
       company: 'Platform User',
       avatar: (c.userName || 'AA').split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase(),
       avatarColor: colors[c.userId % colors.length],
-      isRead: readMap[c.userId] ?? true,
+      isRead: unreadCount === 0,
+      unreadCount,
       time: lastChat ? lastChat.time : '',
       preview: getPreviewText(lastChat),
       isPinned:   metaMap[c.userId]?.isPinned   ?? false,
@@ -203,11 +213,11 @@ export function MessagingProvider({ children }) {
 
   // Compute total unread for UI badging across apps!
   const totalUnreadCount = useMemo(() => {
-    return visibleMessages.filter(m => !m.isRead).length;
+    return visibleMessages.reduce((sum, message) => sum + (Number(message.unreadCount) || 0), 0);
   }, [visibleMessages]);
 
   const markRead = useCallback((id) => {
-    setReadMap(prev => ({ ...prev, [id]: true }));
+    setUnreadCountMap(prev => ({ ...prev, [id]: 0 }));
     apiService.markMessagesAsRead(id).catch(err => console.error("Failed to mark read", err));
   }, []);
 
@@ -259,6 +269,7 @@ export function MessagingProvider({ children }) {
       if (prev.find(c => c.userId === userId)) return prev;
       return [{ userId, userName, userEmail, userType }, ...prev];
     });
+    setUnreadCountMap(prev => ({ ...prev, [userId]: Number(prev[userId]) || 0 }));
   }, []);
 
   return (

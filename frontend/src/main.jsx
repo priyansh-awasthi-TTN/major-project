@@ -5,6 +5,7 @@ import App from './App.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { NotificationProvider } from './context/NotificationContext.jsx'
 import { MessagingProvider } from './context/MessagingContext.jsx'
+import { ToastProvider } from './components/Toast.jsx'
 import NotificationToast from './components/NotificationToast.jsx'
 
 createRoot(document.getElementById('root')).render(
@@ -12,8 +13,10 @@ createRoot(document.getElementById('root')).render(
     <AuthProvider>
       <NotificationProvider>
         <MessagingProvider>
-          <App />
-          <NotificationToast />
+          <ToastProvider>
+            <App />
+            <NotificationToast />
+          </ToastProvider>
         </MessagingProvider>
       </NotificationProvider>
     </AuthProvider>

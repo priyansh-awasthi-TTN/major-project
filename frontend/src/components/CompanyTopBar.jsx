@@ -2,13 +2,12 @@ import { Link } from 'react-router-dom';
 import { BellIcon, ChevronDownIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
-import { companyApplicantsReferenceMeta } from '../data/companyApplicantsReference';
 
 export default function CompanyTopBar({ title, subtitle, variant = 'default' }) {
   const { user } = useAuth();
   const { unreadCount = 0 } = useNotifications();
 
-  const companyName = user?.companyName || user?.fullName || companyApplicantsReferenceMeta.companyName;
+  const companyName = user?.companyName || user?.fullName || 'Company Workspace';
   const heading = title || companyName;
   const supportingText = subtitle || (title ? companyName : 'Company workspace');
 

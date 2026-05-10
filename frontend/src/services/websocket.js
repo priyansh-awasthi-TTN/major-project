@@ -1,10 +1,14 @@
 import SockJS from 'sockjs-client';
 import { Stomp } from '@stomp/stompjs';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+const WS_ORIGIN = new URL(API_BASE_URL).origin;
+
 class WebSocketService {
   constructor() {
     this.stompClient = null;
     this.connected = false;
+    this.userId = null;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
     this.reconnectInterval = 3000;
@@ -12,7 +16,7 @@ class WebSocketService {
     this.messageHandlers = new Map();
   }
 
-  connect(token) {
+  connect(token, userId) {
     if (this.connected) {
       console.log('WebSocket already connected');
       return Promise.resolve();
@@ -20,12 +24,13 @@ class WebSocketService {
 
     return new Promise((resolve, reject) => {
       try {
-        const socket = new SockJS('http://localhost:8080/ws');
+        this.userId = userId;
+        const socket = new SockJS(`${WS_ORIGIN}/ws`);
         this.stompClient = Stomp.over(socket);
         
         // Disable debug logging in production
         this.stompClient.debug = (str) => {
-          if (process.env.NODE_ENV === 'development') {
+          if (import.meta.env.DEV) {
             console.log('STOMP: ' + str);
           }
         };
@@ -50,7 +55,7 @@ class WebSocketService {
           (error) => {
             console.error('WebSocket connection error:', error);
             this.connected = false;
-            this.handleReconnect(token);
+            this.handleReconnect(token, userId);
             reject(error);
           }
         );
@@ -62,10 +67,10 @@ class WebSocketService {
   }
 
   subscribeToUserQueues() {
-    if (!this.stompClient || !this.connected) return;
+    if (!this.stompClient || !this.connected || !this.userId) return;
 
     // Subscribe to private message queue
-    const messageSubscription = this.stompClient.subscribe('/user/queue/messages', (message) => {
+    const messageSubscription = this.stompClient.subscribe(`/topic/messages/${this.userId}`, (message) => {
       try {
         const messageData = JSON.parse(message.body);
         this.handleMessage('messages', messageData);
@@ -75,7 +80,7 @@ class WebSocketService {
     });
 
     // Subscribe to notification queue
-    const notificationSubscription = this.stompClient.subscribe('/user/queue/notifications', (notification) => {
+    const notificationSubscription = this.stompClient.subscribe(`/topic/messages/${this.userId}/notifications`, (notification) => {
       try {
         const notificationData = JSON.parse(notification.body);
         this.handleMessage('notifications', notificationData);
@@ -99,7 +104,7 @@ class WebSocketService {
     });
   }
 
-  sendMessage(receiverId, content, messageType = 'TEXT') {
+  sendMessage(receiverId, content, senderId, messageType = 'TEXT') {
     if (!this.stompClient || !this.connected) {
       console.error('WebSocket not connected');
       return false;
@@ -107,13 +112,14 @@ class WebSocketService {
 
     try {
       const messageData = {
+        senderId,
         receiverId,
         content,
         messageType,
         timestamp: new Date().toISOString()
       };
 
-      this.stompClient.send('/app/chat.sendMessage', {}, JSON.stringify(messageData));
+      this.stompClient.send('/app/chat.send', {}, JSON.stringify(messageData));
       return true;
     } catch (error) {
       console.error('Error sending message:', error);
@@ -149,7 +155,7 @@ class WebSocketService {
     }
   }
 
-  handleReconnect(token) {
+  handleReconnect(token, userId) {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.error('Max reconnection attempts reached');
       return;
@@ -159,7 +165,7 @@ class WebSocketService {
     console.log(`Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
 
     setTimeout(() => {
-      this.connect(token).catch(error => {
+      this.connect(token, userId).catch(error => {
         console.error('Reconnection failed:', error);
       });
     }, this.reconnectInterval * this.reconnectAttempts);
@@ -180,6 +186,7 @@ class WebSocketService {
     }
     
     this.connected = false;
+    this.userId = null;
     this.stompClient = null;
     this.messageHandlers.clear();
   }

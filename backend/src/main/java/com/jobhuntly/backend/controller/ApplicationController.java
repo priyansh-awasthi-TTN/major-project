@@ -129,33 +129,40 @@ public class ApplicationController {
     public ResponseEntity<?> create(@RequestBody ApplicationRequest req, HttpServletRequest request) {
         try {
             User user = resolveUser(request);
-            if (req.getJobId() != null && applicationRepository.existsByUserAndJobId(user, req.getJobId())) {
+            if (req.getJobId() == null) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Job id is required."));
+            }
+
+            Job job = jobRepository.findById(req.getJobId())
+                    .orElseThrow(() -> new RuntimeException("Job not found"));
+
+            if (job.getPostedByUserId() == null) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Only company-posted jobs can accept applications."));
+            }
+
+            if (applicationRepository.existsByUserAndJobId(user, job.getId())) {
                 return ResponseEntity.badRequest().body(Map.of("message", "You have already applied for this job."));
             }
             Application app = new Application();
             app.setUser(user);
-            app.setJobId(req.getJobId());
-            app.setCompany(req.getCompany());
-            app.setLogo(req.getLogo());
-            app.setColor(req.getColor());
-            app.setLocation(req.getLocation());
-            app.setTitle(req.getTitle());
-            app.setType(req.getType());
+            app.setJobId(job.getId());
+            app.setCompany(job.getCompany());
+            app.setLogo(job.getLogo());
+            app.setColor(job.getColor());
+            app.setLocation(job.getLocation());
+            app.setTitle(job.getTitle());
+            app.setType(job.getType());
             app.setDateApplied(req.getDateApplied() != null ? req.getDateApplied() : LocalDate.now());
             app.setStatus(req.getStatus() != null ? req.getStatus() : "In Review");
-            app.setSalary(req.getSalary());
+            app.setSalary(job.getSalary() != null ? String.valueOf(job.getSalary()) : req.getSalary());
             app.setNote(req.getNote());
             app.setResumeUrl(req.getResumeUrl());
             app.setCoverLetter(req.getCoverLetter());
             Application saved = applicationRepository.save(app);
 
             // Increment applied count on the job
-            if (req.getJobId() != null) {
-                jobRepository.findById(req.getJobId()).ifPresent(job -> {
-                    job.setApplied((job.getApplied() != null ? job.getApplied() : 0) + 1);
-                    jobRepository.save(job);
-                });
-            }
+            job.setApplied((job.getApplied() != null ? job.getApplied() : 0) + 1);
+            jobRepository.save(job);
 
             return ResponseEntity.ok(toMap(saved));
         } catch (Exception e) {

@@ -1,10 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import SearchableFilterInput from '../../components/SearchableFilterInput';
-import {
-  buildBrowseCompaniesFromJobs,
-  getCompanyRouteId,
-} from '../../data/discoveryData';
+import { getCompanyRouteId } from '../../data/discoveryData';
 import DashTopBar from '../../components/DashTopBar';
 import apiService from '../../services/api';
 import {
@@ -16,6 +13,49 @@ import {
 
 const SORT_OPTIONS = ['Most relevant', 'Most jobs', 'A-Z', 'Z-A'];
 const PAGE_SIZE = 6;
+
+const normalizeDelimitedList = (value) => {
+  if (Array.isArray(value)) return value;
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const unique = (values) => [...new Set(values.filter(Boolean))];
+
+const buildCompaniesFromJobs = (jobs = []) => {
+  const grouped = new Map();
+
+  jobs.forEach((job) => {
+    const companyName = (job.company || '').trim();
+    if (!companyName) return;
+    const currentJobs = grouped.get(companyName) || [];
+    currentJobs.push(job);
+    grouped.set(companyName, currentJobs);
+  });
+
+  return [...grouped.entries()]
+    .map(([companyName, companyJobs]) => {
+      const primaryJob = companyJobs[0] || {};
+      const tags = unique(companyJobs.flatMap((job) => normalizeDelimitedList(job.categories)));
+      const officeLocations = unique(companyJobs.map((job) => job.location));
+
+      return {
+        id: companyName,
+        name: companyName,
+        description: primaryJob.companyDescription || `${companyName} is hiring right now.`,
+        logo: primaryJob.logo || companyName.slice(0, 2).toUpperCase(),
+        color: primaryJob.color || 'bg-blue-600',
+        industry: tags[0] || 'Hiring',
+        size: primaryJob.companySize || '1-50',
+        tags,
+        officeLocations,
+        jobs: companyJobs.length,
+      };
+    })
+    .sort((left, right) => left.name.localeCompare(right.name));
+};
 
 function FilterSection({ title, children }) {
   const [open, setOpen] = useState(true);
@@ -103,16 +143,20 @@ export default function DashCompanies() {
   const [page, setPage]             = useState(1);
   const [selIndustry, setSelIndustry] = useState([]);
   const [selSize, setSelSize]         = useState([]);
-  const [allCompanies, setAllCompanies] = useState(() => buildBrowseCompaniesFromJobs());
+  const [allCompanies, setAllCompanies] = useState([]);
 
   useEffect(() => {
     apiService.getJobs()
       .then((jobsData) => {
         if (jobsData?.length) {
-          setAllCompanies(buildBrowseCompaniesFromJobs(jobsData));
+          setAllCompanies(buildCompaniesFromJobs(jobsData));
+        } else {
+          setAllCompanies([]);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        setAllCompanies([]);
+      });
   }, []);
 
   const locationOptions = useMemo(
@@ -188,6 +232,7 @@ export default function DashCompanies() {
     setPage(1);
   };
   const hasFilters = selIndustry.length || selSize.length || countryQuery.trim() || regionQuery.trim();
+  const hasCompanies = allCompanies.length > 0;
 
   return (
     <div className="flex-1 flex flex-col h-full bg-gray-50">
@@ -316,7 +361,13 @@ export default function DashCompanies() {
           ) : null}
 
           {/* Company cards */}
-          {paginated.length === 0 ? (
+          {!hasCompanies ? (
+            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+              <span className="text-5xl mb-3">🏢</span>
+              <p className="text-lg font-medium text-gray-500">No company jobs posted yet</p>
+              <p className="text-sm mt-1">Companies will appear here once they post roles.</p>
+            </div>
+          ) : paginated.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <span className="text-5xl mb-3">🏢</span>
               <p className="text-lg font-medium text-gray-500">No companies found</p>

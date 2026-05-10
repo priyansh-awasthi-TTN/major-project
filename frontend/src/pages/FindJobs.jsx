@@ -1,9 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ApplicationProgressBar from '../components/ApplicationProgressBar';
 import SearchableFilterInput from '../components/SearchableFilterInput';
-import { findJobsFallback } from '../data/discoveryData';
 import apiService from '../services/api';
 import {
   buildApplicationProgressMap,
@@ -26,6 +25,16 @@ const SALARY_RANGES = [
   { label: '$3000 or above', min: 3000, max: Infinity },
 ];
 
+const normalizeJobTypes = (value) => {
+  if (Array.isArray(value)) return value;
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const isCompanyJob = (job) => job?.postedByUserId !== null && job?.postedByUserId !== undefined;
+
 export default function FindJobs() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -46,7 +55,7 @@ export default function FindJobs() {
   const [regionInput, setRegionInput] = useState('');
   const [regionQuery, setRegionQuery] = useState('');
   const [viewGrid, setViewGrid] = useState(false);
-  const [allJobs, setAllJobs] = useState(findJobsFallback);
+  const [allJobs, setAllJobs] = useState([]);
   const [submittedJobIds, setSubmittedJobIds] = useState([]);
 
   useEffect(() => {
@@ -62,7 +71,9 @@ export default function FindJobs() {
         if (!active) return;
 
         if (jobsData?.length) {
-          setAllJobs(jobsData);
+          setAllJobs(jobsData.filter(isCompanyJob));
+        } else {
+          setAllJobs([]);
         }
 
         if (user && Array.isArray(applications)) {
@@ -104,7 +115,11 @@ export default function FindJobs() {
     [allJobLocations, countryInput],
   );
 
-  const typeCounts = useMemo(() => Object.fromEntries(EMPLOYMENT_TYPES.map(t => [t, allJobs.filter(j => j.type === t).length])), [allJobs]);
+  const typeCounts = useMemo(() => (
+    Object.fromEntries(
+      EMPLOYMENT_TYPES.map((t) => [t, allJobs.filter((j) => normalizeJobTypes(j.type).includes(t)).length]),
+    )
+  ), [allJobs]);
   const catCounts = useMemo(() => Object.fromEntries(CATEGORIES.map(c => [c, allJobs.filter(j => Array.isArray(j.categories) ? j.categories.includes(c) : (j.categories || '').includes(c)).length])), [allJobs]);
   const levelCounts = useMemo(() => Object.fromEntries(JOB_LEVELS.map(l => [l, allJobs.filter(j => j.level === l).length])), [allJobs]);
 
@@ -112,9 +127,10 @@ export default function FindJobs() {
     let result = allJobs.filter(j => {
       const cats = Array.isArray(j.categories) ? j.categories : (j.categories || '').split(',').map(s => s.trim()).filter(Boolean);
       const q = searchQuery.toLowerCase();
-      const matchSearch = !q || j.title.toLowerCase().includes(q) || j.company.toLowerCase().includes(q);
+      const matchSearch = !q || (j.title || '').toLowerCase().includes(q) || (j.company || '').toLowerCase().includes(q);
       const matchLoc = matchesLocationFilters([j.location], countryQuery, regionQuery);
-      const matchType   = selTypes.length === 0 || selTypes.includes(j.type);
+      const jobTypes = normalizeJobTypes(j.type);
+      const matchType   = selTypes.length === 0 || selTypes.some((t) => jobTypes.includes(t));
       const matchCat    = selCats.length === 0  || selCats.some(c => cats.includes(c));
       const matchLevel  = selLevels.length === 0 || selLevels.includes(j.level);
       const matchSalary = selSalary.length === 0 || selSalary.some(r => {
@@ -299,13 +315,15 @@ export default function FindJobs() {
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-6 py-16 text-center">
               <p className="text-4xl mb-3">🔍</p>
-              <p className="text-lg font-medium text-gray-600">No jobs found</p>
+              <p className="text-lg font-medium text-gray-600">No company jobs posted yet</p>
               <p className="text-sm text-gray-400 mt-1">
                 {hasActiveLocationFilter
                   ? 'No jobs match the selected country and state/city.'
-                  : 'Try changing your keywords or filters.'}
+                  : 'Check back soon for new openings.'}
               </p>
-              <button onClick={clearAll} className="mt-4 text-sm text-blue-600 hover:underline">Clear all filters</button>
+              {hasActiveLocationFilter ? (
+                <button onClick={clearAll} className="mt-4 text-sm text-blue-600 hover:underline">Clear all filters</button>
+              ) : null}
             </div>
           ) : !viewGrid && (
             <div className="space-y-4">
@@ -330,7 +348,9 @@ export default function FindJobs() {
                       </div>
                       <p className="text-sm text-gray-500">{job.company} • {job.location}</p>
                       <div className="flex flex-wrap gap-2 mt-2">
-                        <span className="text-xs border border-green-500 text-green-600 rounded px-2 py-0.5">{job.type}</span>
+                        {normalizeJobTypes(job.type).map((type) => (
+                          <span key={type} className="text-xs border border-green-500 text-green-600 rounded px-2 py-0.5">{type}</span>
+                        ))}
                         {(Array.isArray(job.categories) ? job.categories : (job.categories || '').split(',').map(s => s.trim()).filter(Boolean)).map(c => (
                           <span key={c} className={`text-xs rounded px-2 py-0.5 border ${c === 'Design' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>{c}</span>
                         ))}
@@ -369,7 +389,11 @@ export default function FindJobs() {
                 return (
                   <div key={job.id} className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-sm transition">
                     <div className="flex items-start justify-between mb-3">
-                      <span className="text-xs border border-green-500 text-green-600 rounded px-2 py-0.5">{job.type}</span>
+                      <div className="flex flex-wrap gap-2">
+                        {normalizeJobTypes(job.type).map((type) => (
+                          <span key={type} className="text-xs border border-green-500 text-green-600 rounded px-2 py-0.5">{type}</span>
+                        ))}
+                      </div>
                       <button
                         onClick={() => handleApply(job.id)}
                         className={`${buttonClass} text-xs px-3 py-1.5 rounded-lg transition`}

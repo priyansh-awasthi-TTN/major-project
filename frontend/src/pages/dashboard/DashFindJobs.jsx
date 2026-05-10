@@ -1,14 +1,12 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import ApplicationProgressBar from '../../components/ApplicationProgressBar';
 import SearchableFilterInput from '../../components/SearchableFilterInput';
 import DashTopBar from '../../components/DashTopBar';
 import { useAuth } from '../../context/AuthContext';
-import { findJobsFallback } from '../../data/discoveryData';
 import apiService from '../../services/api';
 import {
   buildApplicationProgressMap,
-  getSubmittedApplicationIds,
   syncSubmittedApplications,
 } from '../../utils/applicationDrafts';
 import {
@@ -28,6 +26,28 @@ const SALARY_RANGES = [
 ];
 const SORT_OPTIONS = ['Most relevant', 'Newest', 'Oldest', 'Salary (High-Low)', 'Salary (Low-High)'];
 const PAGE_SIZE = 9;
+
+const normalizeJobTypes = (value) => {
+  if (Array.isArray(value)) return value;
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const isCompanyJob = (job) => job?.postedByUserId !== null && job?.postedByUserId !== undefined;
+
+const typeBadgeClass = (type) => (
+  type === 'Full-Time'
+    ? 'border-green-500 text-green-600'
+    : type === 'Part-Time'
+      ? 'border-blue-500 text-blue-600'
+      : type === 'Remote'
+        ? 'border-teal-500 text-teal-600'
+        : type === 'Internship'
+          ? 'border-yellow-500 text-yellow-600'
+          : 'border-purple-500 text-purple-600'
+);
 
 function FilterSection({ title, children, defaultOpen = true }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -68,13 +88,14 @@ function ListJobCard({ job, viewParam, applicationState }) {
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <span className={`text-xs border rounded px-2 py-0.5 font-medium ${
-                  job.type === 'Full-Time' ? 'border-green-500 text-green-600' :
-                  job.type === 'Part-Time' ? 'border-blue-500 text-blue-600' :
-                  job.type === 'Remote' ? 'border-teal-500 text-teal-600' :
-                  job.type === 'Internship' ? 'border-yellow-500 text-yellow-600' :
-                  'border-purple-500 text-purple-600'
-                }`}>{job.type}</span>
+                {normalizeJobTypes(job.type).map((type) => (
+                  <span
+                    key={type}
+                    className={`text-xs border rounded px-2 py-0.5 font-medium ${typeBadgeClass(type)}`}
+                  >
+                    {type}
+                  </span>
+                ))}
               </div>
               <h3 className="font-semibold text-gray-900 text-sm hover:text-blue-600">{job.title}</h3>
               <p className="text-xs text-gray-500 mt-0.5">{job.company} • {job.location}</p>
@@ -122,13 +143,11 @@ function GridJobCard({ job, viewParam, applicationState }) {
         <h3 className="font-semibold text-gray-900 text-sm hover:text-blue-600 mb-0.5">{job.title}</h3>
         <p className="text-xs text-gray-500 mb-2">{job.company} • {job.location}</p>
         <div className="mb-3">
-          <span className={`text-xs border rounded px-2 py-0.5 font-medium ${
-            job.type === 'Full-Time' ? 'border-green-500 text-green-600' :
-            job.type === 'Part-Time' ? 'border-blue-500 text-blue-600' :
-            job.type === 'Remote' ? 'border-teal-500 text-teal-600' :
-            job.type === 'Internship' ? 'border-yellow-500 text-yellow-600' :
-            'border-purple-500 text-purple-600'
-          }`}>{job.type}</span>
+          <div className="flex flex-wrap gap-2">
+            {normalizeJobTypes(job.type).map((type) => (
+              <span key={type} className={`text-xs border rounded px-2 py-0.5 font-medium ${typeBadgeClass(type)}`}>{type}</span>
+            ))}
+          </div>
         </div>
         <div className="flex flex-wrap gap-1 mb-3">
           {(Array.isArray(job.categories) ? job.categories : (job.categories||'').split(',').map(s=>s.trim()).filter(Boolean)).map(c => (
@@ -156,33 +175,39 @@ export default function DashFindJobs() {
   const [regionQuery, setRegionQuery] = useState('');
   const [sortBy, setSortBy] = useState('Most relevant');
   const [page, setPage] = useState(1);
-  const [allJobs, setAllJobs] = useState(findJobsFallback);
+  const [allJobs, setAllJobs] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
   const [submittedJobIds, setSubmittedJobIds] = useState([]);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [loadError, setLoadError] = useState('');
+
+  const reloadJobs = useCallback(async (showSpinner = false) => {
+    if (showSpinner) setLoadingJobs(true);
+    setLoadError('');
+
+    try {
+      const jobsData = await apiService.getJobs();
+      const appsData = user ? await apiService.getApplications().catch(() => null) : null;
+      const companyJobs = Array.isArray(jobsData) ? jobsData.filter(isCompanyJob) : [];
+
+      setAllJobs(companyJobs);
+      setSubmittedJobIds(user && Array.isArray(appsData) ? Array.from(syncSubmittedApplications(user, appsData)) : []);
+      setLastUpdated(new Date().toISOString());
+    } catch (error) {
+      setLoadError(error?.message || 'Unable to load jobs right now.');
+    } finally {
+      if (showSpinner) setLoadingJobs(false);
+    }
+  }, [user]);
 
   useEffect(() => {
-    let active = true;
+    reloadJobs(true);
+    const interval = setInterval(() => {
+      reloadJobs(false);
+    }, 30000);
 
-    setSubmittedJobIds(user ? Array.from(getSubmittedApplicationIds(user)) : []);
-
-    Promise.all([
-      apiService.getJobs().catch(() => null),
-      user ? apiService.getApplications().catch(() => null) : Promise.resolve(null)
-    ]).then(([jobsData, appsData]) => {
-      if (!active) return;
-      if (jobsData?.length) setAllJobs(jobsData);
-      if (user && Array.isArray(appsData)) {
-        setSubmittedJobIds(Array.from(syncSubmittedApplications(user, appsData)));
-      }
-    }).catch(() => {})
-      .finally(() => {
-        if (active) setLoadingJobs(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [user]);
+    return () => clearInterval(interval);
+  }, [reloadJobs]);
 
   useEffect(() => {
     if (!companyParam) return;
@@ -212,7 +237,11 @@ export default function DashFindJobs() {
   );
 
   // Compute counts dynamically — depend on allJobs so they update after API load
-  const typeCounts  = useMemo(() => Object.fromEntries(EMPLOYMENT_TYPES.map(t => [t, allJobs.filter(j => j.type === t).length])), [allJobs]);
+  const typeCounts  = useMemo(() => (
+    Object.fromEntries(
+      EMPLOYMENT_TYPES.map((t) => [t, allJobs.filter((j) => normalizeJobTypes(j.type).includes(t)).length]),
+    )
+  ), [allJobs]);
   const catCounts   = useMemo(() => Object.fromEntries(CATEGORIES.map(c => [c, allJobs.filter(j => Array.isArray(j.categories) ? j.categories.includes(c) : (j.categories || '').includes(c)).length])), [allJobs]);
   const levelCounts = useMemo(() => Object.fromEntries(JOB_LEVELS.map(l => [l, allJobs.filter(j => j.level === l).length])), [allJobs]);
 
@@ -225,7 +254,8 @@ export default function DashFindJobs() {
 
       const q = searchQuery.toLowerCase();
       const matchSearch = !q || j.title.toLowerCase().includes(q) || j.company.toLowerCase().includes(q) || (j.location || '').toLowerCase().includes(q);
-      const matchType   = selTypes.length === 0 || selTypes.includes(j.type);
+      const jobTypes = normalizeJobTypes(j.type);
+      const matchType   = selTypes.length === 0 || selTypes.some((t) => jobTypes.includes(t));
       const matchCat    = selCats.length === 0  || selCats.some(c => cats.includes(c));
       const matchLevel  = selLevels.length === 0 || selLevels.includes(j.level);
       const matchLoc = matchesLocationFilters([j.location], countryQuery, regionQuery);
@@ -394,6 +424,12 @@ export default function DashFindJobs() {
               ) : null}
             </div>
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => reloadJobs(true)}
+                className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+              >
+                Refresh
+              </button>
               <div className="flex items-center gap-1.5 text-sm text-gray-600">
                 <span>Sort by:</span>
                 <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }}
@@ -411,6 +447,18 @@ export default function DashFindJobs() {
               </button>
             </div>
           </div>
+
+          {loadError ? (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+              {loadError}
+            </div>
+          ) : null}
+
+          {lastUpdated ? (
+            <p className="mb-4 text-xs text-gray-400">
+              Last updated {new Date(lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </p>
+          ) : null}
 
           {/* Active filter chips */}
           {hasFilters ? (

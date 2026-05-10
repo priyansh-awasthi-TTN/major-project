@@ -1,46 +1,38 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  EllipsisHorizontalIcon,
   FunnelIcon,
   MagnifyingGlassIcon,
-  StarIcon as StarOutlineIcon,
+  Squares2X2Icon,
+  TableCellsIcon,
 } from '@heroicons/react/24/outline';
-import { StarIcon } from '@heroicons/react/24/solid';
 import CompanyTopBar from '../../components/CompanyTopBar';
-import ApplicantPortrait from '../../components/ApplicantPortrait';
+import apiService from '../../services/api';
 import {
-  applicantReferenceList,
-  companyApplicantsReferenceMeta,
-} from '../../data/companyApplicantsReference';
+  buildJobsById,
+  COMPANY_STAGE_OPTIONS,
+  filterApplications,
+  formatNumber,
+  getInitials,
+  normalizeApplication,
+  normalizeJob,
+} from '../../utils/companyData';
 
-const stageBadgeStyles = {
-  Interview: 'border-[#f0b34a] text-[#f0b34a]',
-  Shortlisted: 'border-[#6b5cff] text-[#6b5cff]',
-  Declined: 'border-[#ff6550] text-[#ff6550]',
-  Hired: 'border-[#56cdad] text-[#56cdad]',
-  Interviewed: 'border-[#4f9cff] text-[#4f9cff]',
-  'In Review': 'border-[#98a2b3] text-[#98a2b3]',
-};
-
-const pipelineColumns = ['In Review', 'Shortlisted', 'Interview', 'Interviewed', 'Hired', 'Declined'];
-
-function compareValues(a, b, direction) {
-  if (a < b) return direction === 'asc' ? -1 : 1;
-  if (a > b) return direction === 'asc' ? 1 : -1;
+function compareValues(left, right, direction) {
+  if (left < right) return direction === 'asc' ? -1 : 1;
+  if (left > right) return direction === 'asc' ? 1 : -1;
   return 0;
 }
 
-function RatingCell({ score, scoreLabel }) {
-  const empty = score <= 0;
-
+function LoadingState() {
   return (
-    <div className="flex items-center gap-1.5 text-[13px] text-[#25324b]">
-      {empty ? <StarOutlineIcon className="h-4 w-4 text-[#25324b]" /> : <StarIcon className="h-4 w-4 text-[#ffb836]" />}
-      <span>{scoreLabel}</span>
+    <div className="flex min-h-[50vh] items-center justify-center">
+      <div className="text-center">
+        <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-indigo-600" />
+        <p className="mt-3 text-sm text-slate-500">Loading applicants...</p>
+      </div>
     </div>
   );
 }
@@ -52,10 +44,10 @@ function TableHeaderButton({ label, sortKey, currentSort, onSort }) {
     <button
       type="button"
       onClick={() => onSort(sortKey)}
-      className="flex items-center gap-2 text-[12px] font-medium text-[#7c8493] transition hover:text-[#25324b]"
+      className="flex items-center gap-2 text-[12px] font-medium text-slate-500 transition hover:text-slate-900"
     >
       <span>{label}</span>
-      <ChevronDownIcon className={`h-3.5 w-3.5 transition ${isActive && currentSort.direction === 'desc' ? 'rotate-180' : ''}`} />
+      <span className={`transition ${isActive && currentSort.direction === 'desc' ? 'rotate-180' : ''}`}>⌄</span>
     </button>
   );
 }
@@ -64,18 +56,22 @@ function PipelineCard({ applicant }) {
   return (
     <Link
       to={`/company/applicants/${applicant.id}`}
-      className="block rounded-[6px] border border-[#d6ddeb] bg-white p-4 transition hover:border-[#5b4ff7]"
+      className="block rounded-[10px] border border-slate-200 bg-white p-4 transition hover:border-indigo-300"
     >
       <div className="flex items-center gap-3">
-        <ApplicantPortrait palette={applicant.avatarPalette} className="h-10 w-10 border border-white shadow-sm" />
+        <div className={`flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-semibold text-white ${applicant.avatarTone}`}>
+          {getInitials(applicant.candidateName)}
+        </div>
         <div className="min-w-0">
-          <p className="truncate text-[14px] font-semibold text-[#25324b]">{applicant.name}</p>
-          <p className="truncate text-[12px] text-[#7c8493]">{applicant.jobRole}</p>
+          <p className="truncate text-sm font-semibold text-slate-900">{applicant.candidateName}</p>
+          <p className="truncate text-xs text-slate-500">{applicant.jobTitle}</p>
         </div>
       </div>
       <div className="mt-3 flex items-center justify-between">
-        <RatingCell score={applicant.score} scoreLabel={applicant.scoreLabel} />
-        <span className="text-[12px] text-[#7c8493]">{applicant.appliedDate}</span>
+        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+          {applicant.stage}
+        </span>
+        <span className="text-[12px] text-slate-500">{applicant.dateAppliedLabel}</span>
       </div>
     </Link>
   );
@@ -88,48 +84,66 @@ export default function AllApplicants() {
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
-  const [selectedApplicantIds, setSelectedApplicantIds] = useState([]);
+  const [sortConfig, setSortConfig] = useState({ key: 'dateApplied', direction: 'desc' });
+  const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadApplicants = async () => {
+      setLoading(true);
+      setError('');
+
+      try {
+        const [jobsResponse, applicationsResponse] = await Promise.all([
+          apiService.getCompanyJobs(),
+          apiService.getCompanyApplications(),
+        ]);
+
+        if (cancelled) return;
+
+        const normalizedJobs = (jobsResponse || []).map(normalizeJob);
+        const jobsById = buildJobsById(normalizedJobs);
+        const normalizedApplications = (applicationsResponse || []).map((item) => normalizeApplication(item, jobsById));
+        setApplications(normalizedApplications);
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError.message || 'Failed to load applicants.');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadApplicants();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredApplicants = useMemo(() => {
-    let results = [...applicantReferenceList];
+    const base = filterApplications(applications, { search: searchQuery, stage: filterStage });
 
-    if (filterStage !== 'all') {
-      results = results.filter((applicant) => applicant.stage === filterStage);
-    }
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.trim().toLowerCase();
-      results = results.filter((applicant) => {
-        return (
-          applicant.name.toLowerCase().includes(query) ||
-          applicant.jobRole.toLowerCase().includes(query) ||
-          applicant.profileRole.toLowerCase().includes(query)
-        );
-      });
-    }
-
-    if (sortConfig.key) {
-      results.sort((left, right) => {
-        switch (sortConfig.key) {
-          case 'name':
-            return compareValues(left.name, right.name, sortConfig.direction);
-          case 'score':
-            return compareValues(left.score, right.score, sortConfig.direction);
-          case 'stage':
-            return compareValues(left.stage, right.stage, sortConfig.direction);
-          case 'appliedDate':
-            return compareValues(left.appliedOrder, right.appliedOrder, sortConfig.direction);
-          case 'jobRole':
-            return compareValues(left.jobRole, right.jobRole, sortConfig.direction);
-          default:
-            return 0;
-        }
-      });
-    }
-
-    return results;
-  }, [filterStage, searchQuery, sortConfig]);
+    return [...base].sort((left, right) => {
+      switch (sortConfig.key) {
+        case 'candidateName':
+          return compareValues(left.candidateName, right.candidateName, sortConfig.direction);
+        case 'score':
+          return compareValues(left.score, right.score, sortConfig.direction);
+        case 'stage':
+          return compareValues(left.stage, right.stage, sortConfig.direction);
+        case 'jobTitle':
+          return compareValues(left.jobTitle, right.jobTitle, sortConfig.direction);
+        case 'dateApplied':
+        default:
+          return compareValues(left.dateApplied?.getTime() || 0, right.dateApplied?.getTime() || 0, sortConfig.direction);
+      }
+    });
+  }, [applications, filterStage, searchQuery, sortConfig.direction, sortConfig.key]);
 
   const totalPages = Math.max(1, Math.ceil(filteredApplicants.length / itemsPerPage));
   const safeCurrentPage = currentPage > totalPages ? totalPages : currentPage;
@@ -137,9 +151,6 @@ export default function AllApplicants() {
     const startIndex = (safeCurrentPage - 1) * itemsPerPage;
     return filteredApplicants.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredApplicants, itemsPerPage, safeCurrentPage]);
-
-  const allCurrentPageSelected =
-    paginatedApplicants.length > 0 && paginatedApplicants.every((applicant) => selectedApplicantIds.includes(applicant.id));
 
   function handleSort(sortKey) {
     setSortConfig((current) => {
@@ -151,23 +162,15 @@ export default function AllApplicants() {
     });
   }
 
-  function toggleApplicantSelection(id) {
-    setSelectedApplicantIds((current) =>
-      current.includes(id) ? current.filter((value) => value !== id) : [...current, id]
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#fbfbfd]">
+        <CompanyTopBar variant="applicants" />
+        <div className="px-5 pb-12 pt-[88px] sm:px-6 lg:px-8">
+          <LoadingState />
+        </div>
+      </div>
     );
-  }
-
-  function toggleCurrentPageSelection() {
-    if (allCurrentPageSelected) {
-      setSelectedApplicantIds((current) => current.filter((id) => !paginatedApplicants.some((applicant) => applicant.id === id)));
-      return;
-    }
-
-    setSelectedApplicantIds((current) => {
-      const next = new Set(current);
-      paginatedApplicants.forEach((applicant) => next.add(applicant.id));
-      return Array.from(next);
-    });
   }
 
   return (
@@ -175,18 +178,24 @@ export default function AllApplicants() {
       <CompanyTopBar variant="applicants" />
 
       <div className="px-5 pb-12 pt-[88px] sm:px-6 lg:px-8">
+        {error ? (
+          <div className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {error}
+          </div>
+        ) : null}
+
         <div className="w-full">
           <div className="flex flex-col gap-5">
-            <div className="flex flex-col gap-4 border border-[#d6ddeb] bg-white px-6 py-5">
+            <div className="flex flex-col gap-4 border border-slate-200 bg-white px-6 py-5">
               <div className="flex items-center justify-between gap-4">
-                <h1 className="text-[16px] font-semibold text-[#25324b]">
-                  Total Applicants : {companyApplicantsReferenceMeta.totalApplicants}
+                <h1 className="text-[16px] font-semibold text-slate-900">
+                  Total Applicants: {formatNumber(filteredApplicants.length)}
                 </h1>
               </div>
 
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
                 <div className="relative w-full max-w-[320px]">
-                  <MagnifyingGlassIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a8adb7]" />
+                  <MagnifyingGlassIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
                     value={searchQuery}
@@ -194,8 +203,8 @@ export default function AllApplicants() {
                       setSearchQuery(event.target.value);
                       setCurrentPage(1);
                     }}
-                    placeholder="Search Applicants"
-                    className="h-11 w-full rounded-[2px] border border-[#d6ddeb] bg-white pl-10 pr-4 text-[13px] text-[#25324b] outline-none placeholder:text-[#a8adb7] focus:border-[#5b4ff7]"
+                    placeholder="Search applicants"
+                    className="h-11 w-full rounded-[6px] border border-slate-200 bg-white pl-10 pr-4 text-[13px] text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500"
                   />
                 </div>
 
@@ -203,15 +212,15 @@ export default function AllApplicants() {
                   <button
                     type="button"
                     onClick={() => setShowFilterMenu((current) => !current)}
-                    className="inline-flex h-11 items-center gap-2 rounded-[2px] border border-[#d6ddeb] px-4 text-[13px] font-medium text-[#25324b] transition hover:bg-[#f8f8fd]"
+                    className="inline-flex h-11 items-center gap-2 rounded-[6px] border border-slate-200 px-4 text-[13px] font-medium text-slate-900 transition hover:bg-slate-50"
                   >
                     <FunnelIcon className="h-4 w-4" />
                     <span>Filter</span>
                   </button>
 
                   {showFilterMenu ? (
-                    <div className="absolute left-0 top-full z-10 mt-2 min-w-[180px] border border-[#d6ddeb] bg-white py-2 shadow-sm">
-                      {['all', 'In Review', 'Shortlisted', 'Interview', 'Interviewed', 'Hired', 'Declined'].map((stage) => (
+                    <div className="absolute left-0 top-full z-10 mt-2 min-w-[180px] rounded-xl border border-slate-200 bg-white py-2 shadow-sm">
+                      {COMPANY_STAGE_OPTIONS.map((stage) => (
                         <button
                           key={stage}
                           type="button"
@@ -221,10 +230,10 @@ export default function AllApplicants() {
                             setCurrentPage(1);
                           }}
                           className={`block w-full px-4 py-2 text-left text-[13px] ${
-                            filterStage === stage ? 'bg-[#f1efff] text-[#5b4ff7]' : 'text-[#515b6f] hover:bg-[#f8f8fd]'
+                            filterStage === stage ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'
                           }`}
                         >
-                          {stage === 'all' ? 'All Stages' : stage}
+                          {stage === 'all' ? 'All stages' : stage}
                         </button>
                       ))}
                     </div>
@@ -238,13 +247,14 @@ export default function AllApplicants() {
                       setView('pipeline');
                       setCurrentPage(1);
                     }}
-                    className={`h-10 rounded-[2px] border px-4 text-[12px] font-medium transition ${
+                    className={`inline-flex h-10 items-center gap-2 rounded-[6px] border px-4 text-[12px] font-medium transition ${
                       view === 'pipeline'
-                        ? 'border-[#5b4ff7] bg-[#f1efff] text-[#5b4ff7]'
-                        : 'border-[#d6ddeb] bg-white text-[#515b6f] hover:bg-[#f8f8fd]'
+                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                     }`}
                   >
-                    Pipeline View
+                    <Squares2X2Icon className="h-4 w-4" />
+                    Pipeline
                   </button>
                   <button
                     type="button"
@@ -252,188 +262,147 @@ export default function AllApplicants() {
                       setView('table');
                       setCurrentPage(1);
                     }}
-                    className={`h-10 rounded-[2px] border px-4 text-[12px] font-medium transition ${
+                    className={`inline-flex h-10 items-center gap-2 rounded-[6px] border px-4 text-[12px] font-medium transition ${
                       view === 'table'
-                        ? 'border-[#5b4ff7] bg-[#5b4ff7] text-white'
-                        : 'border-[#d6ddeb] bg-white text-[#515b6f] hover:bg-[#f8f8fd]'
+                        ? 'border-indigo-600 bg-indigo-600 text-white'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                     }`}
                   >
-                    Table View
+                    <TableCellsIcon className="h-4 w-4" />
+                    Table
                   </button>
                 </div>
               </div>
             </div>
 
             {view === 'table' ? (
-              <div className="overflow-hidden border border-[#d6ddeb] bg-white">
+              <div className="overflow-hidden border border-slate-200 bg-white">
                 <div className="overflow-x-auto">
-                  <table className="min-w-full border-collapse">
-                    <thead className="border-b border-[#d6ddeb] bg-white">
+                  <table className="min-w-full text-sm">
+                    <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500">
                       <tr>
-                        <th className="px-3 py-4 text-left">
-                          <input
-                            type="checkbox"
-                            checked={allCurrentPageSelected}
-                            onChange={toggleCurrentPageSelection}
-                            className="h-4 w-4 rounded-[2px] border border-[#d6ddeb] text-[#5b4ff7] focus:ring-0"
-                          />
+                        <th className="px-5 py-4 text-left font-semibold">
+                          <TableHeaderButton label="Full Name" sortKey="candidateName" currentSort={sortConfig} onSort={handleSort} />
                         </th>
-                        <th className="px-3 py-4 text-left">
-                          <TableHeaderButton label="Full Name" sortKey="name" currentSort={sortConfig} onSort={handleSort} />
+                        <th className="px-5 py-4 text-left font-semibold">
+                          <TableHeaderButton label="Role" sortKey="jobTitle" currentSort={sortConfig} onSort={handleSort} />
                         </th>
-                        <th className="px-3 py-4 text-left">
+                        <th className="px-5 py-4 text-left font-semibold">
+                          <TableHeaderButton label="Stage" sortKey="stage" currentSort={sortConfig} onSort={handleSort} />
+                        </th>
+                        <th className="px-5 py-4 text-left font-semibold">
+                          <TableHeaderButton label="Applied Date" sortKey="dateApplied" currentSort={sortConfig} onSort={handleSort} />
+                        </th>
+                        <th className="px-5 py-4 text-left font-semibold">
                           <TableHeaderButton label="Score" sortKey="score" currentSort={sortConfig} onSort={handleSort} />
                         </th>
-                        <th className="px-3 py-4 text-left">
-                          <TableHeaderButton label="Hiring Stage" sortKey="stage" currentSort={sortConfig} onSort={handleSort} />
-                        </th>
-                        <th className="px-3 py-4 text-left">
-                          <TableHeaderButton label="Applied Date" sortKey="appliedDate" currentSort={sortConfig} onSort={handleSort} />
-                        </th>
-                        <th className="px-3 py-4 text-left">
-                          <TableHeaderButton label="Job Role" sortKey="jobRole" currentSort={sortConfig} onSort={handleSort} />
-                        </th>
-                        <th className="px-3 py-4 text-left text-[12px] font-medium text-[#7c8493]">Action</th>
+                        <th className="px-5 py-4 text-right font-semibold">Action</th>
                       </tr>
                     </thead>
-
-                    <tbody>
-                      {paginatedApplicants.map((applicant, index) => (
-                        <tr
-                          key={applicant.id}
-                          className={`border-b border-[#eef0f5] ${index % 2 === 1 ? 'bg-[#fbfbfd]' : 'bg-white'} hover:bg-[#f8f8fd]`}
-                        >
-                          <td className="px-3 py-4 align-middle">
-                            <input
-                              type="checkbox"
-                              checked={selectedApplicantIds.includes(applicant.id)}
-                              onChange={() => toggleApplicantSelection(applicant.id)}
-                              className="h-4 w-4 rounded-[2px] border border-[#d6ddeb] text-[#5b4ff7] focus:ring-0"
-                            />
-                          </td>
-                          <td className="px-3 py-4 align-middle">
-                            <div className="flex items-center gap-3">
-                              <ApplicantPortrait
-                                palette={applicant.avatarPalette}
-                                className="h-8 w-8 border border-white shadow-sm"
-                              />
-                              <span className="text-[14px] font-medium text-[#25324b]">{applicant.name}</span>
-                            </div>
-                          </td>
-                          <td className="px-3 py-4 align-middle">
-                            <RatingCell score={applicant.score} scoreLabel={applicant.scoreLabel} />
-                          </td>
-                          <td className="px-3 py-4 align-middle">
-                            <span
-                              className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium ${
-                                stageBadgeStyles[applicant.stage] || 'border-[#d6ddeb] text-[#515b6f]'
-                              }`}
-                            >
-                              {applicant.stage}
-                            </span>
-                          </td>
-                          <td className="px-3 py-4 align-middle text-[13px] text-[#25324b]">{applicant.appliedDate}</td>
-                          <td className="px-3 py-4 align-middle text-[13px] text-[#25324b]">{applicant.jobRole}</td>
-                          <td className="px-3 py-4 align-middle">
-                            <div className="flex items-center gap-3">
-                              <Link
-                                to={`/company/applicants/${applicant.id}`}
-                                className="inline-flex h-9 items-center rounded-[2px] border border-[#5b4ff7] px-4 text-[12px] font-semibold text-[#5b4ff7] transition hover:bg-[#f1efff]"
-                              >
-                                See Application
-                              </Link>
-                              <button type="button" className="text-[#515b6f] transition hover:text-[#25324b]">
-                                <EllipsisHorizontalIcon className="h-5 w-5" />
-                              </button>
-                            </div>
+                    <tbody className="divide-y divide-slate-100">
+                      {paginatedApplicants.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="px-5 py-16 text-center">
+                            <p className="text-sm font-medium text-slate-500">No applicants match the current search and filter state.</p>
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        paginatedApplicants.map((applicant) => (
+                          <tr key={applicant.id}>
+                            <td className="px-5 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className={`flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-semibold text-white ${applicant.avatarTone}`}>
+                                  {getInitials(applicant.candidateName)}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="truncate font-semibold text-slate-900">{applicant.candidateName}</p>
+                                  <p className="truncate text-xs text-slate-500">{applicant.candidateEmail}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-5 py-4 text-slate-600">{applicant.jobTitle}</td>
+                            <td className="px-5 py-4">
+                              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{applicant.stage}</span>
+                            </td>
+                            <td className="px-5 py-4 text-slate-600">{applicant.dateAppliedLabel}</td>
+                            <td className="px-5 py-4 text-slate-600">{applicant.score.toFixed(1)}</td>
+                            <td className="px-5 py-4 text-right">
+                              <Link
+                                to={`/company/applicants/${applicant.id}`}
+                                className="inline-flex rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                              >
+                                Open
+                              </Link>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
 
-                <div className="flex flex-col gap-4 border-t border-[#d6ddeb] px-5 py-4 text-[13px] text-[#7c8493] sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-col gap-4 border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2 text-sm text-slate-600">
                     <span>View</span>
-                    <label className="relative">
-                      <select
-                        value={itemsPerPage}
-                        onChange={(event) => {
-                          setItemsPerPage(Number(event.target.value));
-                          setCurrentPage(1);
-                        }}
-                        className="h-10 appearance-none rounded-[2px] border border-[#d6ddeb] bg-white pl-4 pr-9 text-[13px] text-[#25324b] outline-none"
-                      >
-                        {companyApplicantsReferenceMeta.itemsPerPageOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#515b6f]" />
-                    </label>
-                    <span>Applicants per page</span>
+                    <select
+                      value={itemsPerPage}
+                      onChange={(event) => {
+                        setItemsPerPage(Number(event.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700"
+                    >
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                    </select>
+                    <span>applicants per page</span>
                   </div>
 
-                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                  <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => setCurrentPage(Math.max(1, safeCurrentPage - 1))}
-                      className="inline-flex h-8 w-8 items-center justify-center text-[#25324b] transition hover:text-[#5b4ff7]"
+                      onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                      disabled={safeCurrentPage === 1}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 disabled:opacity-40"
                     >
-                      <ChevronLeftIcon className="h-4 w-4" />
+                      <ChevronLeftIcon className="h-5 w-5" />
                     </button>
-
-                    {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-                      <button
-                        key={page}
-                        type="button"
-                        onClick={() => setCurrentPage(page)}
-                        className={`inline-flex h-8 w-8 items-center justify-center rounded-[6px] text-[13px] font-medium transition ${
-                          safeCurrentPage === page ? 'bg-[#5b4ff7] text-white' : 'text-[#25324b] hover:bg-[#f1efff]'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    ))}
-
+                    <span className="px-3 text-sm font-medium text-slate-700">
+                      {safeCurrentPage} / {totalPages}
+                    </span>
                     <button
                       type="button"
-                      onClick={() => setCurrentPage(Math.min(totalPages, safeCurrentPage + 1))}
-                      className="inline-flex h-8 w-8 items-center justify-center text-[#25324b] transition hover:text-[#5b4ff7]"
+                      onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                      disabled={safeCurrentPage === totalPages}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 disabled:opacity-40"
                     >
-                      <ChevronRightIcon className="h-4 w-4" />
+                      <ChevronRightIcon className="h-5 w-5" />
                     </button>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="grid gap-4 xl:grid-cols-6">
-                {pipelineColumns.map((stage) => {
-                  const applicants = filteredApplicants.filter((applicant) => applicant.stage === stage);
+              <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
+                {COMPANY_STAGE_OPTIONS.slice(1).map((stage) => {
+                  const stageApplicants = filteredApplicants.filter((applicant) => applicant.stage === stage);
 
                   return (
-                    <div key={stage} className="border border-[#d6ddeb] bg-white">
-                      <div className="border-b border-[#d6ddeb] px-4 py-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <span
-                            className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium ${
-                              stageBadgeStyles[stage] || 'border-[#d6ddeb] text-[#515b6f]'
-                            }`}
-                          >
-                            {stage}
-                          </span>
-                          <span className="text-[12px] font-semibold text-[#25324b]">{applicants.length}</span>
-                        </div>
+                    <div key={stage} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div className="mb-4 flex items-center justify-between">
+                        <h2 className="text-sm font-semibold text-slate-900">{stage}</h2>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                          {formatNumber(stageApplicants.length)}
+                        </span>
                       </div>
-                      <div className="space-y-3 p-3">
-                        {applicants.length > 0 ? (
-                          applicants.map((applicant) => <PipelineCard key={applicant.id} applicant={applicant} />)
-                        ) : (
-                          <div className="rounded-[6px] border border-dashed border-[#d6ddeb] px-4 py-8 text-center text-[12px] text-[#a8adb7]">
-                            No applicants
+
+                      <div className="space-y-3">
+                        {stageApplicants.length === 0 ? (
+                          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-xs text-slate-500">
+                            No applicants in this stage.
                           </div>
+                        ) : (
+                          stageApplicants.map((applicant) => <PipelineCard key={applicant.id} applicant={applicant} />)
                         )}
                       </div>
                     </div>

@@ -90,7 +90,7 @@ export default function Chat({ isOpen, onClose, otherUserId, otherUserName }) {
     setSending(true);
     try {
       // Send via WebSocket for real-time delivery
-      const success = webSocketService.sendMessage(otherUserId, newMessage.trim());
+      const success = webSocketService.sendMessage(otherUserId, newMessage.trim(), user?.id);
       
       if (success) {
         setNewMessage('');

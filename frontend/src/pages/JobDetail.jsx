@@ -1,11 +1,59 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
-import { findJobsFallback, getCompanyRouteId } from '../data/discoveryData';
+import { getCompanyRouteId } from '../data/discoveryData';
 import { useAuth } from '../context/AuthContext';
-import JobCard from '../components/JobCard';
 import ApplicationModal from '../components/ApplicationModal';
 import ShareModal from '../components/ShareModal';
 import apiService from '../services/api';
+
+const normalizeDelimitedList = (value) => {
+  if (Array.isArray(value)) return value;
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const splitLines = (text) => {
+  if (!text) return null;
+  const items = String(text)
+    .split('\n')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return items.length ? items : null;
+};
+
+const splitCommas = (text) => {
+  if (!text) return null;
+  const items = String(text)
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return items.length ? items : null;
+};
+
+const parseDescriptionSections = (description) => {
+  const sections = {};
+  const blocks = String(description || '')
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  blocks.forEach((block) => {
+    const match = block.match(/^([A-Za-z\s-]+):\s*/);
+    if (match) {
+      const key = match[1].trim();
+      const value = block.slice(match[0].length).trim();
+      if (value) {
+        sections[key] = value;
+      }
+    } else if (block) {
+      sections.Description = sections.Description ? `${sections.Description}\n\n${block}` : block;
+    }
+  });
+
+  return sections;
+};
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -30,7 +78,7 @@ export default function JobDetail() {
       })
       .catch(() => {
         if (active) {
-          setJob(findJobsFallback.find((item) => item.id === Number(id)) || findJobsFallback[0]);
+          setJob(null);
         }
       })
       .finally(() => {
@@ -53,10 +101,22 @@ export default function JobDetail() {
     setShowModal(true);
   };
 
-  if (loading || loadedJobId !== String(id) || !job) {
+  if (loading || loadedJobId !== String(id)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
+
+  if (!job) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center text-gray-500">
+          <p className="text-lg font-semibold">Job not found</p>
+          <p className="text-sm mt-1">This job may have been removed.</p>
+          <button onClick={() => navigate('/find-jobs')} className="mt-4 text-sm text-blue-600 hover:underline">Back to jobs</button>
+        </div>
       </div>
     );
   }
@@ -66,6 +126,30 @@ export default function JobDetail() {
     backTo: `${location.pathname}${location.search}${location.hash}`,
     origin: 'job-detail',
   };
+  const categories = normalizeDelimitedList(job.categories);
+  const jobTypes = normalizeDelimitedList(job.type);
+  const descriptionSections = parseDescriptionSections(job.description);
+  const descriptionText = descriptionSections.Description || job.description || '';
+
+  const responsibilities = splitLines(descriptionSections.Responsibilities) || [];
+  const whoYouAre = splitLines(descriptionSections['Who You Are']) || [];
+  const niceToHaves = splitLines(descriptionSections['Nice-To-Haves']) || [];
+  const perks = splitCommas(descriptionSections.Perks) || [];
+  const requiredSkills = splitCommas(descriptionSections['Required Skills']) || [];
+
+  const messageCompanyHref = job.postedByUserId
+    ? `/dashboard/messages?${new URLSearchParams({
+        user: String(job.postedByUserId),
+        name: job.company || 'Company',
+        type: 'COMPANY',
+      }).toString()}`
+    : null;
+
+  const postedDate = new Date(job.createdAt);
+  const isNew = Boolean(job.isNew);
+  const postedDateLabel = Number.isNaN(postedDate.getTime())
+    ? 'Recently'
+    : postedDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -84,24 +168,37 @@ export default function JobDetail() {
             <div className={`${job.color} text-white rounded-xl w-16 h-16 flex items-center justify-center font-bold text-2xl`}>{job.logo}</div>
             <div>
               <h1 className="text-xl font-bold text-gray-900">{job.title}</h1>
-              <p className="text-gray-500 text-sm">
-                <Link
-                  to={companyProfileHref}
-                  state={companyProfileState}
-                  className="transition-colors hover:text-blue-600 hover:underline underline-offset-4"
-                >
-                  {job.company}
-                </Link>
-                {job.location ? ` • ${job.location}` : ''}
-                {job.type ? ` • ${job.type}` : ''}
-              </p>
-              <div className="flex gap-2 mt-2">
-                {job.categories.map(c => <span key={c} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded px-2 py-0.5">{c}</span>)}
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                {isNew && (
+                  <span className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-700">New</span>
+                )}
+                <p className="text-gray-500 text-sm">
+                  <Link
+                    to={companyProfileHref}
+                    state={companyProfileState}
+                    className="transition-colors hover:text-blue-600 hover:underline underline-offset-4"
+                  >
+                    {job.company}
+                  </Link>
+                  {job.location ? ` • ${job.location}` : ''}
+                  {jobTypes.length ? ` • ${jobTypes.join(', ')}` : ''}
+                </p>
+              </div>
+              <div className="flex gap-2 mt-2 flex-wrap">
+                {categories.map(c => <span key={c} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded px-2 py-0.5">{c}</span>)}
               </div>
             </div>
           </div>
           <div className="flex gap-3">
-            <button 
+            {messageCompanyHref && (
+              <Link
+                to={messageCompanyHref}
+                className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2 transition"
+              >
+                <span>Message</span>
+              </Link>
+            )}
+            <button
               onClick={() => setShowShareModal(true)}
               className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2 transition"
             >
@@ -123,40 +220,48 @@ export default function JobDetail() {
           <div className="col-span-2 space-y-6">
             <div className="bg-white rounded-xl p-6 border border-gray-200">
               <h2 className="font-bold text-gray-900 mb-3">Description</h2>
-              <p className="text-gray-600 text-sm leading-relaxed">Stripe is looking for a Social Media Marketing expert to help manage our online networks. You will be responsible for monitoring our social media channels, creating content, finding effective ways to engage the community and inspire others to engage in our channels.</p>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                {descriptionText || 'No description provided.'}
+              </p>
 
               <h2 className="font-bold text-gray-900 mt-6 mb-3">Responsibilities</h2>
               <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex gap-2"><span className="text-blue-500 mt-0.5">✓</span> Community engagement to ensure that is supported and actively represented online</li>
-                <li className="flex gap-2"><span className="text-blue-500 mt-0.5">✓</span> Focus on social media content development and publication</li>
-                <li className="flex gap-2"><span className="text-blue-500 mt-0.5">✓</span> Marketing and strategy support</li>
-                <li className="flex gap-2"><span className="text-blue-500 mt-0.5">✓</span> Stay on top of trends on social media platforms, and suggest content ideas to the team</li>
-                <li className="flex gap-2"><span className="text-blue-500 mt-0.5">✓</span> Engage with online communities</li>
+                {responsibilities.length ? responsibilities.map((item) => (
+                  <li key={item} className="flex gap-2"><span className="text-blue-500 mt-0.5">✓</span>{item}</li>
+                )) : (
+                  <li className="text-gray-400">No responsibilities listed.</li>
+                )}
               </ul>
 
               <h2 className="font-bold text-gray-900 mt-6 mb-3">Who You Are</h2>
               <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex gap-2"><span className="text-blue-500 mt-0.5">✓</span> You get energy from people and building the Atlassian deployment presence</li>
-                <li className="flex gap-2"><span className="text-blue-500 mt-0.5">✓</span> You have some Stripe Office and Office experience</li>
-                <li className="flex gap-2"><span className="text-blue-500 mt-0.5">✓</span> You are a confident communicator and writer</li>
-                <li className="flex gap-2"><span className="text-blue-500 mt-0.5">✓</span> You are a growth marketer and have a knack for lead-to-campaigns</li>
+                {whoYouAre.length ? whoYouAre.map((item) => (
+                  <li key={item} className="flex gap-2"><span className="text-blue-500 mt-0.5">✓</span>{item}</li>
+                )) : (
+                  <li className="text-gray-400">No candidate profile listed.</li>
+                )}
               </ul>
 
               <h2 className="font-bold text-gray-900 mt-6 mb-3">Nice-To-Haves</h2>
               <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex gap-2"><span className="text-gray-400 mt-0.5">✓</span> Project management skills</li>
-                <li className="flex gap-2"><span className="text-gray-400 mt-0.5">✓</span> Copy editing skills</li>
+                {niceToHaves.length ? niceToHaves.map((item) => (
+                  <li key={item} className="flex gap-2"><span className="text-gray-400 mt-0.5">✓</span>{item}</li>
+                )) : (
+                  <li className="text-gray-400">No extra requirements listed.</li>
+                )}
               </ul>
 
               <h2 className="font-bold text-gray-900 mt-6 mb-3">Perks & Benefits</h2>
               <p className="text-sm text-gray-500 mb-4">This job comes with several perks and benefits</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {['Full Healthcare', 'Unlimited Vacation', 'Skill Development', 'Team Summits', 'Remote Working', 'Commuter Benefits', 'We give back', 'Flexible Team'].map(perk => (
+                {perks.length ? perks.map(perk => (
                   <div key={perk} className="text-center p-3 border border-gray-200 rounded-lg">
                     <div className="text-2xl mb-1">🎁</div>
                     <p className="text-xs text-gray-600">{perk}</p>
                   </div>
-                ))}
+                )) : (
+                  <div className="col-span-2 md:col-span-4 text-sm text-gray-400">No perks listed.</div>
+                )}
               </div>
             </div>
           </div>
@@ -166,22 +271,24 @@ export default function JobDetail() {
             <div className="bg-white rounded-xl p-5 border border-gray-200">
               <h3 className="font-semibold text-gray-900 mb-4">About this role</h3>
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between"><span className="text-gray-500">Date Posted</span><span className="font-medium">July 31, 2021</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Job Type</span><span className="font-medium">Full Time</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Salary</span><span className="font-medium">$75k-$85k USD</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Date Posted</span><span className="font-medium">{postedDateLabel}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Job Type</span><span className="font-medium">{jobTypes.length ? jobTypes.join(', ') : 'Full Time'}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Salary</span><span className="font-medium">{job.salary ? `$${job.salary}` : 'Not disclosed'}</span></div>
               </div>
               <div className="mt-4">
                 <p className="text-xs text-gray-500 mb-2">Categories</p>
                 <div className="flex flex-wrap gap-2">
-                  {job.categories.map(c => <span key={c} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded px-2 py-0.5">{c}</span>)}
+                  {categories.map(c => <span key={c} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded px-2 py-0.5">{c}</span>)}
                 </div>
               </div>
               <div className="mt-4">
                 <p className="text-xs text-gray-500 mb-2">Required Skills</p>
                 <div className="flex flex-wrap gap-2">
-                  {['Project Management', 'Copywriting', 'Social Media Marketing', 'Copy Editing'].map(s => (
+                  {requiredSkills.length ? requiredSkills.map(s => (
                     <span key={s} className="text-xs bg-blue-50 text-blue-600 rounded px-2 py-0.5">{s}</span>
-                  ))}
+                  )) : (
+                    <span className="text-xs text-gray-400">No skills listed.</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -189,8 +296,16 @@ export default function JobDetail() {
             <div className="bg-white rounded-xl p-5 border border-gray-200">
               <div className={`${job.color} text-white rounded-xl w-12 h-12 flex items-center justify-center font-bold text-xl mb-3`}>{job.logo}</div>
               <h3 className="font-semibold text-gray-900">{job.company}</h3>
-              <p className="text-sm text-gray-500 mt-1">{job.description || 'A great company to work for.'}</p>
+              <p className="text-sm text-gray-500 mt-1">{job.description || 'No company description provided.'}</p>
               <Link to={`/companies/${getCompanyRouteId({ name: job.company })}`} className="text-blue-600 text-sm mt-3 block hover:underline">Read more about {job.company} →</Link>
+              {messageCompanyHref && (
+                <Link
+                  to={messageCompanyHref}
+                  className="mt-3 inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                >
+                  Message {job.company}
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -202,7 +317,9 @@ export default function JobDetail() {
             <Link to="/find-jobs" className="text-blue-600 text-sm hover:underline">Show all jobs →</Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {findJobsFallback.filter((item) => item.id !== job.id).slice(0, 4).map((item) => <JobCard key={item.id} job={item} />)}
+            <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-sm text-gray-500">
+              Similar jobs will appear once more company jobs are posted.
+            </div>
           </div>
         </div>
       </div>

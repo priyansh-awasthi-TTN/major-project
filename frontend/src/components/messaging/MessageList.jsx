@@ -116,8 +116,8 @@ export default function MessageList({
             </div>
 
             {!msg.isRead && (
-              <div className="flex items-center justify-center w-5 h-5 bg-blue-500 text-white text-[10px] font-bold rounded-full flex-shrink-0">
-                1
+              <div className="flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-bold text-white flex-shrink-0">
+                {msg.unreadCount > 99 ? '99+' : msg.unreadCount}
               </div>
             )}
           </div>

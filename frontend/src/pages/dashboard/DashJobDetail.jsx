@@ -7,6 +7,55 @@ import Toast from '../../components/Toast';
 import { getCompanyRouteId } from '../../data/discoveryData';
 import apiService from '../../services/api';
 
+const normalizeDelimitedList = (value) => {
+  if (Array.isArray(value)) return value;
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const splitLines = (text) => {
+  if (!text) return null;
+  const items = String(text)
+    .split('\n')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return items.length ? items : null;
+};
+
+const splitCommas = (text) => {
+  if (!text) return null;
+  const items = String(text)
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return items.length ? items : null;
+};
+
+const parseDescriptionSections = (description) => {
+  const sections = {};
+  const blocks = String(description || '')
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  blocks.forEach((block) => {
+    const match = block.match(/^([A-Za-z\s-]+):\s*/);
+    if (match) {
+      const key = match[1].trim();
+      const value = block.slice(match[0].length).trim();
+      if (value) {
+        sections[key] = value;
+      }
+    } else if (block) {
+      sections.Description = sections.Description ? `${sections.Description}\n\n${block}` : block;
+    }
+  });
+
+  return sections;
+};
+
 export default function DashJobDetail() {
   const { id } = useParams();
   const location = useLocation();
@@ -59,6 +108,47 @@ export default function DashJobDetail() {
     origin: 'job-detail',
     suppressSidebarItem: 'companies',
   };
+  const categories = normalizeDelimitedList(job.categories);
+  const jobTypes = normalizeDelimitedList(job.type);
+  const descriptionSections = parseDescriptionSections(job.description);
+  const descriptionText = descriptionSections.Description || job.description || '';
+
+  const responsibilities = splitLines(descriptionSections.Responsibilities);
+  const whoYouAre = splitLines(descriptionSections['Who You Are']);
+  const niceToHaves = splitLines(descriptionSections['Nice-To-Haves']);
+  const perks = splitCommas(descriptionSections.Perks);
+  const requiredSkills = splitCommas(descriptionSections['Required Skills']);
+
+  const fallbackResponsibilities = [
+    'Community engagement to ensure that is supported and actively represented online',
+    'Focus on social media content development and publication',
+    'Marketing and strategy support',
+    'Stay on top of trends on social media platforms, and suggest content ideas to the team',
+    'Engage with online communities',
+  ];
+  const fallbackWhoYouAre = [
+    'You get energy from people and building the Atlassian deployment presence',
+    'You have some Stripe Office and Office experience',
+    'You are a confident communicator and writer',
+    'You are a growth marketer and have a knack for lead-to-campaigns',
+  ];
+  const fallbackNiceToHaves = ['Project management skills', 'Copy editing skills'];
+  const fallbackPerks = [
+    'Full Healthcare',
+    'Unlimited Vacation',
+    'Skill Development',
+    'Team Summits',
+    'Remote Working',
+    'Commuter Benefits',
+    'We give back',
+    'Flexible Team',
+  ];
+  const fallbackSkills = ['Project Management', 'Copywriting', 'Social Media Marketing', 'Copy Editing'];
+
+  const postedDate = new Date(job.createdAt);
+  const postedDateLabel = Number.isNaN(postedDate.getTime())
+    ? 'Recently'
+    : postedDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 
   return (
     <div className="flex-1 flex flex-col h-full bg-gray-50">
@@ -84,10 +174,10 @@ export default function DashJobDetail() {
                     {job.company}
                   </Link>
                   {job.location ? ` • ${job.location}` : ''}
-                  {job.type ? ` • ${job.type}` : ''}
+                  {jobTypes.length ? ` • ${jobTypes.join(', ')}` : ''}
                 </p>
-                <div className="flex gap-2 mt-2">
-                  {(job.categories || []).map(c => <span key={c} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded px-2 py-0.5">{c}</span>)}
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  {categories.map(c => <span key={c} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded px-2 py-0.5">{c}</span>)}
                 </div>
               </div>
             </div>
@@ -115,43 +205,35 @@ export default function DashJobDetail() {
             <div className="col-span-2 space-y-6">
               <div className="bg-white rounded-xl p-6 border border-gray-200">
                 <h2 className="font-bold text-gray-900 mb-3">Description</h2>
-                <p className="text-gray-600 text-sm leading-relaxed">Stripe is looking for a Social Media Marketing expert to help manage our online networks. You will be responsible for monitoring our social media channels, creating content, finding effective ways to engage the community and inspire others to engage in our channels.</p>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  {descriptionText || 'This company is looking for a passionate candidate to join the team and help deliver impactful outcomes.'}
+                </p>
 
                 <h2 className="font-bold text-gray-900 mt-6 mb-3">Responsibilities</h2>
                 <ul className="space-y-2 text-sm text-gray-600">
-                  {[
-                    'Community engagement to ensure that is supported and actively represented online',
-                    'Focus on social media content development and publication',
-                    'Marketing and strategy support',
-                    'Stay on top of trends on social media platforms, and suggest content ideas to the team',
-                    'Engage with online communities',
-                  ].map((r, i) => (
-                    <li key={i} className="flex gap-2"><span className="text-blue-500 mt-0.5">✓</span>{r}</li>
+                  {(responsibilities || fallbackResponsibilities).map((item) => (
+                    <li key={item} className="flex gap-2"><span className="text-blue-500 mt-0.5">✓</span>{item}</li>
                   ))}
                 </ul>
 
                 <h2 className="font-bold text-gray-900 mt-6 mb-3">Who You Are</h2>
                 <ul className="space-y-2 text-sm text-gray-600">
-                  {[
-                    'You get energy from people and building the Atlassian deployment presence',
-                    'You have some Stripe Office and Office experience',
-                    'You are a confident communicator and writer',
-                    'You are a growth marketer and have a knack for lead-to-campaigns',
-                  ].map((r, i) => (
-                    <li key={i} className="flex gap-2"><span className="text-blue-500 mt-0.5">✓</span>{r}</li>
+                  {(whoYouAre || fallbackWhoYouAre).map((item) => (
+                    <li key={item} className="flex gap-2"><span className="text-blue-500 mt-0.5">✓</span>{item}</li>
                   ))}
                 </ul>
 
                 <h2 className="font-bold text-gray-900 mt-6 mb-3">Nice-To-Haves</h2>
                 <ul className="space-y-2 text-sm text-gray-600">
-                  <li className="flex gap-2"><span className="text-gray-400 mt-0.5">✓</span>Project management skills</li>
-                  <li className="flex gap-2"><span className="text-gray-400 mt-0.5">✓</span>Copy editing skills</li>
+                  {(niceToHaves || fallbackNiceToHaves).map((item) => (
+                    <li key={item} className="flex gap-2"><span className="text-gray-400 mt-0.5">✓</span>{item}</li>
+                  ))}
                 </ul>
 
                 <h2 className="font-bold text-gray-900 mt-6 mb-3">Perks & Benefits</h2>
                 <p className="text-sm text-gray-500 mb-4">This job comes with several perks and benefits</p>
                 <div className="grid grid-cols-4 gap-3">
-                  {['Full Healthcare', 'Unlimited Vacation', 'Skill Development', 'Team Summits', 'Remote Working', 'Commuter Benefits', 'We give back', 'Flexible Team'].map(perk => (
+                  {(perks || fallbackPerks).map(perk => (
                     <div key={perk} className="text-center p-3 border border-gray-200 rounded-lg">
                       <div className="text-xl mb-1">🎁</div>
                       <p className="text-xs text-gray-600">{perk}</p>
@@ -169,7 +251,7 @@ export default function DashJobDetail() {
                     <p className="text-xs text-gray-400">Read more about {job.company}</p>
                   </div>
                 </div>
-                <p className="text-sm text-gray-600">Stripe is a technology company that builds economic infrastructure for the internet. Businesses of every size use our software to accept payments and manage their businesses online.</p>
+                <p className="text-sm text-gray-600">{job.description || 'A great company to work for.'}</p>
               </div>
             </div>
 
@@ -178,20 +260,20 @@ export default function DashJobDetail() {
               <div className="bg-white rounded-xl p-5 border border-gray-200">
                 <h3 className="font-semibold text-gray-900 mb-4">About this role</h3>
                 <div className="space-y-3 text-sm">
-                  <div className="flex justify-between"><span className="text-gray-500">Date Posted</span><span className="font-medium">July 31, 2021</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Job Type</span><span className="font-medium">Full Time</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Salary</span><span className="font-medium">$75k-$85k USD</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Date Posted</span><span className="font-medium">{postedDateLabel}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Job Type</span><span className="font-medium">{jobTypes.length ? jobTypes.join(', ') : 'Full Time'}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Salary</span><span className="font-medium">{job.salary ? `$${job.salary}` : '$75k-$85k USD'}</span></div>
                 </div>
                 <div className="mt-4">
                   <p className="text-xs text-gray-500 mb-2">Categories</p>
                   <div className="flex flex-wrap gap-2">
-                    {(job.categories || []).map(c => <span key={c} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded px-2 py-0.5">{c}</span>)}
+                    {categories.map(c => <span key={c} className="text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded px-2 py-0.5">{c}</span>)}
                   </div>
                 </div>
                 <div className="mt-4">
                   <p className="text-xs text-gray-500 mb-2">Required Skills</p>
                   <div className="flex flex-wrap gap-2">
-                    {['Project Management', 'Copywriting', 'Social Media Marketing', 'Copy Editing'].map(s => (
+                    {(requiredSkills || fallbackSkills).map(s => (
                       <span key={s} className="text-xs bg-blue-50 text-blue-600 rounded px-2 py-0.5">{s}</span>
                     ))}
                   </div>

@@ -1,16 +1,56 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import SearchableFilterInput from '../components/SearchableFilterInput';
-import {
-  buildBrowseCompaniesFromJobs,
-  getCompanyRouteId,
-} from '../data/discoveryData';
+import { getCompanyRouteId } from '../data/discoveryData';
 import apiService from '../services/api';
 import {
   buildLocationFilterOptions,
   getRegionsForCountryQuery,
   matchesLocationFilters,
 } from '../utils/locationFilters';
+
+const normalizeDelimitedList = (value) => {
+  if (Array.isArray(value)) return value;
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const unique = (values) => [...new Set(values.filter(Boolean))];
+
+const buildCompaniesFromJobs = (jobs = []) => {
+  const grouped = new Map();
+
+  jobs.forEach((job) => {
+    const companyName = (job.company || '').trim();
+    if (!companyName) return;
+    const currentJobs = grouped.get(companyName) || [];
+    currentJobs.push(job);
+    grouped.set(companyName, currentJobs);
+  });
+
+  return [...grouped.entries()]
+    .map(([companyName, companyJobs]) => {
+      const primaryJob = companyJobs[0] || {};
+      const tags = unique(companyJobs.flatMap((job) => normalizeDelimitedList(job.categories)));
+      const officeLocations = unique(companyJobs.map((job) => job.location));
+
+      return {
+        id: companyName,
+        name: companyName,
+        description: primaryJob.companyDescription || `${companyName} is hiring right now.`,
+        logo: primaryJob.logo || companyName.slice(0, 2).toUpperCase(),
+        color: primaryJob.color || 'bg-blue-600',
+        industry: tags[0] || 'Hiring',
+        size: primaryJob.companySize || '1-50',
+        tags,
+        officeLocations,
+        jobs: companyJobs.length,
+      };
+    })
+    .sort((left, right) => left.name.localeCompare(right.name));
+};
 
 export default function BrowseCompanies() {
   const [searchInput, setSearchInput] = useState('');
@@ -21,16 +61,20 @@ export default function BrowseCompanies() {
   const [regionQuery, setRegionQuery] = useState('');
   const [selectedIndustries, setSelectedIndustries] = useState([]);
   const [selectedSizes, setSelectedSizes] = useState([]);
-  const [allCompanies, setAllCompanies] = useState(() => buildBrowseCompaniesFromJobs());
+  const [allCompanies, setAllCompanies] = useState([]);
 
   useEffect(() => {
     apiService.getJobs()
       .then((jobsData) => {
         if (jobsData?.length) {
-          setAllCompanies(buildBrowseCompaniesFromJobs(jobsData));
+          setAllCompanies(buildCompaniesFromJobs(jobsData));
+        } else {
+          setAllCompanies([]);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        setAllCompanies([]);
+      });
   }, []);
 
   const locationOptions = useMemo(
@@ -88,6 +132,8 @@ export default function BrowseCompanies() {
     const matchesSize = selectedSizes.length === 0 || selectedSizes.includes(c.size);
     return matchesQuery && matchesLoc && matchesIndustry && matchesSize;
   });
+
+  const hasCompanies = allCompanies.length > 0;
 
   return (
     <div className="min-h-screen bg-white">
@@ -189,7 +235,13 @@ export default function BrowseCompanies() {
             </div>
           </div>
 
-          {filtered.length === 0 ? (
+          {!hasCompanies ? (
+            <div className="text-center py-20 text-gray-400">
+              <p className="text-4xl mb-3">🏢</p>
+              <p className="font-medium text-gray-600">No company jobs posted yet</p>
+              <p className="text-sm mt-1">Companies will appear here once they post roles.</p>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="text-center py-20 text-gray-400">
               <p className="text-4xl mb-3">🔍</p>
               <p className="font-medium text-gray-600">No companies found</p>
@@ -228,15 +280,17 @@ export default function BrowseCompanies() {
             </div>
           )}
 
-          <div className="flex justify-center items-center gap-1 mt-8">
-            <button className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-100 rounded">‹</button>
-            {[1,2,3].map(p => (
-              <button key={p} className={`w-8 h-8 rounded text-sm font-medium ${p === 1 ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>{p}</button>
-            ))}
-            <span className="text-gray-400 text-sm px-1">...</span>
-            <button className="w-8 h-8 rounded text-sm text-gray-600 hover:bg-gray-100">8</button>
-            <button className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-100 rounded">›</button>
-          </div>
+          {hasCompanies ? (
+            <div className="flex justify-center items-center gap-1 mt-8">
+              <button className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-100 rounded">‹</button>
+              {[1,2,3].map(p => (
+                <button key={p} className={`w-8 h-8 rounded text-sm font-medium ${p === 1 ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>{p}</button>
+              ))}
+              <span className="text-gray-400 text-sm px-1">...</span>
+              <button className="w-8 h-8 rounded text-sm text-gray-600 hover:bg-gray-100">8</button>
+              <button className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-100 rounded">›</button>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

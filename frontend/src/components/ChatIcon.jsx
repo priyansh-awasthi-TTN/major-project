@@ -19,7 +19,7 @@ export default function ChatIcon() {
     if (user) {
       const token = sessionStorage.getItem('accessToken');
       if (token && !webSocketService.isConnected()) {
-        webSocketService.connect(token).catch(error => {
+        webSocketService.connect(token, user.id).catch(error => {
           console.error('Failed to connect to WebSocket:', error);
         });
       }
@@ -39,6 +39,12 @@ export default function ChatIcon() {
       loadUnreadCount();
     }
   }, [user, isOpen]);
+
+  useEffect(() => {
+    if (user) {
+      loadUnreadCount();
+    }
+  }, [user]);
 
   // WebSocket message handler
   useEffect(() => {
@@ -76,7 +82,7 @@ export default function ChatIcon() {
   const loadUnreadCount = async () => {
     try {
       const response = await ApiService.getUnreadMessageCount();
-      setUnreadCount(response.unreadCount || 0);
+      setUnreadCount(response.count || 0);
     } catch (error) {
       console.error('Error loading unread count:', error);
     }

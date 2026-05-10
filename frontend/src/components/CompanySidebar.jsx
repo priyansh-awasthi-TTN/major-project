@@ -12,7 +12,6 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
 import { useMessaging } from '../context/MessagingContext';
-import { companyApplicantsReferenceMeta } from '../data/companyApplicantsReference';
 
 const NAV = [
   {
@@ -134,9 +133,9 @@ export default function CompanySidebar() {
   const { user } = useAuth();
   const { totalUnreadCount = 0 } = useMessaging();
 
-  const companyName = user?.companyName || user?.fullName || companyApplicantsReferenceMeta.companyName;
-  const contactName = user?.fullName || companyApplicantsReferenceMeta.contactName;
-  const contactEmail = user?.email || companyApplicantsReferenceMeta.contactEmail;
+  const companyName = user?.companyName || user?.fullName || 'Company Workspace';
+  const contactName = user?.fullName || companyName;
+  const contactEmail = user?.email || 'No email available';
   const initials = getInitials(companyName);
 
   return (

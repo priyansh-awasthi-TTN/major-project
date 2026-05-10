@@ -12,10 +12,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:3000" })
+@CrossOrigin(origins = { "http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000", "http://127.0.0.1:3000" })
 public class JobController {
 
     @Autowired
@@ -56,6 +57,9 @@ public class JobController {
         m.put("capacity", j.getCapacity() != null ? j.getCapacity() : 10);
         m.put("description", j.getDescription());
         m.put("postedByCompany", j.getPostedByCompany());
+        m.put("postedByUserId", j.getPostedByUserId());
+        m.put("createdAt", j.getCreatedAt());
+        m.put("isNew", j.getCreatedAt() != null && j.getCreatedAt().isAfter(LocalDateTime.now().minusDays(7)));
         return m;
     }
 

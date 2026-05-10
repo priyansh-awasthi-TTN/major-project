@@ -17,7 +17,7 @@ function NotifItem({ n, onMarkRead, timeAgo, userName, userEmail }) {
         <div className="flex-1 min-w-0">
           <p className="text-sm text-gray-800 leading-snug">
             <span className="font-semibold">{n.name}</span>{' '}
-            {n.text.replace('Jake Gyll', userName)}
+            {n.text}
           </p>
           {n.badge && (
             <span className={`inline-block mt-1.5 text-xs px-3 py-0.5 rounded-full border font-medium ${n.badgeColor}`}>
@@ -99,8 +99,6 @@ export default function NotificationPanel({ open, onClose }) {
     return true;
   });
 
-  // Group by Today / Earlier
-  const now = Date.now();
   const todayStart = new Date().setHours(0, 0, 0, 0);
   const todayItems = filtered.filter(n => n.timestamp >= todayStart);
   const earlierItems = filtered.filter(n => n.timestamp < todayStart);
