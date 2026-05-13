@@ -188,6 +188,52 @@ class ApiService {
     return this.request(`/company/applications/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
   }
 
+  async getCompanyCalendar(startDate, endDate) {
+    return this.request(`/company/calendar?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`);
+  }
+
+  async createCompanyCalendarCategory(data) {
+    return this.request('/company/calendar/categories', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateCompanyCalendarCategory(id, data) {
+    return this.request(`/company/calendar/categories/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async createCompanyCalendarEvent(data) {
+    return this.request('/company/calendar/events', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateCompanyCalendarEvent(id, data) {
+    return this.request(`/company/calendar/events/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteCompanyCalendarEvent(id) {
+    return this.request(`/company/calendar/events/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Google Meet integration
+  async createGoogleMeetLink(eventDetails) {
+    return this.request('/company/calendar/create-meet-link', {
+      method: 'POST',
+      body: JSON.stringify(eventDetails),
+    });
+  }
+
   // Job endpoints
   async getJobs() {
     return this.request('/jobs');
