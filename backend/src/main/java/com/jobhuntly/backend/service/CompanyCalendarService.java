@@ -22,6 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -172,18 +173,42 @@ public class CompanyCalendarService {
     @Transactional
     public String createGoogleMeetLink(String email, Map<String, Object> eventDetails) {
         User companyUser = getCompanyUser(email);
-        
-        // Extract event details
-        String summary = (String) eventDetails.getOrDefault("summary", "Meeting");
-        
-        // Use GoogleCalendarService to create the meet link
-        String meetLink = googleCalendarService.createGoogleMeetLink(
-            summary,
-            LocalDateTime.now(),
-            LocalDateTime.now().plusHours(1)
-        );
-        
-        return meetLink;
+
+        String summary = normalizeName((String) eventDetails.getOrDefault("summary", eventDetails.getOrDefault("title", "Meeting")),
+                "Meeting summary is required");
+
+        LocalDateTime startAt = readDateTime(eventDetails, "startAt", "startTime");
+        LocalDateTime endAt = readDateTime(eventDetails, "endAt", "endTime");
+
+        if (startAt == null || endAt == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Meeting start and end time are required");
+        }
+
+        if (!endAt.isAfter(startAt)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Meeting end time must be after start time");
+        }
+
+        return googleCalendarService.createGoogleMeetLink(summary, startAt, endAt);
+    }
+
+    private LocalDateTime readDateTime(Map<String, Object> payload, String... keys) {
+        for (String key : keys) {
+            Object value = payload.get(key);
+            if (value == null) {
+                continue;
+            }
+            if (value instanceof LocalDateTime) {
+                return (LocalDateTime) value;
+            }
+            if (value instanceof String) {
+                try {
+                    return LocalDateTime.parse((String) value);
+                } catch (DateTimeParseException e) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid date-time format for " + key);
+                }
+            }
+        }
+        return null;
     }
 
     private void ensureDefaultCategories(User companyUser) {

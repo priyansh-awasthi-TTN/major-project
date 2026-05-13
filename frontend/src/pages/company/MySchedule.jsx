@@ -354,44 +354,43 @@ function EventModal({
     setIsGeneratingMeetLink(false);
   };
 
-  const removeMeetLink = () => {
-    onChange('meetingLink', '');
-    setIsGeneratingMeetLink(false);
-  };
+  const generateMeetLink = async () => {
+    console.log('🎥 Generating Google Meet link...');
+    setIsGeneratingMeetLink(true);
 
-  const copyMeetLink = () => {
-    if (form.meetingLink) {
-      navigator.clipboard.writeText(form.meetingLink);
+    const startDateTime = form.allDay
+      ? combineDateAndTime(form.startDate, '00:00')
+      : combineDateAndTime(form.startDate, form.startTime);
+    const endDateTime = form.allDay
+      ? addDays(combineDateAndTime(form.endDate, '00:00'), 1)
+      : combineDateAndTime(form.endDate, form.endTime);
+
+    try {
+      const response = await apiService.createGoogleMeetLink({
+        summary: form.title || 'Meeting',
+        startAt: toLocalDateTimeString(startDateTime),
+        endAt: toLocalDateTimeString(endDateTime),
+      });
+
+      if (response && response.meetLink) {
+        onChange('meetingLink', response.meetLink);
+        console.log('✅ Meet link created via backend:', response.meetLink);
+
+        if (typeof onShowToast === 'function') {
+          onShowToast('Meeting link created successfully', 'success');
+        }
+        setIsGeneratingMeetLink(false);
+        return;
+      }
+    } catch (backendError) {
+      console.warn('⚠️ Backend API not available:', backendError.message);
       if (typeof onShowToast === 'function') {
-        onShowToast('Meeting link copied to clipboard', 'success');
+        onShowToast('Google Meet setup is required before creating a meeting link.', 'error');
       }
     }
+
+    setIsGeneratingMeetLink(false);
   };
-
-  // Close dropdowns when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (!event.target.closest('.dropdown-container')) {
-        setShowCategoryDropdown(false);
-        setShowAvailabilityDropdown(false);
-        setShowVisibilityDropdown(false);
-        setShowReminderDropdown(false);
-        setShowTaskListDropdown(false);
-        setShowColorPicker(false);
-        setShowRepeatDropdown(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const dateSummary = useMemo(() => {
-    const startDate = combineDateAndTime(form.startDate, form.allDay ? '00:00' : form.startTime);
-    const endDate = combineDateAndTime(form.endDate, form.allDay ? '00:00' : form.endTime);
-
-    const dateFormatter = new Intl.DateTimeFormat('en-US', {
-      weekday: 'long',
       month: 'short',
       day: 'numeric',
     });

@@ -30,3 +30,12 @@ cors:
   allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
   allowed-headers: "*"
   allow-credentials: true
+
+google:
+  calendar:
+    enabled: false
+    credentials-path: ""
+    credentials-json: ""
+    calendar-id: "primary"
+    timezone: "UTC"
+    impersonated-user: ""
