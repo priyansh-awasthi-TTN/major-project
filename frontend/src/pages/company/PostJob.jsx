@@ -115,7 +115,6 @@ export default function PostJob() {
         level: 'Mid Level',
         logo: title.substring(0, 2).toUpperCase(),
         color: 'bg-indigo-600',
-        capacity: 10,
         description: [
           desc && `Description:\n${desc}`,
           resp && `Responsibilities:\n${resp}`,

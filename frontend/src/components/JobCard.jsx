@@ -85,7 +85,7 @@ export default function JobCard({ job, grid = false, dashboard = false }) {
             </button>
           </div>
         )}
-        <p className="text-xs text-gray-400 mt-2">{job.applied} applied of {job.capacity} capacity</p>
+        <p className="text-xs text-gray-400 mt-2">{job.applied || 0} applied</p>
       </div>
     </div>
     <ShareModal 

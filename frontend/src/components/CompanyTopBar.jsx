@@ -1,11 +1,14 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { BellIcon, ChevronDownIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import NotificationPanel from './NotificationPanel';
 
 export default function CompanyTopBar({ title, subtitle, variant = 'default' }) {
   const { user } = useAuth();
   const { unreadCount = 0 } = useNotifications();
+  const [bellOpen, setBellOpen] = useState(false);
 
   const companyName = user?.companyName || user?.fullName || 'Company Workspace';
   const heading = title || companyName;
@@ -30,14 +33,18 @@ export default function CompanyTopBar({ title, subtitle, variant = 'default' }) 
           </div>
 
           <div className="flex items-center gap-4">
-            <button
-              type="button"
-              aria-label="notifications"
-              className="relative inline-flex h-8 w-8 items-center justify-center text-[#515b6f] transition hover:text-[#25324b]"
-            >
-              <BellIcon className="h-5 w-5" />
-              {unreadCount > 0 ? <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[#ff6550]" /> : null}
-            </button>
+            <div className="relative notification-bell">
+              <button
+                type="button"
+                aria-label="notifications"
+                onClick={() => setBellOpen((open) => !open)}
+                className="relative inline-flex h-8 w-8 items-center justify-center text-[#515b6f] transition hover:text-[#25324b]"
+              >
+                <BellIcon className="h-5 w-5" />
+                {unreadCount > 0 ? <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[#ff6550]" /> : null}
+              </button>
+              <NotificationPanel open={bellOpen} onClose={() => setBellOpen(false)} />
+            </div>
 
             <Link
               to="/company/jobs/post"
@@ -61,16 +68,20 @@ export default function CompanyTopBar({ title, subtitle, variant = 'default' }) 
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label="notifications"
-            className="relative inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
-          >
-            <BellIcon className="h-5 w-5" />
-            {unreadCount > 0 ? (
-              <span className="absolute right-2 top-2 flex h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
-            ) : null}
-          </button>
+          <div className="relative notification-bell">
+            <button
+              type="button"
+              aria-label="notifications"
+              onClick={() => setBellOpen((open) => !open)}
+              className="relative inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
+            >
+              <BellIcon className="h-5 w-5" />
+              {unreadCount > 0 ? (
+                <span className="absolute right-2 top-2 flex h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
+              ) : null}
+            </button>
+            <NotificationPanel open={bellOpen} onClose={() => setBellOpen(false)} />
+          </div>
 
           <Link
             to="/company/jobs/post"

@@ -65,15 +65,23 @@ export default function JobDetail() {
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadedJobId, setLoadedJobId] = useState(null);
+  const [hasApplied, setHasApplied] = useState(false);
 
   useEffect(() => {
     let active = true;
     const requestedId = String(id);
 
-    apiService.getJob(id)
-      .then((jobData) => {
+    setLoading(true);
+    setHasApplied(false);
+
+    Promise.all([
+      apiService.getJob(id),
+      user ? apiService.checkApplicationStatus(id).catch(() => ({ applied: false })) : Promise.resolve({ applied: false }),
+    ])
+      .then(([jobData, applicationStatus]) => {
         if (active) {
           setJob(jobData);
+          setHasApplied(Boolean(applicationStatus?.applied));
         }
       })
       .catch(() => {
@@ -91,7 +99,7 @@ export default function JobDetail() {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, user]);
 
   const handleApply = () => {
     if (!user) {
@@ -137,7 +145,7 @@ export default function JobDetail() {
   const perks = splitCommas(descriptionSections.Perks) || [];
   const requiredSkills = splitCommas(descriptionSections['Required Skills']) || [];
 
-  const messageCompanyHref = job.postedByUserId
+  const messageCompanyHref = hasApplied && job.postedByUserId
     ? `/dashboard/messages?${new URLSearchParams({
         user: String(job.postedByUserId),
         name: job.company || 'Company',
@@ -207,11 +215,7 @@ export default function JobDetail() {
               </svg>
               Share
             </button>
-            {job.applied >= job.capacity ? (
-              <span className="bg-red-100 text-red-700 px-6 py-2 rounded-lg text-sm font-medium flex items-center gap-1">✕ Out of Capacity</span>
-            ) : (
-              <button onClick={handleApply} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700">Apply</button>
-            )}
+            <button onClick={handleApply} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700">Apply</button>
           </div>
         </div>
 

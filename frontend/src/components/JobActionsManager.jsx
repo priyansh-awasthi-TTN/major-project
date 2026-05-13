@@ -384,7 +384,6 @@ function ActionCard({ item, type, onUnsaveJob, onRemoveFromReadingList, onMarkAs
   const job = item.job || item;
   const categories = normalizeCategories(job.categories);
   const applied = typeof job.applied === 'number' ? job.applied : 0;
-  const capacity = typeof job.capacity === 'number' ? job.capacity : 0;
   const dateLabel =
     type === 'reading'
       ? formatActionDate(item.addedAt)
@@ -445,7 +444,7 @@ function ActionCard({ item, type, onUnsaveJob, onRemoveFromReadingList, onMarkAs
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 col-span-2 sm:col-span-1">
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Demand</p>
               <p className="mt-2 text-sm font-semibold text-slate-900">
-                {capacity > 0 ? `${applied}/${capacity} filled` : `${applied} applied`}
+                {applied} applied
               </p>
             </div>
           </div>

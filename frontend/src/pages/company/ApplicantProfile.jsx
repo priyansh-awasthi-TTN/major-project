@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeftIcon,
   BriefcaseIcon,
@@ -59,6 +59,7 @@ function DetailRow({ icon: Icon, label, value, href }) {
 
 export default function ApplicantProfile() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const applicationId = Number(id);
   const { showToast } = useToast();
   const [application, setApplication] = useState(null);
@@ -138,6 +139,21 @@ export default function ApplicantProfile() {
     }
   };
 
+  const candidateName = candidate?.fullName || application?.candidateName || '';
+  const stageLabel = application?.stage || '';
+  const candidateEmail = candidate?.email || application?.candidateEmail || '';
+
+  const handleMessageApplicant = () => {
+    if (!application) return;
+    const params = new URLSearchParams({
+      user: String(application.candidateId),
+      name: candidateName,
+      email: candidateEmail,
+      type: 'JOBSEEKER',
+    });
+    navigate(`/company/messages?${params.toString()}`);
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen flex-1 flex-col bg-[#f5f7fb]">
@@ -168,9 +184,6 @@ export default function ApplicantProfile() {
       </div>
     );
   }
-
-  const candidateName = candidate?.fullName || application.candidateName;
-  const stageLabel = application.stage;
 
   return (
     <div className="flex min-h-screen flex-1 flex-col bg-[#f5f7fb]">
@@ -218,6 +231,19 @@ export default function ApplicantProfile() {
                   <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Match score</p>
                   <p className="mt-2 text-sm font-semibold text-slate-900">{application.score.toFixed(1)}</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={handleMessageApplicant}
+                  className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                >
+                  Message applicant
+                </button>
+                <Link
+                  to={`/company/seeker/${application.candidateId}`}
+                  className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  View full profile
+                </Link>
               </div>
             </div>
           </section>

@@ -144,7 +144,6 @@ export function normalizeJob(job) {
   const types = normalizeTags(job?.type);
   const createdAt = toDate(job?.createdAt);
   const applied = Number(job?.applied) || 0;
-  const capacity = Number(job?.capacity) || 0;
 
   return {
     ...job,
@@ -152,9 +151,9 @@ export function normalizeJob(job) {
     categories: normalizeTags(job?.categories),
     types,
     displayType: types.join(', ') || 'Not specified',
-    status: job?.status || (capacity > 0 && applied >= capacity ? 'Closed' : 'Live'),
+    status: job?.status || 'Live',
     applied,
-    capacity,
+    capacity: Number(job?.capacity) || 0,
     salaryLabel: formatCurrency(job?.salary),
     createdAtLabel: createdAt ? formatShortDate(createdAt) : 'N/A',
     initials: getInitials(job?.title || job?.company),

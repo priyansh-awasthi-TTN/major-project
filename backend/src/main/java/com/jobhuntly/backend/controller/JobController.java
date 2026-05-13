@@ -54,7 +54,7 @@ public class JobController {
         m.put("level", j.getLevel());
         m.put("salary", j.getSalary());
         m.put("applied", j.getApplied() != null ? j.getApplied() : 0);
-        m.put("capacity", j.getCapacity() != null ? j.getCapacity() : 10);
+        m.put("capacity", j.getCapacity());
         m.put("description", j.getDescription());
         m.put("postedByCompany", j.getPostedByCompany());
         m.put("postedByUserId", j.getPostedByUserId());
@@ -100,7 +100,7 @@ public class JobController {
             job.setLevel((String) body.get("level"));
             if (body.get("salary") != null)
                 job.setSalary(Integer.parseInt(body.get("salary").toString()));
-            job.setCapacity(body.containsKey("capacity") ? Integer.parseInt(body.get("capacity").toString()) : 10);
+            job.setCapacity(null);
             job.setApplied(0);
             job.setDescription((String) body.get("description"));
             job.setPostedByUserId(user.getId());

@@ -9,6 +9,7 @@ class WebSocketService {
     this.stompClient = null;
     this.connected = false;
     this.userId = null;
+    this.token = null;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
     this.reconnectInterval = 3000;
@@ -25,6 +26,7 @@ class WebSocketService {
     return new Promise((resolve, reject) => {
       try {
         this.userId = userId;
+        this.token = token;
         const socket = new SockJS(`${WS_ORIGIN}/ws`);
         this.stompClient = Stomp.over(socket);
         
@@ -119,7 +121,8 @@ class WebSocketService {
         timestamp: new Date().toISOString()
       };
 
-      this.stompClient.send('/app/chat.send', {}, JSON.stringify(messageData));
+      const headers = this.token ? { Authorization: `Bearer ${this.token}` } : {};
+      this.stompClient.send('/app/chat.send', headers, JSON.stringify(messageData));
       return true;
     } catch (error) {
       console.error('Error sending message:', error);
@@ -187,6 +190,7 @@ class WebSocketService {
     
     this.connected = false;
     this.userId = null;
+    this.token = null;
     this.stompClient = null;
     this.messageHandlers.clear();
   }

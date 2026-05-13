@@ -205,10 +205,6 @@ function JobDetailsPanel({ job }) {
               <dt className="text-slate-500">Salary</dt>
               <dd className="font-medium text-slate-900">{job.salaryLabel}</dd>
             </div>
-            <div className="flex items-center justify-between gap-4">
-              <dt className="text-slate-500">Capacity</dt>
-              <dd className="font-medium text-slate-900">{formatNumber(job.capacity)}</dd>
-            </div>
           </dl>
         </div>
 
@@ -513,14 +509,13 @@ export default function JobListing() {
                     <th className="px-5 py-4 text-left font-semibold">Date Posted</th>
                     <th className="px-5 py-4 text-left font-semibold">Job Type</th>
                     <th className="px-5 py-4 text-left font-semibold">Applicants</th>
-                    <th className="px-5 py-4 text-left font-semibold">Capacity</th>
                     <th className="px-5 py-4 text-right font-semibold">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {paginatedJobs.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-5 py-16 text-center">
+                      <td colSpan={6} className="px-5 py-16 text-center">
                         <p className="text-sm font-medium text-slate-500">No jobs match the current search and filter state.</p>
                       </td>
                     </tr>
@@ -546,7 +541,6 @@ export default function JobListing() {
                         <td className="px-5 py-4 text-slate-600">{job.createdAt ? formatFullDate(job.createdAt) : 'N/A'}</td>
                         <td className="px-5 py-4 text-slate-600">{job.displayType}</td>
                         <td className="px-5 py-4 font-semibold text-slate-900">{formatNumber(job.applied)}</td>
-                        <td className="px-5 py-4 text-slate-600">{formatNumber(job.capacity)}</td>
                         <td className="px-5 py-4 text-right">
                           <Link
                             to={buildJobRoute(job.id, 'detail')}

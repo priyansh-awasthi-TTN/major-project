@@ -109,6 +109,33 @@ export function MessagingProvider({ children }) {
         // Dont overwrite full chat history if already loaded
         setChatMap(prev => ({ ...initMap, ...prev }));
         setUnreadCountMap(prev => ({ ...prev, ...initUnread }));
+
+        if (user.userType === 'COMPANY') {
+          const apps = await apiService.getCompanyApplications();
+          const applicantConversations = (apps || []).map((app) => ({
+            userId: app.candidateId,
+            userName: app.candidateName,
+            userEmail: app.candidateEmail,
+            userType: 'JOBSEEKER',
+          }));
+
+          setConversations(prev => {
+            const existing = new Set(prev.map(item => item.userId));
+            const merged = [...prev];
+            applicantConversations.forEach((entry) => {
+              if (!existing.has(entry.userId)) merged.push(entry);
+            });
+            return merged;
+          });
+
+          setUnreadCountMap(prev => {
+            const next = { ...prev };
+            applicantConversations.forEach((entry) => {
+              if (next[entry.userId] === undefined) next[entry.userId] = 0;
+            });
+            return next;
+          });
+        }
       } catch (e) {
         console.error('Failed to fetch conversations', e);
       }
@@ -237,7 +264,9 @@ export function MessagingProvider({ children }) {
         messageType: options.messageType || 'TEXT',
         fileUrl: options.fileUrl || null,
       };
-      stompClient.current.publish({ destination: '/app/chat.send', body: JSON.stringify(payload) });
+      const token = sessionStorage.getItem('accessToken');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      stompClient.current.publish({ destination: '/app/chat.send', headers, body: JSON.stringify(payload) });
     } else {
       throw new Error('STOMP client is not connected');
     }

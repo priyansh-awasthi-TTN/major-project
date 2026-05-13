@@ -10,9 +10,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -65,6 +68,8 @@ public class ChatController {
             if (user == null) return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
             chatService.markMessagesAsRead(user.getEmail(), otherUserId);
             return ResponseEntity.ok(Map.of("message", "Marked as read"));
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
@@ -99,13 +104,15 @@ class ChatWebSocketController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private JwtService jwtService;
+
+    @Autowired
+    private TokenService tokenService;
+
     @MessageMapping("/chat.send")
-    public void sendMessage(@Payload ChatMessagePayload payload) {
-        // Find sender internally? We do not have HttpServletRequest in websockets.
-        // Spring STOMP provides Principal, but for simplicity we rely on senderId in payload 
-        // if JWT wasn't natively linked to principal in WebSocketConfig.
-        // Assuming payload has senderId:
-        User sender = userRepository.findById(payload.getSenderId()).orElse(null);
+    public void sendMessage(@Payload ChatMessagePayload payload, SimpMessageHeaderAccessor headers) {
+        User sender = resolveSender(payload, headers);
         if (sender != null) {
             chatService.sendMessage(
                 sender.getEmail(),
@@ -115,6 +122,39 @@ class ChatWebSocketController {
                 payload.getFileUrl()
             );
         }
+    }
+
+    private User resolveSender(ChatMessagePayload payload, SimpMessageHeaderAccessor headers) {
+        if (payload.getSenderId() == null) {
+            return null;
+        }
+
+        String token = extractBearerToken(headers);
+        if (token == null || !tokenService.isAccessTokenValid(token)) {
+            return null;
+        }
+
+        String email = jwtService.extractUsername(token);
+        User sender = userRepository.findByEmailAndIsActiveTrue(email).orElse(null);
+        if (sender == null || !sender.getId().equals(payload.getSenderId())) {
+            return null;
+        }
+
+        return sender;
+    }
+
+    private String extractBearerToken(SimpMessageHeaderAccessor headers) {
+        List<String> values = headers.getNativeHeader("Authorization");
+        if (values == null || values.isEmpty()) {
+            return null;
+        }
+
+        String authorization = values.get(0);
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            return null;
+        }
+
+        return authorization.substring(7);
     }
 
     public static class ChatMessagePayload {

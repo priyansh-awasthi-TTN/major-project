@@ -73,6 +73,7 @@ export default function SeekerProfile() {
   const numericSeekerId = Number(seekerId);
 
   const [networkUser, setNetworkUser] = useState(null);
+  const [canMessage, setCanMessage] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -85,14 +86,20 @@ export default function SeekerProfile() {
       }
 
       setLoading(true);
+      setCanMessage(false);
       try {
-        const data = await apiService.getNetworkUser(seekerId);
+        const [data, applications] = await Promise.all([
+          apiService.getNetworkUser(seekerId),
+          apiService.getCompanyApplications().catch(() => []),
+        ]);
         if (!ignore) {
           setNetworkUser(data?.userType === 'JOBSEEKER' ? data : null);
+          setCanMessage((applications || []).some((application) => String(application.candidateId) === String(seekerId)));
         }
       } catch (error) {
         if (!ignore) {
           setNetworkUser(null);
+          setCanMessage(false);
         }
       } finally {
         if (!ignore) {
@@ -199,7 +206,7 @@ export default function SeekerProfile() {
   }, [networkUser, numericSeekerId, seekerId]);
 
   const openMessages = () => {
-    if (!profileData) return;
+    if (!profileData || !canMessage) return;
 
     const params = new URLSearchParams({
       user: String(networkUser?.id || numericSeekerId),
@@ -249,7 +256,7 @@ export default function SeekerProfile() {
       <div className="overflow-y-auto flex-1 px-8 py-6" style={{ marginTop: '60px' }}>
         <div className="max-w-2xl mx-auto space-y-5">
           <button
-            onClick={openMessages}
+            onClick={() => navigate('/company/messages')}
             className="flex items-center gap-1.5 text-gray-500 hover:text-blue-600 text-sm font-medium transition mb-2"
           >
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
@@ -284,7 +291,9 @@ export default function SeekerProfile() {
                 <div className="flex gap-3 mt-4 flex-wrap">
                   <button
                     onClick={openMessages}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition flex items-center gap-2"
+                    disabled={!canMessage}
+                    title={canMessage ? 'Send message' : 'Only applicants can be messaged'}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />

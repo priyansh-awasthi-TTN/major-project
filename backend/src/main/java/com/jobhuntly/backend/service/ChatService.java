@@ -3,12 +3,15 @@ package com.jobhuntly.backend.service;
 import com.jobhuntly.backend.dto.ChatMessageDTO;
 import com.jobhuntly.backend.entity.ChatMessage;
 import com.jobhuntly.backend.entity.User;
+import com.jobhuntly.backend.repository.ApplicationRepository;
 import com.jobhuntly.backend.repository.ChatMessageRepository;
 import com.jobhuntly.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -24,6 +27,9 @@ public class ChatService {
     
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ApplicationRepository applicationRepository;
     
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
@@ -35,6 +41,8 @@ public class ChatService {
         
         User receiver = userRepository.findById(receiverId)
             .orElseThrow(() -> new RuntimeException("Receiver not found"));
+
+        assertCanChat(sender, receiver);
         
         ChatMessage message = new ChatMessage(
             sender,
@@ -63,12 +71,15 @@ public class ChatService {
         return messageDTO;
     }
     
+    @Transactional(readOnly = true)
     public List<ChatMessageDTO> getMessagesBetweenUsers(String userEmail, Long otherUserId) {
         User user = userRepository.findByEmail(userEmail)
             .orElseThrow(() -> new RuntimeException("User not found"));
         
         User otherUser = userRepository.findById(otherUserId)
             .orElseThrow(() -> new RuntimeException("Other user not found"));
+
+        assertCanChat(user, otherUser);
         
         List<ChatMessage> messages = chatMessageRepository.findMessagesBetweenUsers(user, otherUser);
         List<ChatMessageDTO> messageDTOs = new ArrayList<>();
@@ -80,6 +91,7 @@ public class ChatService {
         return messageDTOs;
     }
     
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> getConversations(String userEmail) {
         User user = userRepository.findByEmail(userEmail)
             .orElseThrow(() -> new RuntimeException("User not found"));
@@ -88,7 +100,10 @@ public class ChatService {
         List<Map<String, Object>> conversations = new ArrayList<>();
         
         for (ChatMessage message : recentMessages) {
-            User otherUser = message.getSender().equals(user) ? message.getReceiver() : message.getSender();
+            User otherUser = message.getSender().getId().equals(user.getId()) ? message.getReceiver() : message.getSender();
+            if (!canChat(user, otherUser)) {
+                continue;
+            }
             long unreadCount = chatMessageRepository.countUnreadMessagesBetweenUsers(otherUser, user);
             
             Map<String, Object> conversation = new HashMap<>();
@@ -105,19 +120,25 @@ public class ChatService {
         return conversations;
     }
     
+    @Transactional(readOnly = true)
     public long getUnreadMessageCount(String userEmail) {
         User user = userRepository.findByEmail(userEmail)
             .orElseThrow(() -> new RuntimeException("User not found"));
         
-        return chatMessageRepository.countUnreadMessages(user);
+        return chatMessageRepository.findUnreadMessages(user).stream()
+            .filter(message -> canChat(user, message.getSender()))
+            .count();
     }
     
+    @Transactional(readOnly = true)
     public long getUnreadMessageCountBetweenUsers(String userEmail, Long otherUserId) {
         User user = userRepository.findByEmail(userEmail)
             .orElseThrow(() -> new RuntimeException("User not found"));
         
         User otherUser = userRepository.findById(otherUserId)
             .orElseThrow(() -> new RuntimeException("Other user not found"));
+
+        assertCanChat(user, otherUser);
         
         return chatMessageRepository.countUnreadMessagesBetweenUsers(otherUser, user);
     }
@@ -129,6 +150,8 @@ public class ChatService {
         
         User otherUser = userRepository.findById(otherUserId)
             .orElseThrow(() -> new RuntimeException("Other user not found"));
+
+        assertCanChat(user, otherUser);
         
         chatMessageRepository.markMessagesAsRead(otherUser, user);
         
@@ -142,6 +165,40 @@ public class ChatService {
             "/topic/messages/" + otherUser.getId() + "/notifications",
             readNotification
         );
+    }
+
+    private void assertCanChat(User user, User otherUser) {
+        if (!canChat(user, otherUser)) {
+            throw new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "Companies can only message applicants who have applied to one of their jobs."
+            );
+        }
+    }
+
+    private boolean canChat(User user, User otherUser) {
+        if (user == null || otherUser == null || user.getId() == null || otherUser.getId() == null) {
+            return false;
+        }
+        if (user.getId().equals(otherUser.getId())) {
+            return false;
+        }
+
+        boolean userIsCompany = user.getUserType() == User.UserType.COMPANY;
+        boolean otherUserIsCompany = otherUser.getUserType() == User.UserType.COMPANY;
+
+        if (!userIsCompany && !otherUserIsCompany) {
+            return true;
+        }
+        if (userIsCompany == otherUserIsCompany) {
+            return false;
+        }
+
+        User company = userIsCompany ? user : otherUser;
+        User applicant = userIsCompany ? otherUser : user;
+
+        return applicant.getUserType() == User.UserType.JOBSEEKER
+            && applicationRepository.existsByApplicantAndCompanyJob(applicant, company.getId());
     }
     
     private ChatMessageDTO convertToDTO(ChatMessage message) {

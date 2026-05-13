@@ -1,12 +1,12 @@
 export const jobs = [
-  { id: 1, title: 'Social Media Assistant', company: 'Nomad', location: 'Paris, France', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'N', color: 'bg-emerald-500', applied: 5, capacity: 10 },
-  { id: 2, title: 'Brand Designer', company: 'Dropbox', location: 'San Francisco, USA', type: 'Full-Time', categories: ['Design', 'Business'], logo: 'D', color: 'bg-blue-500', applied: 2, capacity: 8 },
-  { id: 3, title: 'Interactive Developer', company: 'Terraform', location: 'Hamburg, Germany', type: 'Full-Time', categories: ['Technology', 'Engineering'], logo: 'T', color: 'bg-purple-500', applied: 7, capacity: 12 },
-  { id: 4, title: 'Email Marketing', company: 'Revolut', location: 'Madrid, Spain', type: 'Full-Time', categories: ['Marketing'], logo: 'R', color: 'bg-red-500', applied: 3, capacity: 6 },
-  { id: 5, title: 'Lead Engineer', company: 'Stripe', location: 'New York, USA', type: 'Full-Time', categories: ['Engineering', 'Technology'], logo: 'S', color: 'bg-indigo-500', applied: 9, capacity: 15 },
-  { id: 6, title: 'Product Designer', company: 'Coinbase', location: 'London, UK', type: 'Part-Time', categories: ['Design'], logo: 'C', color: 'bg-yellow-500', applied: 4, capacity: 5 },
-  { id: 7, title: 'Customer Manager', company: 'Twilio', location: 'Berlin, Germany', type: 'Full-Time', categories: ['Business', 'Finance'], logo: 'T', color: 'bg-pink-500', applied: 1, capacity: 4 },
-  { id: 8, title: 'Visual Designer', company: 'Packer', location: 'Madrid, Spain', type: 'Full-Time', categories: ['Design'], logo: 'P', color: 'bg-orange-500', applied: 6, capacity: 10 },
+  { id: 1, title: 'Social Media Assistant', company: 'Nomad', location: 'Paris, France', type: 'Full-Time', categories: ['Marketing', 'Design'], logo: 'N', color: 'bg-emerald-500', applied: 5 },
+  { id: 2, title: 'Brand Designer', company: 'Dropbox', location: 'San Francisco, USA', type: 'Full-Time', categories: ['Design', 'Business'], logo: 'D', color: 'bg-blue-500', applied: 2 },
+  { id: 3, title: 'Interactive Developer', company: 'Terraform', location: 'Hamburg, Germany', type: 'Full-Time', categories: ['Technology', 'Engineering'], logo: 'T', color: 'bg-purple-500', applied: 7 },
+  { id: 4, title: 'Email Marketing', company: 'Revolut', location: 'Madrid, Spain', type: 'Full-Time', categories: ['Marketing'], logo: 'R', color: 'bg-red-500', applied: 3 },
+  { id: 5, title: 'Lead Engineer', company: 'Stripe', location: 'New York, USA', type: 'Full-Time', categories: ['Engineering', 'Technology'], logo: 'S', color: 'bg-indigo-500', applied: 9 },
+  { id: 6, title: 'Product Designer', company: 'Coinbase', location: 'London, UK', type: 'Part-Time', categories: ['Design'], logo: 'C', color: 'bg-yellow-500', applied: 4 },
+  { id: 7, title: 'Customer Manager', company: 'Twilio', location: 'Berlin, Germany', type: 'Full-Time', categories: ['Business', 'Finance'], logo: 'T', color: 'bg-pink-500', applied: 1 },
+  { id: 8, title: 'Visual Designer', company: 'Packer', location: 'Madrid, Spain', type: 'Full-Time', categories: ['Design'], logo: 'P', color: 'bg-orange-500', applied: 6 },
 ];
 
 export const companies = [

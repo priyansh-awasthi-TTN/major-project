@@ -184,8 +184,7 @@ public class JobSeederService implements ApplicationRunner {
             (String) row[6],
             (String) row[7],
             (Integer) row[8],
-            (Integer) row[9],
-            (Integer) row[10]
+            (Integer) row[9]
         );
     }
 
@@ -211,8 +210,7 @@ public class JobSeederService implements ApplicationRunner {
             int variantIndex = generated + 1;
             String type = EMPLOYMENT_TYPES[Math.floorMod(companySeed + variantIndex, EMPLOYMENT_TYPES.length)];
             String location = "Remote".equals(type) ? "Remote" : (String) baseRow[4];
-            int capacity = Math.max(4, ((Integer) baseRow[10]) + (variantIndex % 3) + 1);
-            int applied = Math.min(capacity - 1, Math.max(1, ((Integer) baseRow[9]) + Math.floorMod(companySeed + variantIndex, 4) - 1));
+            int applied = Math.max(1, ((Integer) baseRow[9]) + Math.floorMod(companySeed + variantIndex, 4) - 1);
             int salary = ((Integer) baseRow[8]) + 150 + (variantIndex * 120) + (companySeed % 130);
 
             seedJobIfMissing(
@@ -225,8 +223,7 @@ public class JobSeederService implements ApplicationRunner {
                 (String) baseRow[6],
                 resolveLevel((String) baseRow[7], variantIndex),
                 salary,
-                applied,
-                capacity
+                applied
             );
 
             generated += 1;
@@ -272,8 +269,7 @@ public class JobSeederService implements ApplicationRunner {
         String categories,
         String level,
         Integer salary,
-        Integer applied,
-        Integer capacity
+        Integer applied
     ) {
         if (jobRepository.existsByTitleAndCompany(title, company)) return;
 
@@ -288,7 +284,7 @@ public class JobSeederService implements ApplicationRunner {
         job.setLevel(level);
         job.setSalary(salary);
         job.setApplied(applied);
-        job.setCapacity(capacity);
+        job.setCapacity(null);
         jobRepository.save(job);
     }
 }

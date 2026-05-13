@@ -74,7 +74,7 @@ export default function CompanyJobDetail() {
             <div className="bg-white rounded-xl p-5 border border-gray-200">
               <h3 className="font-semibold text-gray-900 mb-3">About this role</h3>
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-gray-500">Applied</span><span className="font-medium">{job.applications} / 50 capacity</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Applied</span><span className="font-medium">{job.applications}</span></div>
                 <div className="flex justify-between"><span className="text-gray-500">Date Posted</span><span className="font-medium">{job.datePosted}</span></div>
                 <div className="flex justify-between"><span className="text-gray-500">Job Type</span><span className="font-medium">{job.jobType}</span></div>
                 <div className="flex justify-between"><span className="text-gray-500">Salary</span><span className="font-medium">$75k-$85k USD</span></div>

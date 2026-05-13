@@ -720,9 +720,7 @@ export default function CompanyProfileDetails({
               ) : (
                 visibleJobs.map((job) => {
                   const categories = normalizeCategories(job.categories);
-                  const capacity = typeof job.capacity === 'number' && job.capacity > 0 ? job.capacity : 10;
                   const applied = typeof job.applied === 'number' ? job.applied : 0;
-                  const progress = Math.min((applied / capacity) * 100, 100);
 
                   return (
                     <Link
@@ -758,11 +756,8 @@ export default function CompanyProfileDetails({
                         ))}
                       </div>
 
-                      <div className="mb-1 h-1.5 w-full rounded-full bg-gray-200">
-                        <div className="h-1.5 rounded-full bg-green-500" style={{ width: `${progress}%` }} />
-                      </div>
                       <p className="text-xs text-gray-400">
-                        <span className="font-medium text-gray-600">{applied} applied</span> of {capacity} capacity
+                        <span className="font-medium text-gray-600">{applied} applied</span>
                       </p>
                     </Link>
                   );

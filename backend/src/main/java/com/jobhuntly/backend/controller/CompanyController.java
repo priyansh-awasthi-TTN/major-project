@@ -51,14 +51,8 @@ public class CompanyController {
         result.put("postedByCompany", job.getPostedByCompany());
         result.put("postedByUserId", job.getPostedByUserId());
         result.put("createdAt", job.getCreatedAt() != null ? job.getCreatedAt().toString() : null);
-        result.put("status", isJobClosed(job) ? "Closed" : "Live");
+        result.put("status", "Live");
         return result;
-    }
-
-    private boolean isJobClosed(Job job) {
-        Integer capacity = job.getCapacity();
-        Integer applied = job.getApplied();
-        return capacity != null && capacity > 0 && applied != null && applied >= capacity;
     }
 
     private User resolveUser(HttpServletRequest request) {
