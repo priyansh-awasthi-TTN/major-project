@@ -163,6 +163,14 @@ class ApiService {
     return this.request(`/applications/check/${jobId}`);
   }
 
+  async requestFollowup(id) {
+    return this.request(`/applications/${id}/follow-up`, { method: 'POST' });
+  }
+
+  async submitAssessment(id) {
+    return this.request(`/applications/${id}/submit-assessment`, { method: 'POST' });
+  }
+
   async createApplication(data) {
     return this.request('/applications', { method: 'POST', body: JSON.stringify(data) });
   }

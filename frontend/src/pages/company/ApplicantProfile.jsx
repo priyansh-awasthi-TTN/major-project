@@ -72,6 +72,8 @@ export default function ApplicantProfile() {
   const [gratuity, setGratuity] = useState('');
   const [assessmentDescription, setAssessmentDescription] = useState('');
   const [assessmentDocumentFile, setAssessmentDocumentFile] = useState(null);
+  const [interviewDate, setInterviewDate] = useState('');
+  const [meetLink, setMeetLink] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -142,9 +144,33 @@ export default function ApplicantProfile() {
           const uploadRes = await apiService.uploadFile(assessmentDocumentFile);
           payload.assessmentDocumentUrl = uploadRes.url;
         }
+      } else if (status === 'Interviewing' || status === 'Interview') {
+        if (interviewDate) {
+          payload.interviewDate = new Date(interviewDate).toISOString().slice(0, 19); // yyyy-MM-ddTHH:mm:ss
+        }
+        if (meetLink) {
+          payload.meetLink = meetLink;
+        }
       }
 
       await apiService.updateCompanyApplicationStatus(application.id, payload);
+
+      if ((status === 'Interviewing' || status === 'Interview') && interviewDate) {
+        try {
+          const start = new Date(interviewDate);
+          const end = new Date(start.getTime() + 60 * 60 * 1000); // 1 hour duration
+          await apiService.createCompanyCalendarEvent({
+            title: `Interview with ${candidateName}`,
+            description: `Interview for ${application.jobTitle}`,
+            startTime: start.toISOString(),
+            endTime: end.toISOString(),
+            meetLink: meetLink || ''
+          });
+          showToast('Calendar event created successfully.', 'success');
+        } catch (calError) {
+          console.error("Failed to create calendar event:", calError);
+        }
+      }
       setApplication((current) => current ? { ...current, stage: status, status } : current);
       showToast(`Status updated to ${status}.`, 'success');
     } catch (updateError) {
@@ -394,6 +420,19 @@ export default function ApplicantProfile() {
                     <label className="block">
                       <span className="text-xs font-semibold text-slate-600">Assessment Document (PDF/Doc)</span>
                       <input type="file" onChange={(e) => setAssessmentDocumentFile(e.target.files[0])} className="mt-1 w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer" />
+                    </label>
+                  </div>
+                )}
+
+                {(status === 'Interviewing' || status === 'Interview') && (
+                  <div className="mt-4 space-y-3">
+                    <label className="block">
+                      <span className="text-xs font-semibold text-slate-600">Interview Date & Time</span>
+                      <input type="datetime-local" value={interviewDate} onChange={(e) => setInterviewDate(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none" />
+                    </label>
+                    <label className="block">
+                      <span className="text-xs font-semibold text-slate-600">Meet Link (Optional)</span>
+                      <input type="url" placeholder="https://meet.google.com/..." value={meetLink} onChange={(e) => setMeetLink(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none" />
                     </label>
                   </div>
                 )}

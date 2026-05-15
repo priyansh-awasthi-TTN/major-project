@@ -207,7 +207,7 @@ function EventModal({
   onShowToast,
 }) {
   const [activeTab, setActiveTab] = useState('event');
-  
+
   // Handle tab switching - reset date/time editor and expanded settings
   const handleTabSwitch = (tab) => {
     setActiveTab(tab);
@@ -215,7 +215,7 @@ function EventModal({
     setShowExpandedSettings(false);
     closeAllDropdowns();
   };
-  
+
   const [isDescriptionFocused, setIsDescriptionFocused] = useState(false);
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
@@ -234,7 +234,7 @@ function EventModal({
   const [showGuestsInput, setShowGuestsInput] = useState(!!form.attendees);
   const [showLocationInput, setShowLocationInput] = useState(!!form.location);
   const [showDescriptionInput, setShowDescriptionInput] = useState(!!form.description);
-  
+
   const descriptionRef = useCallback((node) => {
     if (node && !isDescriptionFocused) {
       node.innerHTML = form.description || '';
@@ -310,6 +310,8 @@ function EventModal({
         summary: form.title || 'Meeting',
         startAt: toLocalDateTimeString(startDateTime),
         endAt: toLocalDateTimeString(endDateTime),
+        startAt: toLocalDateTimeString(startDateTime),
+        endAt: toLocalDateTimeString(endDateTime),
       });
 
       if (response && response.meetLink) {
@@ -324,34 +326,37 @@ function EventModal({
       }
     } catch (backendError) {
       console.warn('⚠️ Backend API not available:', backendError.message);
+      if (typeof onShowToast === 'function') {
+        onShowToast('Google Meet setup is required before creating a meeting link.', 'error');
+      }
     }
 
     // Generate Google Meet-style link as fallback
     const chars = 'abcdefghijklmnopqrstuvwxyz';
     let code = '';
-    
+
     // Part 1: 3 chars
     for (let i = 0; i < 3; i++) {
       code += chars[Math.floor(Math.random() * chars.length)];
     }
     code += '-';
-    
+
     // Part 2: 4 chars
     for (let i = 0; i < 4; i++) {
       code += chars[Math.floor(Math.random() * chars.length)];
     }
     code += '-';
-    
+
     // Part 3: 3 chars
     for (let i = 0; i < 3; i++) {
       code += chars[Math.floor(Math.random() * chars.length)];
     }
-    
+
     const meetLink = `https://meet.google.com/${code}`;
     onChange('meetingLink', meetLink);
     console.log('✅ Meet link generated:', meetLink);
     console.warn('⚠️ Note: This link requires Google OAuth setup to work. See GOOGLE_MEET_SETUP.md');
-    
+
     if (typeof onShowToast === 'function') {
       onShowToast('Meeting link created', 'success');
     }
@@ -407,7 +412,7 @@ function EventModal({
 
   const applyFormatting = (command, value = null) => {
     document.execCommand(command, false, value);
-    
+
     // Update button states
     setIsBold(document.queryCommandState('bold'));
     setIsItalic(document.queryCommandState('italic'));
@@ -488,920 +493,920 @@ function EventModal({
             {activeTab === 'event' ? (
               // Event content
               <>
-            {/* Date and time section */}
-            {!showDateTimeEditor ? (
-              // Collapsed view
-              <button
-                type="button"
-                onClick={() => setShowDateTimeEditor(true)}
-                className="mt-6 flex w-full gap-4 px-2 py-3 text-left transition hover:bg-slate-50 rounded-lg"
-              >
-                <ClockIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
-                <div className="min-w-0 flex-1">
-                  <div className="text-base text-slate-900">{dateSummary}</div>
-                  <p className="mt-1 text-sm text-slate-600">Time zone · Does not repeat</p>
-                </div>
-              </button>
-            ) : (
-              // Expanded view - editable
-              <div className="mt-6 flex gap-4 px-2 py-3">
-                <ClockIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
-                <div className="min-w-0 flex-1 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="date"
-                      value={form.startDate}
-                      onChange={(event) => onChange('startDate', event.target.value)}
-                      className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8]"
-                    />
-                    {!form.allDay && (
-                      <>
-                        <input
-                          type="time"
-                          value={form.startTime}
-                          onChange={(event) => onChange('startTime', event.target.value)}
-                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8]"
-                        />
-                        <span className="text-slate-600">–</span>
-                        <input
-                          type="time"
-                          value={form.endTime}
-                          onChange={(event) => onChange('endTime', event.target.value)}
-                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8]"
-                        />
-                      </>
-                    )}
-                  </div>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={form.allDay}
-                      onChange={(event) => onChange('allDay', event.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-[#1a73e8]"
-                    />
-                    <span className="text-sm text-slate-900">All day</span>
-                  </label>
-                  <div className="dropdown-container relative">
-                    <button
-                      type="button"
-                      onClick={toggleRepeatDropdown}
-                      className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                    >
-                      <span>{form.repeatOption || 'Does not repeat'}</span>
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    {showRepeatDropdown && (
-                      <div className="absolute left-0 top-full z-10 mt-1 w-full rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-                        {[
-                          'Does not repeat',
-                          'Daily',
-                          'Weekly on Thursday',
-                          'Monthly on the second Thursday',
-                          'Annually on May 14',
-                          'Every weekday (Monday to Friday)',
-                          'Custom...',
-                        ].map((option) => (
-                          <button
-                            key={option}
-                            type="button"
-                            onClick={() => {
-                              onChange('repeatOption', option);
-                              setShowRepeatDropdown(false);
-                            }}
-                            className={classNames(
-                              'flex w-full items-center px-4 py-2 text-left text-sm hover:bg-slate-50',
-                              (form.repeatOption || 'Does not repeat') === option
-                                ? 'bg-[#e8f0fe] text-slate-900'
-                                : 'text-slate-700'
-                            )}
-                          >
-                            {option}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                {/* Date and time section */}
+                {!showDateTimeEditor ? (
+                  // Collapsed view
                   <button
                     type="button"
-                    onClick={() => setShowDateTimeEditor(false)}
-                    className="text-sm text-[#1a73e8] hover:underline"
+                    onClick={() => setShowDateTimeEditor(true)}
+                    className="mt-6 flex w-full gap-4 px-2 py-3 text-left transition hover:bg-slate-50 rounded-lg"
                   >
-                    Done
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Add guests */}
-            <div className="mt-2 flex gap-4 px-2 py-3">
-              <UserGroupIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
-              {!showGuestsInput ? (
-                <button
-                  type="button"
-                  onClick={() => setShowGuestsInput(true)}
-                  className="min-w-0 flex-1 text-left text-base text-slate-600"
-                >
-                  Add guests
-                </button>
-              ) : (
-                <div className="min-w-0 flex-1">
-                  <input
-                    value={form.attendees}
-                    onChange={(event) => onChange('attendees', event.target.value)}
-                    placeholder="Add guests"
-                    autoFocus
-                    className="w-full bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-600"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Add Google Meet */}
-            <div className="mt-2 flex gap-4 px-2 py-3">
-              <VideoCameraIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
-              <div className="min-w-0 flex-1">
-                {!form.meetingLink && !isGeneratingMeetLink ? (
-                  <button
-                    type="button"
-                    onClick={generateMeetLink}
-                    className="w-full text-left text-base text-slate-600 hover:text-slate-900"
-                  >
-                    Add Google Meet video conferencing
-                  </button>
-                ) : isGeneratingMeetLink ? (
-                  <div className="flex items-center gap-3">
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-[#1a73e8]" />
-                    <span className="text-base text-slate-700">Adding conferencing...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <a
-                        href={form.meetingLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-base font-medium text-[#1a73e8] hover:underline"
-                      >
-                        Join with Google Meet
-                      </a>
-                      <p className="mt-1 text-sm text-slate-600">{form.meetingLink}</p>
-                      <p className="mt-1 text-xs text-slate-500">Up to 100 guest connections</p>
+                    <ClockIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-base text-slate-900">{dateSummary}</div>
+                      <p className="mt-1 text-sm text-slate-600">Time zone · Does not repeat</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                  </button>
+                ) : (
+                  // Expanded view - editable
+                  <div className="mt-6 flex gap-4 px-2 py-3">
+                    <ClockIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
+                    <div className="min-w-0 flex-1 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="date"
+                          value={form.startDate}
+                          onChange={(event) => onChange('startDate', event.target.value)}
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8]"
+                        />
+                        {!form.allDay && (
+                          <>
+                            <input
+                              type="time"
+                              value={form.startTime}
+                              onChange={(event) => onChange('startTime', event.target.value)}
+                              className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8]"
+                            />
+                            <span className="text-slate-600">–</span>
+                            <input
+                              type="time"
+                              value={form.endTime}
+                              onChange={(event) => onChange('endTime', event.target.value)}
+                              className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8]"
+                            />
+                          </>
+                        )}
+                      </div>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={form.allDay}
+                          onChange={(event) => onChange('allDay', event.target.checked)}
+                          className="h-4 w-4 rounded border-slate-300 text-[#1a73e8]"
+                        />
+                        <span className="text-sm text-slate-900">All day</span>
+                      </label>
+                      <div className="dropdown-container relative">
+                        <button
+                          type="button"
+                          onClick={toggleRepeatDropdown}
+                          className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                        >
+                          <span>{form.repeatOption || 'Does not repeat'}</span>
+                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {showRepeatDropdown && (
+                          <div className="absolute left-0 top-full z-10 mt-1 w-full rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                            {[
+                              'Does not repeat',
+                              'Daily',
+                              'Weekly on Thursday',
+                              'Monthly on the second Thursday',
+                              'Annually on May 14',
+                              'Every weekday (Monday to Friday)',
+                              'Custom...',
+                            ].map((option) => (
+                              <button
+                                key={option}
+                                type="button"
+                                onClick={() => {
+                                  onChange('repeatOption', option);
+                                  setShowRepeatDropdown(false);
+                                }}
+                                className={classNames(
+                                  'flex w-full items-center px-4 py-2 text-left text-sm hover:bg-slate-50',
+                                  (form.repeatOption || 'Does not repeat') === option
+                                    ? 'bg-[#e8f0fe] text-slate-900'
+                                    : 'text-slate-700'
+                                )}
+                              >
+                                {option}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <button
                         type="button"
-                        onClick={copyMeetLink}
-                        className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-                        title="Copy meeting link"
+                        onClick={() => setShowDateTimeEditor(false)}
+                        className="text-sm text-[#1a73e8] hover:underline"
                       >
-                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={removeMeetLink}
-                        className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-                        title="Remove meeting link"
-                      >
-                        <XMarkIcon className="h-5 w-5" />
+                        Done
                       </button>
                     </div>
                   </div>
                 )}
-              </div>
-            </div>
 
-            {/* Add location */}
-            <div className="mt-2 flex gap-4 px-2 py-3">
-              <MapPinIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
-              {!showLocationInput ? (
-                <button
-                  type="button"
-                  onClick={() => setShowLocationInput(true)}
-                  className="min-w-0 flex-1 text-left text-base text-slate-600"
-                >
-                  Add location
-                </button>
-              ) : (
-                <input
-                  value={form.location}
-                  onChange={(event) => onChange('location', event.target.value)}
-                  placeholder="Add location"
-                  autoFocus
-                  className="min-w-0 flex-1 bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-600"
-                />
-              )}
-            </div>
-
-            {/* Add description */}
-            <div className="mt-2 flex gap-4 px-2 py-3">
-              <Bars3Icon className="h-6 w-6 flex-shrink-0 text-slate-600" />
-              {!showDescriptionInput ? (
-                <button
-                  type="button"
-                  onClick={() => setShowDescriptionInput(true)}
-                  className="min-w-0 flex-1 text-left text-base text-slate-600"
-                >
-                  Add description
-                </button>
-              ) : (
-                <div className="min-w-0 flex-1">
-                  {/* Rich text editor with formatting toolbar - always visible when description is shown */}
-                  <div className="formatting-toolbar mb-2 flex items-center gap-1 rounded-lg bg-slate-100 p-2">
+                {/* Add guests */}
+                <div className="mt-2 flex gap-4 px-2 py-3">
+                  <UserGroupIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
+                  {!showGuestsInput ? (
                     <button
                       type="button"
-                      onClick={() => applyFormatting('bold')}
-                      className={classNames(
-                        'rounded px-2 py-1 text-sm font-bold transition',
-                        isBold ? 'bg-slate-300 text-slate-900' : 'text-slate-600 hover:bg-slate-200'
-                      )}
+                      onClick={() => setShowGuestsInput(true)}
+                      className="min-w-0 flex-1 text-left text-base text-slate-600"
                     >
-                      B
+                      Add guests
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => applyFormatting('italic')}
-                      className={classNames(
-                        'rounded px-2 py-1 text-sm italic transition',
-                        isItalic ? 'bg-slate-300 text-slate-900' : 'text-slate-600 hover:bg-slate-200'
-                      )}
-                    >
-                      I
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => applyFormatting('underline')}
-                      className={classNames(
-                        'rounded px-2 py-1 text-sm underline transition',
-                        isUnderline ? 'bg-slate-300 text-slate-900' : 'text-slate-600 hover:bg-slate-200'
-                      )}
-                    >
-                      U
-                    </button>
-                    <div className="mx-1 h-6 w-px bg-slate-300" />
-                    <button
-                      type="button"
-                      onClick={() => applyFormatting('insertUnorderedList')}
-                      className="rounded px-2 py-1 text-sm text-slate-600 transition hover:bg-slate-200"
-                      title="Bullet list"
-                    >
-                      • List
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => applyFormatting('insertOrderedList')}
-                      className="rounded px-2 py-1 text-sm text-slate-600 transition hover:bg-slate-200"
-                      title="Numbered list"
-                    >
-                      1. List
-                    </button>
-                    <div className="mx-1 h-6 w-px bg-slate-300" />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const url = prompt('Enter URL:');
-                        if (url) applyFormatting('createLink', url);
-                      }}
-                      className="rounded px-2 py-1 text-sm text-slate-600 transition hover:bg-slate-200"
-                      title="Add link"
-                    >
-                      🔗
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => applyFormatting('removeFormat')}
-                      className="rounded px-2 py-1 text-sm text-slate-600 transition hover:bg-slate-200"
-                      title="Remove formatting"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  <div
-                    ref={descriptionRef}
-                    contentEditable
-                    onFocus={handleDescriptionFocus}
-                    onBlur={handleDescriptionBlur}
-                    onInput={(e) => onChange('description', e.currentTarget.innerHTML || '')}
-                    className="min-h-[80px] w-full rounded-lg border-2 border-[#1a73e8] bg-white px-3 py-2 text-base text-slate-900 outline-none [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_li]:my-1"
-                    style={{ whiteSpace: 'pre-wrap' }}
-                  />
+                  ) : (
+                    <div className="min-w-0 flex-1">
+                      <input
+                        value={form.attendees}
+                        onChange={(event) => onChange('attendees', event.target.value)}
+                        placeholder="Add guests"
+                        autoFocus
+                        className="w-full bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-600"
+                      />
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            {/* Add Google Drive attachment link */}
-            {showDescriptionInput && (
-              <div className="mt-2 flex gap-4 px-2 py-3">
-                <PaperClipIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
-                <button
-                  type="button"
-                  className="text-base text-[#1a73e8] hover:underline"
-                >
-                  Add a Google Drive attachment
-                </button>
-              </div>
-            )}
-
-            {/* Owner section - collapsed by default */}
-            {!showExpandedSettings ? (
-              <button
-                type="button"
-                onClick={() => setShowExpandedSettings(true)}
-                className="mt-6 flex w-full gap-4 px-2 py-3 text-left transition hover:bg-slate-50 rounded-lg"
-              >
-                <CalendarDaysIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <span className="text-base font-medium text-slate-900">{ownerName}</span>
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: selectedCategory?.color || '#0ea5e9' }} />
-                  <span className="text-base text-slate-600">
-                    {form.availability === 'BUSY' ? 'Busy' : 'Free'} · {' '}
-                    {form.visibility === 'DEFAULT' && 'Default visibility'}
-                    {form.visibility === 'PUBLIC' && 'Public'}
-                    {form.visibility === 'PRIVATE' && 'Private'} · Notify{' '}
-                    {form.reminderMinutes === '0' && 'at time of event'}
-                    {form.reminderMinutes === '10' && '10 minutes before'}
-                    {form.reminderMinutes === '15' && '15 minutes before'}
-                    {form.reminderMinutes === '30' && '30 minutes before'}
-                    {form.reminderMinutes === '60' && '1 hour before'}
-                    {form.reminderMinutes === '1440' && '1 day before'}
-                  </span>
-                </div>
-              </button>
-            ) : (
-              // Expanded settings for Event
-              <div className="mt-6">
-                {/* Owner and category */}
-                <div className="flex gap-4">
-                  <CalendarDaysIcon className="mt-1 h-6 w-6 flex-shrink-0 text-slate-600" />
-                  <div className="dropdown-container relative flex min-w-0 flex-1 items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-base font-medium text-slate-900">{ownerName}</span>
+                {/* Add Google Meet */}
+                <div className="mt-2 flex gap-4 px-2 py-3">
+                  <VideoCameraIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
+                  <div className="min-w-0 flex-1">
+                    {!form.meetingLink && !isGeneratingMeetLink ? (
                       <button
                         type="button"
-                        onClick={toggleCategoryDropdown}
-                        className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700 hover:bg-slate-200"
+                        onClick={generateMeetLink}
+                        className="w-full text-left text-base text-slate-600 hover:text-slate-900"
                       >
-                        <span
-                          className="h-5 w-5 rounded-full"
-                          style={{ backgroundColor: selectedCategory?.color || '#0ea5e9' }}
-                        />
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
+                        Add Google Meet video conferencing
                       </button>
-                    </div>
-                    {showCategoryDropdown && (
-                      <div className="absolute right-0 top-full z-10 mt-1 rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
-                        <div className="grid grid-cols-2 gap-2">
-                          {categories.map((category) => (
-                            <button
-                              key={category.id}
-                              type="button"
-                              onClick={() => {
-                                onChange('categoryId', String(category.id));
-                                setShowCategoryDropdown(false);
-                              }}
-                              className="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                            >
-                              <span
-                                className="h-5 w-5 rounded-full"
-                                style={{ backgroundColor: category.color }}
-                              />
-                              {String(category.id) === form.categoryId && (
-                                <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
-                              )}
-                            </button>
-                          ))}
+                    ) : isGeneratingMeetLink ? (
+                      <div className="flex items-center gap-3">
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-[#1a73e8]" />
+                        <span className="text-base text-slate-700">Adding conferencing...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <a
+                            href={form.meetingLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-base font-medium text-[#1a73e8] hover:underline"
+                          >
+                            Join with Google Meet
+                          </a>
+                          <p className="mt-1 text-sm text-slate-600">{form.meetingLink}</p>
+                          <p className="mt-1 text-xs text-slate-500">Up to 100 guest connections</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={copyMeetLink}
+                            className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                            title="Copy meeting link"
+                          >
+                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={removeMeetLink}
+                            className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                            title="Remove meeting link"
+                          >
+                            <XMarkIcon className="h-5 w-5" />
+                          </button>
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Availability dropdown */}
-                <div className="mt-2 flex gap-4">
-                  <div className="h-6 w-6 flex-shrink-0">
-                    <svg className="h-6 w-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <rect x="3" y="6" width="18" height="12" rx="2" strokeWidth={2} />
-                    </svg>
-                  </div>
-                  <div className="dropdown-container relative flex-1">
+                {/* Add location */}
+                <div className="mt-2 flex gap-4 px-2 py-3">
+                  <MapPinIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
+                  {!showLocationInput ? (
                     <button
                       type="button"
-                      onClick={toggleAvailabilityDropdown}
-                      className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700 hover:bg-slate-200"
+                      onClick={() => setShowLocationInput(true)}
+                      className="min-w-0 flex-1 text-left text-base text-slate-600"
                     >
-                      <span>{form.availability === 'BUSY' ? 'Busy' : 'Free'}</span>
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
+                      Add location
                     </button>
-                    {showAvailabilityDropdown && (
-                      <div className="absolute left-0 top-full z-10 mt-1 w-40 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onChange('availability', 'BUSY');
-                            setShowAvailabilityDropdown(false);
-                          }}
-                          className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                        >
-                          <span>Busy</span>
-                          {form.availability === 'BUSY' && (
-                            <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onChange('availability', 'FREE');
-                            setShowAvailabilityDropdown(false);
-                          }}
-                          className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                        >
-                          <span>Free</span>
-                          {form.availability === 'FREE' && (
-                            <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          )}
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  ) : (
+                    <input
+                      value={form.location}
+                      onChange={(event) => onChange('location', event.target.value)}
+                      placeholder="Add location"
+                      autoFocus
+                      className="min-w-0 flex-1 bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-600"
+                    />
+                  )}
                 </div>
 
-                {/* Visibility dropdown */}
-                <div className="mt-2 flex gap-4">
-                  <div className="h-6 w-6 flex-shrink-0">
-                    <svg className="h-6 w-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  </div>
-                  <div className="dropdown-container relative flex-1">
+                {/* Add description */}
+                <div className="mt-2 flex gap-4 px-2 py-3">
+                  <Bars3Icon className="h-6 w-6 flex-shrink-0 text-slate-600" />
+                  {!showDescriptionInput ? (
                     <button
                       type="button"
-                      onClick={toggleVisibilityDropdown}
-                      className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700 hover:bg-slate-200"
+                      onClick={() => setShowDescriptionInput(true)}
+                      className="min-w-0 flex-1 text-left text-base text-slate-600"
                     >
-                      <span>
-                        {form.visibility === 'DEFAULT' && 'Default visibility'}
-                        {form.visibility === 'PUBLIC' && 'Public'}
-                        {form.visibility === 'PRIVATE' && 'Private'}
-                      </span>
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
+                      Add description
                     </button>
-                    {showVisibilityDropdown && (
-                      <div className="absolute left-0 top-full z-10 mt-1 w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                  ) : (
+                    <div className="min-w-0 flex-1">
+                      {/* Rich text editor with formatting toolbar - always visible when description is shown */}
+                      <div className="formatting-toolbar mb-2 flex items-center gap-1 rounded-lg bg-slate-100 p-2">
                         <button
                           type="button"
-                          onClick={() => {
-                            onChange('visibility', 'DEFAULT');
-                            setShowVisibilityDropdown(false);
-                          }}
-                          className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                        >
-                          <span>Default visibility</span>
-                          {form.visibility === 'DEFAULT' && (
-                            <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
+                          onClick={() => applyFormatting('bold')}
+                          className={classNames(
+                            'rounded px-2 py-1 text-sm font-bold transition',
+                            isBold ? 'bg-slate-300 text-slate-900' : 'text-slate-600 hover:bg-slate-200'
                           )}
+                        >
+                          B
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            onChange('visibility', 'PUBLIC');
-                            setShowVisibilityDropdown(false);
-                          }}
-                          className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                        >
-                          <span>Public</span>
-                          {form.visibility === 'PUBLIC' && (
-                            <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
+                          onClick={() => applyFormatting('italic')}
+                          className={classNames(
+                            'rounded px-2 py-1 text-sm italic transition',
+                            isItalic ? 'bg-slate-300 text-slate-900' : 'text-slate-600 hover:bg-slate-200'
                           )}
+                        >
+                          I
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            onChange('visibility', 'PRIVATE');
-                            setShowVisibilityDropdown(false);
-                          }}
-                          className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                        >
-                          <span>Private</span>
-                          {form.visibility === 'PRIVATE' && (
-                            <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
+                          onClick={() => applyFormatting('underline')}
+                          className={classNames(
+                            'rounded px-2 py-1 text-sm underline transition',
+                            isUnderline ? 'bg-slate-300 text-slate-900' : 'text-slate-600 hover:bg-slate-200'
                           )}
+                        >
+                          U
+                        </button>
+                        <div className="mx-1 h-6 w-px bg-slate-300" />
+                        <button
+                          type="button"
+                          onClick={() => applyFormatting('insertUnorderedList')}
+                          className="rounded px-2 py-1 text-sm text-slate-600 transition hover:bg-slate-200"
+                          title="Bullet list"
+                        >
+                          • List
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyFormatting('insertOrderedList')}
+                          className="rounded px-2 py-1 text-sm text-slate-600 transition hover:bg-slate-200"
+                          title="Numbered list"
+                        >
+                          1. List
+                        </button>
+                        <div className="mx-1 h-6 w-px bg-slate-300" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const url = prompt('Enter URL:');
+                            if (url) applyFormatting('createLink', url);
+                          }}
+                          className="rounded px-2 py-1 text-sm text-slate-600 transition hover:bg-slate-200"
+                          title="Add link"
+                        >
+                          🔗
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyFormatting('removeFormat')}
+                          className="rounded px-2 py-1 text-sm text-slate-600 transition hover:bg-slate-200"
+                          title="Remove formatting"
+                        >
+                          ✕
                         </button>
                       </div>
-                    )}
-                  </div>
+                      <div
+                        ref={descriptionRef}
+                        contentEditable
+                        onFocus={handleDescriptionFocus}
+                        onBlur={handleDescriptionBlur}
+                        onInput={(e) => onChange('description', e.currentTarget.innerHTML || '')}
+                        className="min-h-[80px] w-full rounded-lg border-2 border-[#1a73e8] bg-white px-3 py-2 text-base text-slate-900 outline-none [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_li]:my-1"
+                        style={{ whiteSpace: 'pre-wrap' }}
+                      />
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+
+                {/* Add Google Drive attachment link */}
+                {showDescriptionInput && (
+                  <div className="mt-2 flex gap-4 px-2 py-3">
+                    <PaperClipIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
+                    <button
+                      type="button"
+                      className="text-base text-[#1a73e8] hover:underline"
+                    >
+                      Add a Google Drive attachment
+                    </button>
+                  </div>
+                )}
+
+                {/* Owner section - collapsed by default */}
+                {!showExpandedSettings ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowExpandedSettings(true)}
+                    className="mt-6 flex w-full gap-4 px-2 py-3 text-left transition hover:bg-slate-50 rounded-lg"
+                  >
+                    <CalendarDaysIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <span className="text-base font-medium text-slate-900">{ownerName}</span>
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: selectedCategory?.color || '#0ea5e9' }} />
+                      <span className="text-base text-slate-600">
+                        {form.availability === 'BUSY' ? 'Busy' : 'Free'} · {' '}
+                        {form.visibility === 'DEFAULT' && 'Default visibility'}
+                        {form.visibility === 'PUBLIC' && 'Public'}
+                        {form.visibility === 'PRIVATE' && 'Private'} · Notify{' '}
+                        {form.reminderMinutes === '0' && 'at time of event'}
+                        {form.reminderMinutes === '10' && '10 minutes before'}
+                        {form.reminderMinutes === '15' && '15 minutes before'}
+                        {form.reminderMinutes === '30' && '30 minutes before'}
+                        {form.reminderMinutes === '60' && '1 hour before'}
+                        {form.reminderMinutes === '1440' && '1 day before'}
+                      </span>
+                    </div>
+                  </button>
+                ) : (
+                  // Expanded settings for Event
+                  <div className="mt-6">
+                    {/* Owner and category */}
+                    <div className="flex gap-4">
+                      <CalendarDaysIcon className="mt-1 h-6 w-6 flex-shrink-0 text-slate-600" />
+                      <div className="dropdown-container relative flex min-w-0 flex-1 items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base font-medium text-slate-900">{ownerName}</span>
+                          <button
+                            type="button"
+                            onClick={toggleCategoryDropdown}
+                            className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700 hover:bg-slate-200"
+                          >
+                            <span
+                              className="h-5 w-5 rounded-full"
+                              style={{ backgroundColor: selectedCategory?.color || '#0ea5e9' }}
+                            />
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                        </div>
+                        {showCategoryDropdown && (
+                          <div className="absolute right-0 top-full z-10 mt-1 rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
+                            <div className="grid grid-cols-2 gap-2">
+                              {categories.map((category) => (
+                                <button
+                                  key={category.id}
+                                  type="button"
+                                  onClick={() => {
+                                    onChange('categoryId', String(category.id));
+                                    setShowCategoryDropdown(false);
+                                  }}
+                                  className="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                >
+                                  <span
+                                    className="h-5 w-5 rounded-full"
+                                    style={{ backgroundColor: category.color }}
+                                  />
+                                  {String(category.id) === form.categoryId && (
+                                    <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Availability dropdown */}
+                    <div className="mt-2 flex gap-4">
+                      <div className="h-6 w-6 flex-shrink-0">
+                        <svg className="h-6 w-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <rect x="3" y="6" width="18" height="12" rx="2" strokeWidth={2} />
+                        </svg>
+                      </div>
+                      <div className="dropdown-container relative flex-1">
+                        <button
+                          type="button"
+                          onClick={toggleAvailabilityDropdown}
+                          className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700 hover:bg-slate-200"
+                        >
+                          <span>{form.availability === 'BUSY' ? 'Busy' : 'Free'}</span>
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {showAvailabilityDropdown && (
+                          <div className="absolute left-0 top-full z-10 mt-1 w-40 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onChange('availability', 'BUSY');
+                                setShowAvailabilityDropdown(false);
+                              }}
+                              className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                            >
+                              <span>Busy</span>
+                              {form.availability === 'BUSY' && (
+                                <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onChange('availability', 'FREE');
+                                setShowAvailabilityDropdown(false);
+                              }}
+                              className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                            >
+                              <span>Free</span>
+                              {form.availability === 'FREE' && (
+                                <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Visibility dropdown */}
+                    <div className="mt-2 flex gap-4">
+                      <div className="h-6 w-6 flex-shrink-0">
+                        <svg className="h-6 w-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      </div>
+                      <div className="dropdown-container relative flex-1">
+                        <button
+                          type="button"
+                          onClick={toggleVisibilityDropdown}
+                          className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700 hover:bg-slate-200"
+                        >
+                          <span>
+                            {form.visibility === 'DEFAULT' && 'Default visibility'}
+                            {form.visibility === 'PUBLIC' && 'Public'}
+                            {form.visibility === 'PRIVATE' && 'Private'}
+                          </span>
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {showVisibilityDropdown && (
+                          <div className="absolute left-0 top-full z-10 mt-1 w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onChange('visibility', 'DEFAULT');
+                                setShowVisibilityDropdown(false);
+                              }}
+                              className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                            >
+                              <span>Default visibility</span>
+                              {form.visibility === 'DEFAULT' && (
+                                <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onChange('visibility', 'PUBLIC');
+                                setShowVisibilityDropdown(false);
+                              }}
+                              className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                            >
+                              <span>Public</span>
+                              {form.visibility === 'PUBLIC' && (
+                                <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onChange('visibility', 'PRIVATE');
+                                setShowVisibilityDropdown(false);
+                              }}
+                              className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                            >
+                              <span>Private</span>
+                              {form.visibility === 'PRIVATE' && (
+                                <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               // Task content
               <>
-            {/* Date/time display for task */}
-            {!showDateTimeEditor ? (
-              // Collapsed view - clickable
-              <button
-                type="button"
-                onClick={() => setShowDateTimeEditor(true)}
-                className="mt-6 flex w-full gap-4 px-2 py-3 text-left transition hover:bg-slate-50 rounded-lg"
-              >
-                <ClockIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
-                <div className="min-w-0 flex-1">
-                  <div className="text-base text-slate-900">{dateSummary}</div>
-                  <p className="mt-1 text-sm text-slate-600">Does not repeat</p>
-                </div>
-              </button>
-            ) : (
-              // Expanded view - editable
-              <div className="mt-6 flex gap-4 px-2 py-3">
-                <ClockIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
-                <div className="min-w-0 flex-1 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="date"
-                      value={form.startDate}
-                      onChange={(event) => onChange('startDate', event.target.value)}
-                      className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8]"
-                    />
-                    {!form.allDay && (
-                      <>
+                {/* Date/time display for task */}
+                {!showDateTimeEditor ? (
+                  // Collapsed view - clickable
+                  <button
+                    type="button"
+                    onClick={() => setShowDateTimeEditor(true)}
+                    className="mt-6 flex w-full gap-4 px-2 py-3 text-left transition hover:bg-slate-50 rounded-lg"
+                  >
+                    <ClockIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-base text-slate-900">{dateSummary}</div>
+                      <p className="mt-1 text-sm text-slate-600">Does not repeat</p>
+                    </div>
+                  </button>
+                ) : (
+                  // Expanded view - editable
+                  <div className="mt-6 flex gap-4 px-2 py-3">
+                    <ClockIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
+                    <div className="min-w-0 flex-1 space-y-3">
+                      <div className="flex items-center gap-2">
                         <input
-                          type="time"
-                          value={form.startTime}
-                          onChange={(event) => onChange('startTime', event.target.value)}
+                          type="date"
+                          value={form.startDate}
+                          onChange={(event) => onChange('startDate', event.target.value)}
                           className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8]"
                         />
-                        <span className="text-slate-600">–</span>
+                        {!form.allDay && (
+                          <>
+                            <input
+                              type="time"
+                              value={form.startTime}
+                              onChange={(event) => onChange('startTime', event.target.value)}
+                              className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8]"
+                            />
+                            <span className="text-slate-600">–</span>
+                            <input
+                              type="time"
+                              value={form.endTime}
+                              onChange={(event) => onChange('endTime', event.target.value)}
+                              className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8]"
+                            />
+                          </>
+                        )}
+                      </div>
+                      <label className="flex items-center gap-2">
                         <input
-                          type="time"
-                          value={form.endTime}
-                          onChange={(event) => onChange('endTime', event.target.value)}
-                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8]"
+                          type="checkbox"
+                          checked={form.allDay}
+                          onChange={(event) => onChange('allDay', event.target.checked)}
+                          className="h-4 w-4 rounded border-slate-300 text-[#1a73e8]"
                         />
-                      </>
-                    )}
+                        <span className="text-sm text-slate-900">All day</span>
+                      </label>
+                      <div className="dropdown-container relative">
+                        <button
+                          type="button"
+                          onClick={toggleRepeatDropdown}
+                          className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                        >
+                          <span>{form.repeatOption || 'Does not repeat'}</span>
+                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {showRepeatDropdown && (
+                          <div className="absolute left-0 top-full z-10 mt-1 w-full rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                            {[
+                              'Does not repeat',
+                              'Daily',
+                              'Weekly on Thursday',
+                              'Monthly on the second Thursday',
+                              'Annually on May 14',
+                              'Every weekday (Monday to Friday)',
+                              'Custom...',
+                            ].map((option) => (
+                              <button
+                                key={option}
+                                type="button"
+                                onClick={() => {
+                                  onChange('repeatOption', option);
+                                  setShowRepeatDropdown(false);
+                                }}
+                                className={classNames(
+                                  'flex w-full items-center px-4 py-2 text-left text-sm hover:bg-slate-50',
+                                  (form.repeatOption || 'Does not repeat') === option
+                                    ? 'bg-[#e8f0fe] text-slate-900'
+                                    : 'text-slate-700'
+                                )}
+                              >
+                                {option}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowDateTimeEditor(false)}
+                        className="text-sm text-[#1a73e8] hover:underline"
+                      >
+                        Done
+                      </button>
+                    </div>
                   </div>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={form.allDay}
-                      onChange={(event) => onChange('allDay', event.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-[#1a73e8]"
-                    />
-                    <span className="text-sm text-slate-900">All day</span>
-                  </label>
-                  <div className="dropdown-container relative">
+                )}
+
+                {/* Add deadline button */}
+                <div className="mt-2 flex gap-4 px-2 py-3">
+                  <svg className="h-6 w-6 flex-shrink-0 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {!showDeadline ? (
                     <button
                       type="button"
-                      onClick={toggleRepeatDropdown}
-                      className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                      onClick={() => setShowDeadline(true)}
+                      className="min-w-0 flex-1 text-left text-base text-slate-600 transition hover:bg-slate-50 rounded-lg px-2 py-1 -mx-2 -my-1"
                     >
-                      <span>{form.repeatOption || 'Does not repeat'}</span>
+                      Add deadline
+                    </button>
+                  ) : (
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <span className="text-base text-slate-600">Due</span>
+                      <input
+                        type="date"
+                        value={form.endDate}
+                        onChange={(event) => onChange('endDate', event.target.value)}
+                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowDeadline(false)}
+                        className="rounded-full p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                      >
+                        <XMarkIcon className="h-5 w-5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Add description - with gray background */}
+                <div className="mt-2 flex gap-4 px-2 py-3">
+                  <Bars3Icon className="h-6 w-6 flex-shrink-0 text-slate-600" />
+                  {!showDescriptionInput ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowDescriptionInput(true)}
+                      className="min-w-0 flex-1 rounded-lg bg-slate-100 px-4 py-3 text-left text-base text-slate-600 transition hover:bg-slate-200"
+                    >
+                      Add description
+                    </button>
+                  ) : (
+                    <textarea
+                      value={form.description}
+                      onChange={(event) => onChange('description', event.target.value)}
+                      placeholder="Add description"
+                      autoFocus
+                      rows={4}
+                      className="min-w-0 flex-1 resize-none rounded-lg bg-slate-100 px-4 py-3 text-base text-slate-900 outline-none placeholder:text-slate-600 focus:bg-white focus:ring-2 focus:ring-[#1a73e8]"
+                    />
+                  )}
+                </div>
+
+                {/* Task list selector - with gray background */}
+                <div className="mt-2 flex gap-4 px-2 py-3">
+                  <svg className="h-6 w-6 flex-shrink-0 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                  </svg>
+                  <div className="min-w-0 flex-1">
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between rounded-lg bg-slate-100 px-4 py-3 text-left text-base text-slate-700 transition hover:bg-slate-200"
+                    >
+                      <span>My Tasks</span>
                       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </button>
-                    {showRepeatDropdown && (
-                      <div className="absolute left-0 top-full z-10 mt-1 w-full rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-                        {[
-                          'Does not repeat',
-                          'Daily',
-                          'Weekly on Thursday',
-                          'Monthly on the second Thursday',
-                          'Annually on May 14',
-                          'Every weekday (Monday to Friday)',
-                          'Custom...',
-                        ].map((option) => (
-                          <button
-                            key={option}
-                            type="button"
-                            onClick={() => {
-                              onChange('repeatOption', option);
-                              setShowRepeatDropdown(false);
-                            }}
-                            className={classNames(
-                              'flex w-full items-center px-4 py-2 text-left text-sm hover:bg-slate-50',
-                              (form.repeatOption || 'Does not repeat') === option
-                                ? 'bg-[#e8f0fe] text-slate-900'
-                                : 'text-slate-700'
-                            )}
-                          >
-                            {option}
-                          </button>
-                        ))}
+                  </div>
+                </div>
+
+                {/* Owner section for task - Collapsible */}
+                {!showExpandedSettings ? (
+                  // Collapsed view
+                  <button
+                    type="button"
+                    onClick={() => setShowExpandedSettings(true)}
+                    className="mt-2 flex w-full gap-4 px-2 py-3 text-left transition hover:bg-slate-50 rounded-lg"
+                  >
+                    <CalendarDaysIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1a73e8] text-sm font-medium text-white">
+                        {ownerName.charAt(0).toUpperCase()}
                       </div>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowDateTimeEditor(false)}
-                    className="text-sm text-[#1a73e8] hover:underline"
-                  >
-                    Done
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Add deadline button */}
-            <div className="mt-2 flex gap-4 px-2 py-3">
-              <svg className="h-6 w-6 flex-shrink-0 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {!showDeadline ? (
-                <button
-                  type="button"
-                  onClick={() => setShowDeadline(true)}
-                  className="min-w-0 flex-1 text-left text-base text-slate-600 transition hover:bg-slate-50 rounded-lg px-2 py-1 -mx-2 -my-1"
-                >
-                  Add deadline
-                </button>
-              ) : (
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <span className="text-base text-slate-600">Due</span>
-                  <input
-                    type="date"
-                    value={form.endDate}
-                    onChange={(event) => onChange('endDate', event.target.value)}
-                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowDeadline(false)}
-                    className="rounded-full p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-                  >
-                    <XMarkIcon className="h-5 w-5" />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Add description - with gray background */}
-            <div className="mt-2 flex gap-4 px-2 py-3">
-              <Bars3Icon className="h-6 w-6 flex-shrink-0 text-slate-600" />
-              {!showDescriptionInput ? (
-                <button
-                  type="button"
-                  onClick={() => setShowDescriptionInput(true)}
-                  className="min-w-0 flex-1 rounded-lg bg-slate-100 px-4 py-3 text-left text-base text-slate-600 transition hover:bg-slate-200"
-                >
-                  Add description
-                </button>
-              ) : (
-                <textarea
-                  value={form.description}
-                  onChange={(event) => onChange('description', event.target.value)}
-                  placeholder="Add description"
-                  autoFocus
-                  rows={4}
-                  className="min-w-0 flex-1 resize-none rounded-lg bg-slate-100 px-4 py-3 text-base text-slate-900 outline-none placeholder:text-slate-600 focus:bg-white focus:ring-2 focus:ring-[#1a73e8]"
-                />
-              )}
-            </div>
-
-            {/* Task list selector - with gray background */}
-            <div className="mt-2 flex gap-4 px-2 py-3">
-              <svg className="h-6 w-6 flex-shrink-0 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-              </svg>
-              <div className="min-w-0 flex-1">
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-lg bg-slate-100 px-4 py-3 text-left text-base text-slate-700 transition hover:bg-slate-200"
-                >
-                  <span>My Tasks</span>
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            {/* Owner section for task - Collapsible */}
-            {!showExpandedSettings ? (
-              // Collapsed view
-              <button
-                type="button"
-                onClick={() => setShowExpandedSettings(true)}
-                className="mt-2 flex w-full gap-4 px-2 py-3 text-left transition hover:bg-slate-50 rounded-lg"
-              >
-                <CalendarDaysIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
-                <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1a73e8] text-sm font-medium text-white">
-                    {ownerName.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-base font-medium text-slate-900">{ownerName}</span>
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: selectedCategory?.color || '#0ea5e9' }} />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base font-medium text-slate-900">{ownerName}</span>
+                          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: selectedCategory?.color || '#0ea5e9' }} />
+                        </div>
+                        <div className="text-sm text-slate-600">Free · Private</div>
+                      </div>
                     </div>
-                    <div className="text-sm text-slate-600">Free · Private</div>
-                  </div>
-                </div>
-              </button>
-            ) : (
-              // Expanded view for Task
-              <div className="mt-2">
-                {/* Owner and category */}
-                <div className="flex gap-4 px-2 py-3">
-                  <CalendarDaysIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
-                  <div className="dropdown-container relative flex min-w-0 flex-1 items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-base font-medium text-slate-900">{ownerName}</span>
-                      <button
-                        type="button"
-                        onClick={toggleColorPicker}
-                        className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700 hover:bg-slate-200"
-                      >
-                        <span
-                          className="h-5 w-5 rounded-full"
-                          style={{ backgroundColor: selectedCategory?.color || '#0ea5e9' }}
-                        />
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </button>
+                ) : (
+                  // Expanded view for Task
+                  <div className="mt-2">
+                    {/* Owner and category */}
+                    <div className="flex gap-4 px-2 py-3">
+                      <CalendarDaysIcon className="h-6 w-6 flex-shrink-0 text-slate-600" />
+                      <div className="dropdown-container relative flex min-w-0 flex-1 items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base font-medium text-slate-900">{ownerName}</span>
+                          <button
+                            type="button"
+                            onClick={toggleColorPicker}
+                            className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700 hover:bg-slate-200"
+                          >
+                            <span
+                              className="h-5 w-5 rounded-full"
+                              style={{ backgroundColor: selectedCategory?.color || '#0ea5e9' }}
+                            />
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                        </div>
+                        {showColorPicker && (
+                          <div className="absolute right-0 top-full z-10 mt-1 rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
+                            <div className="grid grid-cols-2 gap-2">
+                              {categories.map((category) => (
+                                <button
+                                  key={category.id}
+                                  type="button"
+                                  onClick={() => {
+                                    onChange('categoryId', String(category.id));
+                                    setShowColorPicker(false);
+                                  }}
+                                  className="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                >
+                                  <span
+                                    className="h-5 w-5 rounded-full"
+                                    style={{ backgroundColor: category.color }}
+                                  />
+                                  {String(category.id) === form.categoryId && (
+                                    <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Availability dropdown */}
+                    <div className="flex gap-4 px-2 py-3">
+                      <div className="h-6 w-6 flex-shrink-0">
+                        <svg className="h-6 w-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <rect x="3" y="6" width="18" height="12" rx="2" strokeWidth={2} />
                         </svg>
-                      </button>
-                    </div>
-                    {showColorPicker && (
-                      <div className="absolute right-0 top-full z-10 mt-1 rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
-                        <div className="grid grid-cols-2 gap-2">
-                          {categories.map((category) => (
+                      </div>
+                      <div className="dropdown-container relative flex-1">
+                        <button
+                          type="button"
+                          onClick={toggleAvailabilityDropdown}
+                          className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700 hover:bg-slate-200"
+                        >
+                          <span>{form.availability === 'BUSY' ? 'Busy' : 'Free'}</span>
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {showAvailabilityDropdown && (
+                          <div className="absolute left-0 top-full z-10 mt-1 w-40 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
                             <button
-                              key={category.id}
                               type="button"
                               onClick={() => {
-                                onChange('categoryId', String(category.id));
-                                setShowColorPicker(false);
+                                onChange('availability', 'BUSY');
+                                setShowAvailabilityDropdown(false);
                               }}
-                              className="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                              className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                             >
-                              <span
-                                className="h-5 w-5 rounded-full"
-                                style={{ backgroundColor: category.color }}
-                              />
-                              {String(category.id) === form.categoryId && (
+                              <span>Busy</span>
+                              {form.availability === 'BUSY' && (
                                 <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
                                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                 </svg>
                               )}
                             </button>
-                          ))}
-                        </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onChange('availability', 'FREE');
+                                setShowAvailabilityDropdown(false);
+                              }}
+                              className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                            >
+                              <span>Free</span>
+                              {form.availability === 'FREE' && (
+                                <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </div>
+                    </div>
 
-                {/* Availability dropdown */}
-                <div className="flex gap-4 px-2 py-3">
-                  <div className="h-6 w-6 flex-shrink-0">
-                    <svg className="h-6 w-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <rect x="3" y="6" width="18" height="12" rx="2" strokeWidth={2} />
-                    </svg>
-                  </div>
-                  <div className="dropdown-container relative flex-1">
-                    <button
-                      type="button"
-                      onClick={toggleAvailabilityDropdown}
-                      className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700 hover:bg-slate-200"
-                    >
-                      <span>{form.availability === 'BUSY' ? 'Busy' : 'Free'}</span>
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    {showAvailabilityDropdown && (
-                      <div className="absolute left-0 top-full z-10 mt-1 w-40 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onChange('availability', 'BUSY');
-                            setShowAvailabilityDropdown(false);
-                          }}
-                          className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                        >
-                          <span>Busy</span>
-                          {form.availability === 'BUSY' && (
-                            <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onChange('availability', 'FREE');
-                            setShowAvailabilityDropdown(false);
-                          }}
-                          className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                        >
-                          <span>Free</span>
-                          {form.availability === 'FREE' && (
-                            <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          )}
-                        </button>
+                    {/* Visibility dropdown */}
+                    <div className="flex gap-4 px-2 py-3">
+                      <div className="h-6 w-6 flex-shrink-0">
+                        <svg className="h-6 w-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Visibility dropdown */}
-                <div className="flex gap-4 px-2 py-3">
-                  <div className="h-6 w-6 flex-shrink-0">
-                    <svg className="h-6 w-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  </div>
-                  <div className="dropdown-container relative flex-1">
-                    <button
-                      type="button"
-                      onClick={toggleVisibilityDropdown}
-                      className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700 hover:bg-slate-200"
-                    >
-                      <span>
-                        {form.visibility === 'DEFAULT' && 'Default visibility'}
-                        {form.visibility === 'PUBLIC' && 'Public'}
-                        {form.visibility === 'PRIVATE' && 'Private'}
-                      </span>
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    {showVisibilityDropdown && (
-                      <div className="absolute left-0 top-full z-10 mt-1 w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                      <div className="dropdown-container relative flex-1">
                         <button
                           type="button"
-                          onClick={() => {
-                            onChange('visibility', 'DEFAULT');
-                            setShowVisibilityDropdown(false);
-                          }}
-                          className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                          onClick={toggleVisibilityDropdown}
+                          className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700 hover:bg-slate-200"
                         >
-                          <span>Default visibility</span>
-                          {form.visibility === 'DEFAULT' && (
-                            <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          )}
+                          <span>
+                            {form.visibility === 'DEFAULT' && 'Default visibility'}
+                            {form.visibility === 'PUBLIC' && 'Public'}
+                            {form.visibility === 'PRIVATE' && 'Private'}
+                          </span>
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onChange('visibility', 'PUBLIC');
-                            setShowVisibilityDropdown(false);
-                          }}
-                          className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                        >
-                          <span>Public</span>
-                          {form.visibility === 'PUBLIC' && (
-                            <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onChange('visibility', 'PRIVATE');
-                            setShowVisibilityDropdown(false);
-                          }}
-                          className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                        >
-                          <span>Private</span>
-                          {form.visibility === 'PRIVATE' && (
-                            <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          )}
-                        </button>
+                        {showVisibilityDropdown && (
+                          <div className="absolute left-0 top-full z-10 mt-1 w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onChange('visibility', 'DEFAULT');
+                                setShowVisibilityDropdown(false);
+                              }}
+                              className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                            >
+                              <span>Default visibility</span>
+                              {form.visibility === 'DEFAULT' && (
+                                <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onChange('visibility', 'PUBLIC');
+                                setShowVisibilityDropdown(false);
+                              }}
+                              className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                            >
+                              <span>Public</span>
+                              {form.visibility === 'PUBLIC' && (
+                                <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onChange('visibility', 'PRIVATE');
+                                setShowVisibilityDropdown(false);
+                              }}
+                              className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                            >
+                              <span>Private</span>
+                              {form.visibility === 'PRIVATE' && (
+                                <svg className="h-4 w-4 text-[#1a73e8]" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
-                </div>
-              </div>
-            )}
+                )}
               </>
             )}
 

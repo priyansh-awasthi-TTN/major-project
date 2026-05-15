@@ -249,11 +249,17 @@ function buildEmployeeRange(size) {
 
 function buildContactLinks(company, website) {
   const slug = slugify(company.name || 'company');
-  return [
+  const links = [
     { icon: '🌐', label: website.replace(/^https?:\/\//, ''), href: website, external: true, kind: 'website' },
-    { icon: '✉️', label: `hello@${slug}.com`, href: `mailto:hello@${slug}.com`, external: false, kind: 'email' },
-    { icon: '💼', label: `linkedin.com/company/${slug}`, href: `https://linkedin.com/company/${slug}`, external: true, kind: 'linkedin' },
   ];
+  if (company.twitter) {
+    links.push({ icon: '🐦', label: company.twitter.replace(/^https?:\/\/(www\.)?twitter\.com\//, '@').replace(/^https?:\/\//, ''), href: company.twitter.startsWith('http') ? company.twitter : `https://${company.twitter}`, external: true, kind: 'twitter' });
+  }
+  if (company.instagram) {
+    links.push({ icon: '📸', label: company.instagram.replace(/^https?:\/\/(www\.)?instagram\.com\//, '@').replace(/^https?:\/\//, ''), href: company.instagram.startsWith('http') ? company.instagram : `https://${company.instagram}`, external: true, kind: 'instagram' });
+  }
+  links.push({ icon: '✉️', label: `hello@${slug}.com`, href: `mailto:hello@${slug}.com`, external: false, kind: 'email' });
+  return links;
 }
 
 function buildOfficeEntries(locations) {
@@ -487,7 +493,7 @@ function buildPerks(company, jobs) {
 function buildCompanyProfileModel(company, jobs) {
   const displayJobCount = jobs.length || company.jobs || 0;
   const officeEntries = buildOfficeEntries(company.officeLocations || []);
-  const website = `https://${slugify(company.name || 'company') || 'company'}.com`;
+  const website = company.website || `https://${slugify(company.name || 'company') || 'company'}.com`;
   const teamMembers = buildTeamMembers(company, jobs);
   const techStack = buildTechStack(company, jobs);
   const reviews = buildReviews(company, jobs, officeEntries);
@@ -509,7 +515,7 @@ function buildCompanyProfileModel(company, jobs) {
     averageRating,
     perks: buildPerks(company, jobs),
     displayJobCount,
-    description: `${company.description || `${company.name} is hiring right now.`} ${company.name} is building for ${toTitleCase(company.industry || 'technology')} teams and keeping hiring signals visible across the company page.`,
+    description: company.description || `${company.name} is hiring right now. ${company.name} is building for ${toTitleCase(company.industry || 'technology')} teams and keeping hiring signals visible across the company page.`,
   };
 }
 

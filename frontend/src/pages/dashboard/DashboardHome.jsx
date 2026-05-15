@@ -327,7 +327,7 @@ export default function DashboardHome() {
       if (['Interviewing', 'Interview'].includes(app.status)) {
         activeInterviews++;
       }
-      if (['Interviewing', 'Interview', 'Interviewed', 'Hired'].includes(app.status)) {
+      if (app.status === 'Interviewed') {
         totalInterviewed++;
       }
       if (app.status === 'Hired') hired++;
@@ -514,14 +514,20 @@ export default function DashboardHome() {
               </p>
             </div>
             {stats.activeInterviews > 0 ? (
-              <div className="flex items-center gap-2 bg-blue-50 rounded-lg px-3 py-2">
-                <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                  {stats.activeInterviews}
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-800">Active Interviews</p>
-                  <p className="text-xs text-gray-400">Applications in Interviewing stage</p>
-                </div>
+              <div className="space-y-3 mt-4">
+                {applications.filter(a => ['Interview', 'Interviewing'].includes(a.status)).map((app) => (
+                  <div key={app.id} className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                    <p className="text-sm font-semibold text-gray-800">{app.title} at {app.company}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {app.interviewDate ? new Date(app.interviewDate).toLocaleString() : 'Date to be determined'}
+                    </p>
+                    {app.meetLink && (
+                      <a href={app.meetLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 mt-2 text-xs font-medium text-blue-600 hover:text-blue-800">
+                        📹 Join Meeting
+                      </a>
+                    )}
+                  </div>
+                ))}
               </div>
             ) : (
               <p className="text-xs text-gray-400">No active interviews scheduled.</p>

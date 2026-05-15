@@ -16,9 +16,12 @@ const normalizeDelimitedList = (value) => {
 const unique = (values) => [...new Set(values.filter(Boolean))];
 
 const buildCompanyDetailsFromJobs = (jobs, companyId) => {
-  const companyJobs = (jobs || []).filter((job) =>
-    getCompanyRouteId({ name: job.company }) === companyId,
-  );
+  const normalizedId = decodeURIComponent(companyId || '').trim().toLowerCase();
+  const companyJobs = (jobs || []).filter((job) => {
+    const jobCompany = (job.company || '').trim().toLowerCase();
+    const jobRouteId = getCompanyRouteId({ name: job.company }).toLowerCase();
+    return jobCompany === normalizedId || jobRouteId === normalizedId;
+  });
 
   if (!companyJobs.length) return null;
 
@@ -29,13 +32,16 @@ const buildCompanyDetailsFromJobs = (jobs, companyId) => {
   const company = {
     id: companyId || companyName,
     name: companyName,
-    description: primaryJob.companyDescription || `${companyName} is hiring right now.`,
+    description: primaryJob.companyDescription || '',
     logo: primaryJob.logo || companyName.slice(0, 2).toUpperCase(),
     color: primaryJob.color || 'bg-blue-600',
-    industry: tags[0] || 'Hiring',
+    industry: primaryJob.companyIndustry || tags[0] || 'Hiring',
     size: primaryJob.companySize || '1-50',
+    website: primaryJob.companyWebsite || '',
+    twitter: primaryJob.companyTwitter || '',
+    instagram: primaryJob.companyInstagram || '',
     tags,
-    officeLocations,
+    officeLocations: primaryJob.companyLocation ? [primaryJob.companyLocation] : officeLocations,
     jobs: companyJobs.length,
   };
 
@@ -127,8 +133,8 @@ export default function DashCompanyProfile() {
         </DashTopBar>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center text-gray-500">
-            <p className="text-lg font-semibold">No company jobs posted yet</p>
-            <p className="text-sm mt-1">This company has not posted any roles.</p>
+            <p className="text-lg font-semibold">No company found</p>
+            <p className="text-sm mt-1">This company could not be found or has not posted any roles.</p>
           </div>
         </div>
       </div>

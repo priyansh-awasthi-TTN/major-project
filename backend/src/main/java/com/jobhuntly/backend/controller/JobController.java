@@ -39,12 +39,20 @@ public class JobController {
         return userRepository.findByEmailAndIsActiveTrue(email).orElse(null);
     }
 
-    private Map<String, Object> toMap(Job j) {
+    private Map<String, Object> toMap(Job j, User user) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", j.getId());
         m.put("title", j.getTitle());
-        m.put("company", j.getCompany());
-        m.put("logo", j.getLogo());
+        m.put("company", user != null ? user.getFullName() : j.getCompany());
+        
+        if (user != null && user.getProfilePhotoUrl() != null) {
+            m.put("logo", user.getProfilePhotoUrl());
+        } else if (user != null && user.getFullName() != null && user.getFullName().length() >= 2) {
+            m.put("logo", user.getFullName().substring(0, 2).toUpperCase());
+        } else {
+            m.put("logo", j.getLogo());
+        }
+        
         m.put("color", j.getColor());
         m.put("location", j.getLocation());
         m.put("type", j.getType());
@@ -56,10 +64,21 @@ public class JobController {
         m.put("applied", j.getApplied() != null ? j.getApplied() : 0);
         m.put("capacity", j.getCapacity());
         m.put("description", j.getDescription());
-        m.put("postedByCompany", j.getPostedByCompany());
+        m.put("postedByCompany", user != null ? user.getFullName() : j.getPostedByCompany());
         m.put("postedByUserId", j.getPostedByUserId());
         m.put("createdAt", j.getCreatedAt());
         m.put("isNew", j.getCreatedAt() != null && j.getCreatedAt().isAfter(LocalDateTime.now().minusDays(7)));
+        
+        if (user != null) {
+            m.put("companyDescription", user.getDescription());
+            m.put("companySize", user.getCompanySize());
+            m.put("companyIndustry", user.getIndustry());
+            m.put("companyWebsite", user.getWebsite());
+            m.put("companyLocation", user.getLocation());
+            m.put("companyTwitter", user.getTwitterUrl());
+            m.put("companyInstagram", user.getInstagramUrl());
+        }
+        
         return m;
     }
 
@@ -67,8 +86,13 @@ public class JobController {
     @GetMapping("/jobs")
     public ResponseEntity<?> getAll() {
         List<Map<String, Object>> result = new ArrayList<>();
-        for (Job j : jobRepository.findAllByOrderByCreatedAtDesc())
-            result.add(toMap(j));
+        Map<Long, User> userCache = new HashMap<>();
+        for (Job j : jobRepository.findAllByOrderByCreatedAtDesc()) {
+            if (j.getPostedByUserId() != null && !userCache.containsKey(j.getPostedByUserId())) {
+                userRepository.findById(j.getPostedByUserId()).ifPresent(u -> userCache.put(u.getId(), u));
+            }
+            result.add(toMap(j, userCache.get(j.getPostedByUserId())));
+        }
         return ResponseEntity.ok(result);
     }
 
@@ -76,7 +100,10 @@ public class JobController {
     @GetMapping("/jobs/{id}")
     public ResponseEntity<?> getById(@PathVariable Long id) {
         return jobRepository.findById(id)
-                .map(j -> ResponseEntity.ok(toMap(j)))
+                .map(j -> {
+                    User u = j.getPostedByUserId() != null ? userRepository.findById(j.getPostedByUserId()).orElse(null) : null;
+                    return ResponseEntity.ok(toMap(j, u));
+                })
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -107,7 +134,7 @@ public class JobController {
             job.setPostedByCompany(user.getFullName());
 
             Job saved = jobRepository.save(job);
-            return ResponseEntity.ok(toMap(saved));
+            return ResponseEntity.ok(toMap(saved, user));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }

@@ -9,6 +9,9 @@ import com.jobhuntly.backend.repository.JobRepository;
 import com.jobhuntly.backend.service.JwtService;
 import com.jobhuntly.backend.service.TokenService;
 import com.jobhuntly.backend.repository.UserRepository;
+import com.jobhuntly.backend.repository.NotificationRepository;
+import com.jobhuntly.backend.service.ChatService;
+import com.jobhuntly.backend.entity.Notification;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +35,10 @@ public class ApplicationController {
     private JwtService jwtService;
     @Autowired
     private TokenService tokenService;
+    @Autowired
+    private NotificationRepository notificationRepository;
+    @Autowired
+    private ChatService chatService;
 
     private User resolveUser(HttpServletRequest request) {
         String header = request.getHeader("Authorization");
@@ -49,9 +56,28 @@ public class ApplicationController {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", a.getId());
         m.put("jobId", a.getJobId());
-        m.put("company", a.getCompany());
-        m.put("logo", a.getLogo() != null ? a.getLogo()
-                : a.getCompany().substring(0, Math.min(2, a.getCompany().length())).toUpperCase());
+        
+        String companyName = a.getCompany();
+        String logo = a.getLogo();
+
+        if (a.getJobId() != null) {
+            jobRepository.findById(a.getJobId()).ifPresent(job -> {
+                if (job.getPostedByUserId() != null) {
+                    userRepository.findById(job.getPostedByUserId()).ifPresent(user -> {
+                        m.put("company", user.getFullName());
+                        if (user.getProfilePhotoUrl() != null) {
+                            m.put("logo", user.getProfilePhotoUrl());
+                        } else if (user.getFullName() != null && user.getFullName().length() >= 2) {
+                            m.put("logo", user.getFullName().substring(0, 2).toUpperCase());
+                        }
+                    });
+                }
+            });
+        }
+        
+        m.putIfAbsent("company", companyName);
+        m.putIfAbsent("logo", logo != null ? logo : (m.get("company").toString().length() >= 2 ? m.get("company").toString().substring(0, 2).toUpperCase() : ""));
+        
         m.put("color", a.getColor() != null ? a.getColor() : "bg-blue-600");
         m.put("location", a.getLocation());
         m.put("title", a.getTitle());
@@ -66,6 +92,8 @@ public class ApplicationController {
         m.put("gratuity", a.getGratuity());
         m.put("assessmentDocumentUrl", a.getAssessmentDocumentUrl());
         m.put("assessmentDescription", a.getAssessmentDescription());
+        m.put("interviewDate", a.getInterviewDate() != null ? a.getInterviewDate().toString() : null);
+        m.put("meetLink", a.getMeetLink());
         return m;
     }
 
@@ -124,6 +152,92 @@ public class ApplicationController {
             User user = resolveUser(request);
             boolean applied = applicationRepository.existsByUserAndJobId(user, jobId);
             return ResponseEntity.ok(Map.of("applied", applied));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // POST /api/applications/{id}/follow-up
+    @PostMapping("/{id}/follow-up")
+    public ResponseEntity<?> requestFollowUp(@PathVariable Long id, HttpServletRequest request) {
+        try {
+            User user = resolveUser(request);
+            Application app = applicationRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Application not found"));
+
+            if (!app.getUser().getId().equals(user.getId())) {
+                return ResponseEntity.status(403).body(Map.of("message", "Forbidden"));
+            }
+
+            Job job = jobRepository.findById(app.getJobId())
+                    .orElseThrow(() -> new RuntimeException("Job not found"));
+
+            if (job.getPostedByUserId() != null) {
+                User companyUser = userRepository.findById(job.getPostedByUserId()).orElse(null);
+                if (companyUser != null) {
+                    // Create Notification for the company
+                    Notification notification = new Notification();
+                    notification.setRecipient(companyUser);
+                    notification.setActorUserId(user.getId());
+                    notification.setActorName(user.getFullName());
+                    notification.setCategory("Application");
+                    notification.setType("FOLLOW_UP");
+                    notification.setText(user.getFullName() + " requested a follow-up for their application to " + job.getTitle() + ".");
+                    notification.setBadge("Application");
+                    notification.setBadgeColor("bg-yellow-500");
+                    notificationRepository.save(notification);
+
+                    // Send Automated Chat Message from company to user after 2 minutes
+                    String autoReply = "Hi " + user.getFullName() + ", we have received your follow-up request for the " + job.getTitle() + " position. Our team is currently reviewing applications and will get back to you shortly.";
+                    new Thread(() -> {
+                        try {
+                            Thread.sleep(120000); // 2 minutes delay
+                            chatService.sendMessage(companyUser.getEmail(), user.getId(), autoReply, "TEXT", null);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
+                    }).start();
+                }
+            }
+
+            return ResponseEntity.ok(Map.of("message", "Follow-up requested successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // POST /api/applications/{id}/submit-assessment
+    @PostMapping("/{id}/submit-assessment")
+    public ResponseEntity<?> submitAssessment(@PathVariable Long id, HttpServletRequest request) {
+        try {
+            User user = resolveUser(request);
+            Application app = applicationRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Application not found"));
+
+            if (!app.getUser().getId().equals(user.getId())) {
+                return ResponseEntity.status(403).body(Map.of("message", "Forbidden"));
+            }
+
+            Job job = jobRepository.findById(app.getJobId())
+                    .orElseThrow(() -> new RuntimeException("Job not found"));
+
+            if (job.getPostedByUserId() != null) {
+                User companyUser = userRepository.findById(job.getPostedByUserId()).orElse(null);
+                if (companyUser != null) {
+                    Notification notification = new Notification();
+                    notification.setRecipient(companyUser);
+                    notification.setActorUserId(user.getId());
+                    notification.setActorName(user.getFullName());
+                    notification.setCategory("Application");
+                    notification.setType("ASSESSMENT_SUBMITTED");
+                    notification.setText(user.getFullName() + " has submitted the assessment for " + job.getTitle() + ".");
+                    notification.setBadge("Assessment");
+                    notification.setBadgeColor("bg-blue-500");
+                    notificationRepository.save(notification);
+                }
+            }
+
+            return ResponseEntity.ok(Map.of("message", "Assessment submitted successfully"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }

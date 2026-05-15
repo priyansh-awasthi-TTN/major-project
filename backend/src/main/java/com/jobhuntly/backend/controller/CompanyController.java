@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/company/applications")
@@ -30,12 +31,20 @@ public class CompanyController {
     @Autowired private JwtService jwtService;
     @Autowired private TokenService tokenService;
 
-    private Map<String, Object> toJobMap(Job job) {
+    private Map<String, Object> toJobMap(Job job, User user) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", job.getId());
         result.put("title", job.getTitle());
-        result.put("company", job.getCompany());
-        result.put("logo", job.getLogo());
+        result.put("company", user != null ? user.getFullName() : job.getCompany());
+        
+        if (user != null && user.getProfilePhotoUrl() != null) {
+            result.put("logo", user.getProfilePhotoUrl());
+        } else if (user != null && user.getFullName() != null && user.getFullName().length() >= 2) {
+            result.put("logo", user.getFullName().substring(0, 2).toUpperCase());
+        } else {
+            result.put("logo", job.getLogo());
+        }
+        
         result.put("color", job.getColor());
         result.put("location", job.getLocation());
         result.put("type", job.getType());
@@ -48,10 +57,18 @@ public class CompanyController {
         result.put("applied", job.getApplied() != null ? job.getApplied() : 0);
         result.put("capacity", job.getCapacity() != null ? job.getCapacity() : 0);
         result.put("description", job.getDescription());
-        result.put("postedByCompany", job.getPostedByCompany());
+        result.put("postedByCompany", user != null ? user.getFullName() : job.getPostedByCompany());
         result.put("postedByUserId", job.getPostedByUserId());
         result.put("createdAt", job.getCreatedAt() != null ? job.getCreatedAt().toString() : null);
         result.put("status", "Live");
+        
+        if (user != null) {
+            result.put("companyDescription", user.getDescription());
+            result.put("companySize", user.getCompanySize());
+            result.put("companyIndustry", user.getIndustry());
+            result.put("companyWebsite", user.getWebsite());
+        }
+        
         return result;
     }
 
@@ -117,7 +134,7 @@ public class CompanyController {
 
             List<Job> jobs = jobRepository.findByPostedByUserIdOrderByCreatedAtDesc(companyUser.getId());
             List<Map<String, Object>> result = jobs.stream()
-                    .map(this::toJobMap)
+                    .map(job -> toJobMap(job, companyUser))
                     .collect(Collectors.toList());
             return ResponseEntity.ok(result);
         } catch (Exception e) {
@@ -146,6 +163,10 @@ public class CompanyController {
             if (body.containsKey("gratuity")) app.setGratuity(body.get("gratuity"));
             if (body.containsKey("assessmentDocumentUrl")) app.setAssessmentDocumentUrl(body.get("assessmentDocumentUrl"));
             if (body.containsKey("assessmentDescription")) app.setAssessmentDescription(body.get("assessmentDescription"));
+            if (body.containsKey("interviewDate") && body.get("interviewDate") != null) {
+                app.setInterviewDate(LocalDateTime.parse(body.get("interviewDate")));
+            }
+            if (body.containsKey("meetLink")) app.setMeetLink(body.get("meetLink"));
             applicationRepository.save(app);
 
             Notification candidateNotification = new Notification();
@@ -154,7 +175,13 @@ public class CompanyController {
             candidateNotification.setActorName(job.getCompany());
             candidateNotification.setCategory("applications");
             candidateNotification.setType("status");
-            candidateNotification.setText("updated your application status for " + job.getTitle());
+            
+            String candidateMsg = "updated your application status for " + job.getTitle() + " to " + nextStatus;
+            if ("Interviewing".equals(nextStatus) && app.getInterviewDate() != null) {
+                candidateMsg += ". Your interview is scheduled for " + app.getInterviewDate().toString().replace("T", " ");
+            }
+            candidateNotification.setText(candidateMsg);
+            
             candidateNotification.setBadge(nextStatus);
             candidateNotification.setBadgeColor("border border-indigo-400 text-indigo-600");
 

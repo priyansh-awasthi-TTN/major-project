@@ -130,6 +130,7 @@ function Calendar({ selectedDate, onDateChange, onClose }) {
 const LS_NOTES = 'jh_appNotes';
 const LS_FOLLOWUP = 'jh_followups';
 const LS_ASSESS = 'jh_assessments';
+const LS_ASSESS_SUBMIT = 'jh_assess_submit';
 function loadNotes() { try { return JSON.parse(sessionStorage.getItem(LS_NOTES)) || {}; } catch { return {}; } }
 function saveNotes(n) { sessionStorage.setItem(LS_NOTES, JSON.stringify(n)); }
 function loadLS(key) { try { return JSON.parse(sessionStorage.getItem(key)) || {}; } catch { return {}; } }
@@ -141,6 +142,7 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast, onNavigate }) {
   const [notes, setNotes] = useState(() => (loadNotes()[app?.id] || []));
   const [followupSent, setFollowupSent] = useState(() => !!(loadLS(LS_FOLLOWUP)[app?.id]));
   const [assessStarted, setAssessStarted] = useState(() => !!(loadLS(LS_ASSESS)[app?.id]));
+  const [assessSubmitted, setAssessSubmitted] = useState(() => !!(loadLS(LS_ASSESS_SUBMIT)[app?.id]));
   const [confirmDecline, setConfirmDecline] = useState(false);
 
   if (!app) return null;
@@ -159,12 +161,17 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast, onNavigate }) {
     const all = loadNotes(); all[app.id] = updated; saveNotes(all);
   };
 
-  const handleFollowup = () => {
-    const map = loadLS(LS_FOLLOWUP);
-    map[app.id] = { sentAt: new Date().toISOString() };
-    saveLS(LS_FOLLOWUP, map);
-    setFollowupSent(true);
-    onToast('Follow-up request sent to the recruiter!', 'success');
+  const handleFollowup = async () => {
+    try {
+      await apiService.requestFollowup(app.id);
+      const map = loadLS(LS_FOLLOWUP);
+      map[app.id] = { sentAt: new Date().toISOString() };
+      saveLS(LS_FOLLOWUP, map);
+      setFollowupSent(true);
+      onToast('Follow-up request sent to the recruiter! You have received an automated acknowledgment in your messages.', 'success');
+    } catch (error) {
+      onToast('Failed to send follow-up request.', 'error');
+    }
   };
 
   const handleStartAssessment = () => {
@@ -175,6 +182,19 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast, onNavigate }) {
     onStatusChange(app.id, 'Interviewing');
     onToast('Assessment started! Status updated to Interviewing.', 'success');
     onClose();
+  };
+
+  const handleSubmitAssessment = async () => {
+    try {
+      await apiService.submitAssessment(app.id);
+      const map = loadLS(LS_ASSESS_SUBMIT);
+      map[app.id] = { submittedAt: new Date().toISOString() };
+      saveLS(LS_ASSESS_SUBMIT, map);
+      setAssessSubmitted(true);
+      onToast('Assessment submitted! The company has been notified.', 'success');
+    } catch (error) {
+      onToast('Failed to notify company.', 'error');
+    }
   };
 
   const handleAccept = () => {
@@ -239,11 +259,30 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast, onNavigate }) {
           {['Interview', 'Interviewing'].includes(app.status) && (
             <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-2">
               <p className="text-sm font-semibold text-orange-700">🎤 Interview Scheduled</p>
-              <p className="text-xs text-gray-500">Prepare well — research the company and practice common interview questions.</p>
-              <div className="flex gap-2 pt-1">
-                <button onClick={() => onToast('Interview added to your calendar!', 'success')} className="text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600 transition">📅 Add to Calendar</button>
-                <button onClick={() => onToast('Reschedule request sent.', 'success')} className="text-xs border border-orange-400 text-orange-600 px-3 py-1.5 rounded-lg hover:bg-orange-50 transition">🔄 Reschedule</button>
-              </div>
+              {app.interviewDate ? (
+                <>
+                  <p className="text-xs text-gray-700">
+                    Your interview is scheduled for <strong>{new Date(app.interviewDate).toLocaleString()}</strong>.
+                  </p>
+                  <div className="flex gap-2 pt-1">
+                    {app.meetLink && (
+                      <a href={app.meetLink} target="_blank" rel="noreferrer" className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition">
+                        📹 Join Meeting
+                      </a>
+                    )}
+                    <button onClick={() => onToast('Interview added to your calendar!', 'success')} className="text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600 transition">📅 Add to Calendar</button>
+                    <button onClick={() => onToast('Reschedule request sent.', 'success')} className="text-xs border border-orange-400 text-orange-600 px-3 py-1.5 rounded-lg hover:bg-orange-50 transition">🔄 Reschedule</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-500">Prepare well — research the company and practice common interview questions.</p>
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={() => onToast('Interview added to your calendar!', 'success')} className="text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600 transition">📅 Add to Calendar</button>
+                    <button onClick={() => onToast('Reschedule request sent.', 'success')} className="text-xs border border-orange-400 text-orange-600 px-3 py-1.5 rounded-lg hover:bg-orange-50 transition">🔄 Reschedule</button>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -268,14 +307,21 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast, onNavigate }) {
                 )}
               </div>
               {app.assessmentDocumentUrl ? (
-                <div className="pt-2 flex flex-col sm:flex-row gap-2">
-                  <a href={apiService.resolveFileUrl(app.assessmentDocumentUrl)} target="_blank" rel="noreferrer" className="flex-1 text-xs bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium text-center">
-                    📄 Download Assessment
-                  </a>
-                  <a href={`mailto:recruiter@${(app.company || 'company').toLowerCase().replace(/\s+/g, '')}.com?subject=${encodeURIComponent(`Assessment Submission - ${app.title}`)}&body=${encodeURIComponent(`Hi,\n\nPlease find my completed assessment attached.\n\nThank you!`)}`} onClick={() => onStatusChange(app.id, 'Interviewing')} className="flex-1 text-xs border border-blue-400 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition font-medium text-center">
-                    ✉️ Submit via Email
-                  </a>
-                </div>
+                assessSubmitted ? (
+                  <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mt-2">
+                    <span className="text-green-600">✓</span>
+                    <p className="text-xs text-green-700 font-medium">Company will reach out to you shortly.</p>
+                  </div>
+                ) : (
+                  <div className="pt-2 flex flex-col sm:flex-row gap-2">
+                    <a href={apiService.resolveFileUrl(app.assessmentDocumentUrl)} target="_blank" rel="noreferrer" className="flex-1 text-xs bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium text-center">
+                      📄 Download Assessment
+                    </a>
+                    <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=recruiter@${(app.company || 'company').toLowerCase().replace(/\s+/g, '')}.com&su=${encodeURIComponent('Assessment Completed')}&body=${encodeURIComponent(`Hi,\n\nPlease find my completed assessment attached.\n\nThank you!`)}`} onClick={handleSubmitAssessment} target="_blank" rel="noreferrer" className="flex-1 text-xs border border-blue-400 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition font-medium text-center">
+                      ✉️ Submit via Email
+                    </a>
+                  </div>
+                )
               ) : (
                 <>
                   {assessStarted ? (
@@ -340,15 +386,7 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast, onNavigate }) {
             </div>
           )}
 
-<<<<<<< HEAD
-  {
-    ['Unsuitable', 'Declined'].includes(app.status) && (
-      <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2">
-        <p className="text-sm font-semibold text-red-600">❌ Not Selected</p>
-        <p className="text-xs text-gray-500">Unfortunately you were not selected. Keep applying!</p>
-        <button onClick={() => onToast('Searching for similar jobs...', 'success')} className="text-xs border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition">🔍 Find Similar Jobs</button>
-=======
-          {app.status === 'Declined' && (
+          {['Unsuitable', 'Declined'].includes(app.status) && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-3">
             <div>
               <p className="text-sm font-semibold text-red-700">❤️ Keep your head up!</p>
@@ -357,7 +395,6 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast, onNavigate }) {
             <button onClick={() => onNavigate(`/dashboard/find-jobs?query=${encodeURIComponent(app.title)}`)} className="w-full text-sm bg-white border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 transition font-medium">
               🔍 Find Similar Jobs
             </button>
->>>>>>> 119e591 (something new)
           </div>
         )}
 

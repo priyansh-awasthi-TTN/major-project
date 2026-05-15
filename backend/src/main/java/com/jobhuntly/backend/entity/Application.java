@@ -76,6 +76,12 @@ public class Application {
     @Column(name = "assessment_description", columnDefinition = "TEXT")
     private String assessmentDescription;
 
+    @Column(name = "interview_date")
+    private LocalDateTime interviewDate;
+
+    @Column(name = "meet_link")
+    private String meetLink;
+
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
@@ -131,5 +137,23 @@ public class Application {
     public String getAssessmentDocumentUrl() { return assessmentDocumentUrl; }
     public void setAssessmentDocumentUrl(String assessmentDocumentUrl) { this.assessmentDocumentUrl = assessmentDocumentUrl; }
     public String getAssessmentDescription() { return assessmentDescription; }
-    public void setAssessmentDescription(String assessmentDescription) { this.assessmentDescription = assessmentDescription; }
+    public void setAssessmentDescription(String assessmentDescription) {
+        this.assessmentDescription = assessmentDescription;
+    }
+
+    public LocalDateTime getInterviewDate() {
+        return interviewDate;
+    }
+
+    public void setInterviewDate(LocalDateTime interviewDate) {
+        this.interviewDate = interviewDate;
+    }
+
+    public String getMeetLink() {
+        return meetLink;
+    }
+
+    public void setMeetLink(String meetLink) {
+        this.meetLink = meetLink;
+    }
 }

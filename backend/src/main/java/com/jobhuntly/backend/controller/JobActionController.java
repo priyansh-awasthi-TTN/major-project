@@ -30,12 +30,33 @@ public class JobActionController {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private com.jobhuntly.backend.repository.UserRepository userRepository;
+
     private Map<String, Object> toJobResponse(Job job) {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("id", job.getId());
         response.put("title", job.getTitle());
         response.put("company", job.getCompany());
         response.put("logo", job.getLogo());
+        
+        if (job.getPostedByUserId() != null) {
+            com.jobhuntly.backend.entity.User companyUser = userRepository.findById(job.getPostedByUserId()).orElse(null);
+            if (companyUser != null) {
+                response.put("company", companyUser.getFullName());
+                response.put("postedByCompany", companyUser.getFullName());
+                if (companyUser.getProfilePhotoUrl() != null) {
+                    response.put("logo", companyUser.getProfilePhotoUrl());
+                } else if (companyUser.getFullName() != null && companyUser.getFullName().length() >= 2) {
+                    response.put("logo", companyUser.getFullName().substring(0, 2).toUpperCase());
+                }
+                response.put("companyDescription", companyUser.getDescription());
+                response.put("companySize", companyUser.getCompanySize());
+                response.put("companyIndustry", companyUser.getIndustry());
+                response.put("companyWebsite", companyUser.getWebsite());
+            }
+        }
+        
         response.put("color", job.getColor());
         response.put("location", job.getLocation());
         response.put("type", job.getType());
@@ -45,7 +66,7 @@ public class JobActionController {
         response.put("applied", job.getApplied());
         response.put("capacity", job.getCapacity());
         response.put("description", job.getDescription());
-        response.put("postedByCompany", job.getPostedByCompany());
+        response.putIfAbsent("postedByCompany", job.getPostedByCompany());
         response.put("createdAt", job.getCreatedAt());
         return response;
     }
