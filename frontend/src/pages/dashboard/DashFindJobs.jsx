@@ -165,10 +165,12 @@ export default function DashFindJobs() {
   const [searchParams, setSearchParams] = useSearchParams();
   const viewGrid = searchParams.get('view') === 'grid';
   const companyParam = searchParams.get('company')?.trim() || '';
+  const queryParam = searchParams.get('query')?.trim() || '';
+  const initialSearch = companyParam || queryParam;
   const companyProfileOrigin = searchParams.get('origin') === 'company-profile';
   const setViewGrid = (val) => setSearchParams(prev => { const p = new URLSearchParams(prev); p.set('view', val ? 'grid' : 'list'); return p; }, { replace: true });
-  const [searchInput, setSearchInput] = useState(companyParam);
-  const [searchQuery, setSearchQuery] = useState(companyParam);
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [countryInput, setCountryInput] = useState('');
   const [countryQuery, setCountryQuery] = useState('');
   const [regionInput, setRegionInput] = useState('');
@@ -210,16 +212,17 @@ export default function DashFindJobs() {
   }, [reloadJobs]);
 
   useEffect(() => {
-    if (!companyParam) return;
+    const term = companyParam || queryParam;
+    if (!term) return;
 
-    setSearchInput(companyParam);
-    setSearchQuery(companyParam);
+    setSearchInput(term);
+    setSearchQuery(term);
     setCountryInput('');
     setCountryQuery('');
     setRegionInput('');
     setRegionQuery('');
     setPage(1);
-  }, [companyParam]);
+  }, [companyParam, queryParam]);
 
   // Filter state
   const [selTypes, setSelTypes]       = useState([]);
@@ -289,10 +292,11 @@ export default function DashFindJobs() {
     setCountryQuery(countryInput);
     setRegionQuery(regionInput.trim());
     setPage(1);
-    if (companyParam) {
+    if (companyParam || queryParam) {
       setSearchParams(prev => {
         const nextParams = new URLSearchParams(prev);
         nextParams.delete('company');
+        nextParams.delete('query');
         if (companyProfileOrigin) {
           nextParams.delete('origin');
         }
@@ -310,10 +314,11 @@ export default function DashFindJobs() {
     setRegionInput('');
     setRegionQuery('');
     setPage(1);
-    if (companyParam) {
+    if (companyParam || queryParam) {
       setSearchParams(prev => {
         const nextParams = new URLSearchParams(prev);
         nextParams.delete('company');
+        nextParams.delete('query');
         if (companyProfileOrigin) {
           nextParams.delete('origin');
         }

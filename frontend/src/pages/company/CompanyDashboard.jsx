@@ -93,15 +93,7 @@ function SummaryCard({ to, icon: Icon, title, value, tone }) {
   );
 }
 
-function ChangeLabel({ value, label, to }) {
-  if (to) {
-    return (
-      <Link to={to} className="block rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:border-indigo-300 hover:bg-slate-100">
-        <p className="text-xs uppercase tracking-[0.16em] text-slate-400">{label}</p>
-        <p className="mt-2 text-2xl font-semibold text-slate-900">{formatNumber(value)}</p>
-      </Link>
-    );
-  }
+function ChangeLabel({ value, label }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
       <p className="text-xs uppercase tracking-[0.16em] text-slate-400">{label}</p>
@@ -464,8 +456,8 @@ export default function CompanyDashboard() {
             </div>
 
             <div className="mt-6 grid gap-4 lg:grid-cols-2">
-              <ChangeLabel value={metrics.totalApplicants} label="Total applications" to="/company/applicants" />
-              <ChangeLabel value={metrics.totalJobs} label="Total jobs posted" to="/company/jobs" />
+              <ChangeLabel value={metrics.scopedApplications.length} label="Applications in range" />
+              <ChangeLabel value={metrics.scopedJobs.length} label="Jobs posted in range" />
             </div>
           </section>
 

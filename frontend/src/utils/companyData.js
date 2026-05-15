@@ -399,7 +399,6 @@ export function buildDashboardMetrics(jobs, applications, unreadMessages, dateRa
   const jobSeries = buildSeries(dateRange, scopedJobs, (item) => item.createdAt);
   const stageCounts = buildStageCounts(applications);
   const totalApplicants = (applications || []).length;
-  const totalJobs = (jobs || []).length;
   const openJobs = (jobs || []).filter((job) => job.status === 'Live').length;
   const reviewCount = (applications || []).filter((application) => application.stage === 'In Review').length;
   const interviewCount = (applications || []).filter((application) => application.stage.includes('Interview')).length;
@@ -413,7 +412,6 @@ export function buildDashboardMetrics(jobs, applications, unreadMessages, dateRa
     latestJobs,
     openJobs,
     totalApplicants,
-    totalJobs,
     reviewCount,
     interviewCount,
     unreadMessages,

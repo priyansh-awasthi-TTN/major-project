@@ -32,6 +32,7 @@ const tabs = [
   { label: 'Assessment', filter: 'Assessment' },
   { label: 'Offered', filter: 'Offered' },
   { label: 'Hired', filter: 'Hired' },
+  { label: 'Declined', filter: 'Declined' },
 ];
 
 const sortOptions = ['Date Applied (Newest)', 'Date Applied (Oldest)', 'Company A-Z', 'Status'];
@@ -135,7 +136,7 @@ function loadLS(key) { try { return JSON.parse(sessionStorage.getItem(key)) || {
 function saveLS(key, val) { sessionStorage.setItem(key, JSON.stringify(val)); }
 
 // ── Detail Drawer ─────────────────────────────────────────────────────────────
-function DetailDrawer({ app, onClose, onStatusChange, onToast }) {
+function DetailDrawer({ app, onClose, onStatusChange, onToast, onNavigate }) {
   const [input, setInput] = useState('');
   const [notes, setNotes] = useState(() => (loadNotes()[app?.id] || []));
   const [followupSent, setFollowupSent] = useState(() => !!(loadLS(LS_FOLLOWUP)[app?.id]));
@@ -183,7 +184,7 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast }) {
   };
 
   const handleDecline = () => {
-    onStatusChange(app.id, 'Unsuitable');
+    onStatusChange(app.id, 'Declined');
     onToast(`Offer from ${app.company} declined.`, 'success');
     setConfirmDecline(false);
     onClose();
@@ -339,399 +340,412 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast }) {
             </div>
           )}
 
-          {['Unsuitable', 'Declined'].includes(app.status) && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2">
-              <p className="text-sm font-semibold text-red-600">❌ Not Selected</p>
-              <p className="text-xs text-gray-500">Unfortunately you were not selected. Keep applying!</p>
-              <button onClick={() => onToast('Searching for similar jobs...', 'success')} className="text-xs border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition">🔍 Find Similar Jobs</button>
-            </div>
-          )}
-
-          {app.status === 'Shortlisted' && (
-            <div className="bg-cyan-50 border border-cyan-200 rounded-xl p-4 space-y-2">
-              <p className="text-sm font-semibold text-cyan-700">✅ Shortlisted</p>
-              <p className="text-xs text-gray-500">You have been shortlisted. The recruiter will reach out soon with next steps.</p>
-            </div>
-          )}
-
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-3">Your Notes</p>
-            <div className="border border-gray-200 rounded-xl overflow-hidden focus-within:border-blue-400 transition">
-              <textarea rows={3} value={input} onChange={e => setInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) addNote(); }}
-                className="w-full px-3 py-2.5 text-sm outline-none resize-none text-gray-700 placeholder-gray-400"
-                placeholder="Add a private note... (Ctrl+Enter to save)" />
-              <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-t border-gray-100">
-                <span className="text-xs text-gray-400">{input.length} chars</span>
-                <button onClick={addNote} disabled={!input.trim()} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition disabled:opacity-40 disabled:cursor-not-allowed">Save Note</button>
-              </div>
-            </div>
-            {notes.length > 0 ? (
-              <div className="mt-3 space-y-2">
-                {notes.map(n => (
-                  <div key={n.id} className="bg-yellow-50 border border-yellow-100 rounded-lg px-3 py-2.5 group">
-                    <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{n.text}</p>
-                    <div className="flex items-center justify-between mt-1.5">
-                      <span className="text-xs text-gray-400">{n.time}</span>
-                      <button onClick={() => deleteNote(n.id)} className="text-xs text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition">Delete</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400 mt-2 text-center py-3">No notes yet. Add one above.</p>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Menu items ────────────────────────────────────────────────────────────────
-const buildMenuItems = (app, onRemove, navigate, onMessageRecruiter) => [
-  { icon: '👁️', label: 'View Details', action: () => navigate(`/dashboard/applications/${app.id}`) },
-  { icon: '📄', label: 'View Job Posting', action: () => navigate(`/dashboard/jobs/${app.jobId}`) },
+<<<<<<< HEAD
   {
-    icon: '✉️', label: 'Message Recruiter',
-    action: () => {
-      const match = messages.find(m => m.company.toLowerCase() === app.company.toLowerCase());
-      const email = match
-        ? `${match.name.toLowerCase().replace(' ', '.')}@${app.company.toLowerCase()}.com`
-        : `recruiter@${app.company.toLowerCase()}.com`;
-      onMessageRecruiter({ email, name: match?.name || null, jobTitle: app.title, company: app.company });
-    },
-  },
-  'divider',
-  { icon: '🗑️', label: 'Remove Application', action: () => onRemove(app.id), danger: true },
-];
-
-// ── Pagination helper ─────────────────────────────────────────────────────────
-function Pagination({ current, total, onChange }) {
-  if (total <= 1) return null;
-  const pages = [];
-  if (total <= 7) {
-    for (let i = 1; i <= total; i++) pages.push(i);
-  } else {
-    pages.push(1);
-    if (current > 3) pages.push('...');
-    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.push(i);
-    if (current < total - 2) pages.push('...');
-    pages.push(total);
-  }
-  return (
-    <div className="flex justify-center items-center gap-1 px-6 py-4">
-      <button onClick={() => onChange(current - 1)} disabled={current === 1}
-        className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-100 rounded disabled:opacity-30">‹</button>
-      {pages.map((p, i) =>
-        p === '...'
-          ? <span key={`e${i}`} className="w-8 h-8 flex items-center justify-center text-gray-400 text-sm">…</span>
-          : <button key={p} onClick={() => onChange(p)}
-            className={`w-8 h-8 rounded text-sm font-medium ${p === current ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>{p}</button>
-      )}
-      <button onClick={() => onChange(current + 1)} disabled={current === total}
-        className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-100 rounded disabled:opacity-30">›</button>
-    </div>
-  );
-}
-
-// ── Main component ────────────────────────────────────────────────────────────
-export default function MyApplications() {
-  const { user } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const firstName = (user?.fullName || 'Jake').split(' ')[0];
-
-  // Calendar — same sessionStorage key as Dashboard
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [selectedDateRange, setSelectedDateRange] = useState(() => {
-    try {
-      const saved = sessionStorage.getItem(LS_CAL);
-      if (saved) {
-        const start = new Date(JSON.parse(saved));
-        const end = new Date(start); end.setDate(end.getDate() + 6);
-        return { start, end };
-      }
-    } catch {
-      // Ignore invalid persisted calendar values and fall back to the default range.
-    }
-    const end = new Date();
-    const start = new Date(); start.setDate(start.getDate() - 6);
-    return { start, end };
-  });
-
-  const handleDateChange = (date) => {
-    const end = new Date(date); end.setDate(end.getDate() + 6);
-    setSelectedDateRange({ start: date, end });
-    sessionStorage.setItem(LS_CAL, JSON.stringify(date.toISOString()));
-  };
-
-  const fmt = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  const dateLabel = `${fmt(selectedDateRange.start)} - ${fmt(selectedDateRange.end)}`;
-
-  const [activeTab, setActiveTab] = useState(0);
-  const [showNotice, setShowNotice] = useState(true);
-  const [search, setSearch] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
-  const [showFilter, setShowFilter] = useState(false);
-  const [sortBy, setSortBy] = useState(sortOptions[0]);
-  const [filterType, setFilterType] = useState('');
-  const [selectedApp, setSelectedApp] = useState(null);
-  const [openMenu, setOpenMenu] = useState(null);
-  const [applications, setApplications] = useState([]);
-  const [toast, setToast] = useState(null);
-  const [recruiterModal, setRecruiterModal] = useState(null);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const applicationsPath = `${location.pathname}${location.search}${location.hash}`;
-
-  useEffect(() => {
-    apiService.getApplications()
-      .then(data => setApplications(data || []))
-      .catch(() => setApplications([]))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const handleStatusChange = async (id, newStatus) => {
-    try {
-      await apiService.updateApplicationStatus(id, newStatus);
-      setApplications(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
-      setSelectedApp(prev => prev?.id === id ? { ...prev, status: newStatus } : prev);
-      
-      if (newStatus === 'Interviewing') {
-        const interviewTabIndex = tabs.findIndex(t => t.filter === 'Interviewing');
-        if (interviewTabIndex !== -1) setActiveTab(interviewTabIndex);
-      } else if (newStatus === 'Hired') {
-        const hiredTabIndex = tabs.findIndex(t => t.filter === 'Hired');
-        if (hiredTabIndex !== -1) setActiveTab(hiredTabIndex);
-      }
-    } catch (e) {
-      setToast({ message: 'Failed to update status', type: 'error' });
-    }
-  };
-
-  const handleToast = (message, type = 'success') => setToast({ message, type });
-  const openCompanyProfile = (companyName) => {
-    if (!companyName) return;
-
-    navigate(`/dashboard/companies/${getCompanyRouteId({ name: companyName })}`, {
-      state: {
-        backTo: applicationsPath,
-        origin: 'my-applications',
-        suppressSidebarItem: 'companies',
-      },
-    });
-  };
-
-  const handleRemove = async (id) => {
-    if (!window.confirm('Remove this application?')) return;
-    try {
-      await apiService.deleteApplication(id);
-      setApplications(prev => prev.filter(a => a.id !== id));
-      setToast({ message: 'Application removed', type: 'success' });
-    } catch {
-      setToast({ message: 'Failed to remove application', type: 'error' });
-    }
-  };
-
-  const tabFilter = tabs[activeTab].filter;
-  let filtered = applications.filter(app => {
-    let matchTab = !tabFilter;
-    if (tabFilter === 'Interviewing') {
-      matchTab = ['Interviewing', 'Interview', 'Interviewed'].includes(app.status);
-    } else if (tabFilter) {
-      matchTab = app.status === tabFilter;
-    }
-    const matchSearch = !search || app.company.toLowerCase().includes(search.toLowerCase()) || app.title.toLowerCase().includes(search.toLowerCase());
-    const matchType = !filterType || app.type === filterType;
-
-    return matchTab && matchSearch && matchType;
-  });
-
-  if (sortBy === 'Company A-Z') filtered = [...filtered].sort((a, b) => (a.company || '').localeCompare(b.company || ''));
-  else if (sortBy === 'Date Applied (Oldest)') filtered = [...filtered].sort((a, b) => new Date(a.dateApplied) - new Date(b.dateApplied));
-  else if (sortBy === 'Date Applied (Newest)') filtered = [...filtered].sort((a, b) => new Date(b.dateApplied) - new Date(a.dateApplied));
-  else if (sortBy === 'Status') filtered = [...filtered].sort((a, b) => (a.status || '').localeCompare(b.status || ''));
-
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const safePage = Math.min(page, totalPages || 1);
-  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const counts = tabs.map(t => {
-    if (!t.filter) return applications.length;
-    if (t.filter === 'Interviewing') return applications.filter(a => ['Interviewing', 'Interview', 'Interviewed'].includes(a.status)).length;
-    return applications.filter(a => a.status === t.filter).length;
-  });
-
-  // Reset to page 1 when filters change
-  const handleTabChange = (i) => { setActiveTab(i); setPage(1); };
-  const handleSearch = (v) => { setSearch(v); setPage(1); };
-
-  return (
-    <div className="flex-1 flex flex-col h-full bg-white">
-      <DashTopBar title="My Applications" />
-      <div className="overflow-y-auto flex-1 px-8 py-6">
-
-        {/* Header */}
-        <div className="flex justify-between items-start mb-5">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Keep it up, {firstName} 💪</h2>
-            <p className="text-sm text-gray-500 mt-0.5">Showing all applied jobs. Dashboard calendar range: {dateLabel}.</p>
-          </div>
-          <div className="relative">
-            <button onClick={() => setShowCalendar(v => !v)}
-              className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 bg-white hover:bg-gray-50 transition">
-              <span>{dateLabel}</span><span>📅</span>
-            </button>
-            {showCalendar && (
-              <Calendar selectedDate={selectedDateRange.start} onDateChange={handleDateChange} onClose={() => setShowCalendar(false)} />
-            )}
-          </div>
-        </div>
-
-        {/* Notice */}
-        {showNotice && (
-          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-4 mb-6">
-            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white text-lg flex-shrink-0">📋</div>
-            <div className="flex-1">
-              <p className="font-semibold text-blue-700 text-sm">New Notices</p>
-              <p className="text-xs text-gray-500 mt-0.5">You can request a follow-up 7 days after applying if the status is In Review. Only one follow-up per job.</p>
+    ['Unsuitable', 'Declined'].includes(app.status) && (
+      <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2">
+        <p className="text-sm font-semibold text-red-600">❌ Not Selected</p>
+        <p className="text-xs text-gray-500">Unfortunately you were not selected. Keep applying!</p>
+        <button onClick={() => onToast('Searching for similar jobs...', 'success')} className="text-xs border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition">🔍 Find Similar Jobs</button>
+=======
+          {app.status === 'Declined' && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-3">
+            <div>
+              <p className="text-sm font-semibold text-red-700">❤️ Keep your head up!</p>
+              <p className="text-xs text-gray-600 mt-1">We know this isn't the news you were hoping for, but every "no" brings you closer to the right "yes". Don't let this discourage you from your goals!</p>
             </div>
-            <button onClick={() => setShowNotice(false)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+            <button onClick={() => onNavigate(`/dashboard/find-jobs?query=${encodeURIComponent(app.title)}`)} className="w-full text-sm bg-white border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 transition font-medium">
+              🔍 Find Similar Jobs
+            </button>
+>>>>>>> 119e591 (something new)
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
-          {tabs.map((tab, i) => (
-            <button key={tab.label} onClick={() => handleTabChange(i)}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition whitespace-nowrap ${activeTab === i ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-              {tab.label} ({counts[i]})
-            </button>
-          ))}
-        </div>
+        {app.status === 'Shortlisted' && (
+          <div className="bg-cyan-50 border border-cyan-200 rounded-xl p-4 space-y-2">
+            <p className="text-sm font-semibold text-cyan-700">✅ Shortlisted</p>
+            <p className="text-xs text-gray-500">You have been shortlisted. The recruiter will reach out soon with next steps.</p>
+          </div>
+        )}
 
-        {/* Table */}
-        <div className="bg-white rounded-xl border border-gray-200">
-          <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100">
-            <h3 className="font-semibold text-gray-900">Applications History</h3>
-            <div className="flex gap-2 items-center">
-              {showSearch && (
-                <input autoFocus value={search} onChange={e => handleSearch(e.target.value)}
-                  className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-blue-400 w-48"
-                  placeholder="Search company or role..." />
+        <div>
+          <p className="text-xs font-semibold text-gray-500 uppercase mb-3">Your Notes</p>
+          <div className="border border-gray-200 rounded-xl overflow-hidden focus-within:border-blue-400 transition">
+            <textarea rows={3} value={input} onChange={e => setInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) addNote(); }}
+              className="w-full px-3 py-2.5 text-sm outline-none resize-none text-gray-700 placeholder-gray-400"
+              placeholder="Add a private note... (Ctrl+Enter to save)" />
+            <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-t border-gray-100">
+              <span className="text-xs text-gray-400">{input.length} chars</span>
+              <button onClick={addNote} disabled={!input.trim()} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition disabled:opacity-40 disabled:cursor-not-allowed">Save Note</button>
+            </div>
+          </div>
+          {notes.length > 0 ? (
+            <div className="mt-3 space-y-2">
+              {notes.map(n => (
+                <div key={n.id} className="bg-yellow-50 border border-yellow-100 rounded-lg px-3 py-2.5 group">
+                  <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{n.text}</p>
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-xs text-gray-400">{n.time}</span>
+                    <button onClick={() => deleteNote(n.id)} className="text-xs text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition">Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400 mt-2 text-center py-3">No notes yet. Add one above.</p>
+          )}
+        </div>
+      </div>
+      </div >
+    </div >
+  );
+  }
+
+  // ── Menu items ────────────────────────────────────────────────────────────────
+  const buildMenuItems = (app, onRemove, navigate, onMessageRecruiter) => [
+    { icon: '👁️', label: 'View Details', action: () => navigate(`/dashboard/applications/${app.id}`) },
+    { icon: '📄', label: 'View Job Posting', action: () => navigate(`/dashboard/jobs/${app.jobId}`) },
+    {
+      icon: '✉️', label: 'Message Recruiter',
+      action: () => {
+        const match = messages.find(m => m.company.toLowerCase() === app.company.toLowerCase());
+        const email = match
+          ? `${match.name.toLowerCase().replace(' ', '.')}@${app.company.toLowerCase()}.com`
+          : `recruiter@${app.company.toLowerCase()}.com`;
+        onMessageRecruiter({ email, name: match?.name || null, jobTitle: app.title, company: app.company });
+      },
+    },
+    'divider',
+    { icon: '🗑️', label: 'Remove Application', action: () => onRemove(app.id), danger: true },
+  ];
+
+  // ── Pagination helper ─────────────────────────────────────────────────────────
+  function Pagination({ current, total, onChange }) {
+    if (total <= 1) return null;
+    const pages = [];
+    if (total <= 7) {
+      for (let i = 1; i <= total; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (current > 3) pages.push('...');
+      for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.push(i);
+      if (current < total - 2) pages.push('...');
+      pages.push(total);
+    }
+    return (
+      <div className="flex justify-center items-center gap-1 px-6 py-4">
+        <button onClick={() => onChange(current - 1)} disabled={current === 1}
+          className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-100 rounded disabled:opacity-30">‹</button>
+        {pages.map((p, i) =>
+          p === '...'
+            ? <span key={`e${i}`} className="w-8 h-8 flex items-center justify-center text-gray-400 text-sm">…</span>
+            : <button key={p} onClick={() => onChange(p)}
+              className={`w-8 h-8 rounded text-sm font-medium ${p === current ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>{p}</button>
+        )}
+        <button onClick={() => onChange(current + 1)} disabled={current === total}
+          className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-100 rounded disabled:opacity-30">›</button>
+      </div>
+    );
+  }
+
+  // ── Main component ────────────────────────────────────────────────────────────
+  export default function MyApplications() {
+    const { user } = useAuth();
+    const location = useLocation();
+    const navigate = useNavigate();
+    const firstName = (user?.fullName || 'Jake').split(' ')[0];
+
+    // Calendar — same sessionStorage key as Dashboard
+    const [showCalendar, setShowCalendar] = useState(false);
+    const [selectedDateRange, setSelectedDateRange] = useState(() => {
+      try {
+        const saved = sessionStorage.getItem(LS_CAL);
+        if (saved) {
+          const start = new Date(JSON.parse(saved));
+          const end = new Date(start); end.setDate(end.getDate() + 6);
+          return { start, end };
+        }
+      } catch {
+        // Ignore invalid persisted calendar values and fall back to the default range.
+      }
+      const end = new Date();
+      const start = new Date(); start.setDate(start.getDate() - 6);
+      return { start, end };
+    });
+
+    const handleDateChange = (date) => {
+      const end = new Date(date); end.setDate(end.getDate() + 6);
+      setSelectedDateRange({ start: date, end });
+      sessionStorage.setItem(LS_CAL, JSON.stringify(date.toISOString()));
+    };
+
+    const fmt = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const dateLabel = `${fmt(selectedDateRange.start)} - ${fmt(selectedDateRange.end)}`;
+
+    const [activeTab, setActiveTab] = useState(0);
+    const [showNotice, setShowNotice] = useState(true);
+    const [search, setSearch] = useState('');
+    const [showSearch, setShowSearch] = useState(false);
+    const [showFilter, setShowFilter] = useState(false);
+    const [sortBy, setSortBy] = useState(sortOptions[0]);
+    const [filterType, setFilterType] = useState('');
+    const [selectedApp, setSelectedApp] = useState(null);
+    const [openMenu, setOpenMenu] = useState(null);
+    const [applications, setApplications] = useState([]);
+    const [toast, setToast] = useState(null);
+    const [recruiterModal, setRecruiterModal] = useState(null);
+    const [page, setPage] = useState(1);
+    const [loading, setLoading] = useState(true);
+    const applicationsPath = `${location.pathname}${location.search}${location.hash}`;
+
+    useEffect(() => {
+      apiService.getApplications()
+        .then(data => setApplications(data || []))
+        .catch(() => setApplications([]))
+        .finally(() => setLoading(false));
+    }, []);
+
+    const handleStatusChange = async (id, newStatus) => {
+      try {
+        await apiService.updateApplicationStatus(id, newStatus);
+        setApplications(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
+        setSelectedApp(prev => prev?.id === id ? { ...prev, status: newStatus } : prev);
+
+        if (newStatus === 'Interviewing') {
+          const interviewTabIndex = tabs.findIndex(t => t.filter === 'Interviewing');
+          if (interviewTabIndex !== -1) setActiveTab(interviewTabIndex);
+        } else if (newStatus === 'Hired') {
+          const hiredTabIndex = tabs.findIndex(t => t.filter === 'Hired');
+          if (hiredTabIndex !== -1) setActiveTab(hiredTabIndex);
+        }
+      } catch (e) {
+        setToast({ message: 'Failed to update status', type: 'error' });
+      }
+    };
+
+    const handleToast = (message, type = 'success') => setToast({ message, type });
+    const openCompanyProfile = (companyName) => {
+      if (!companyName) return;
+
+      navigate(`/dashboard/companies/${getCompanyRouteId({ name: companyName })}`, {
+        state: {
+          backTo: applicationsPath,
+          origin: 'my-applications',
+          suppressSidebarItem: 'companies',
+        },
+      });
+    };
+
+    const handleRemove = async (id) => {
+      if (!window.confirm('Remove this application?')) return;
+      try {
+        await apiService.deleteApplication(id);
+        setApplications(prev => prev.filter(a => a.id !== id));
+        setToast({ message: 'Application removed', type: 'success' });
+      } catch {
+        setToast({ message: 'Failed to remove application', type: 'error' });
+      }
+    };
+
+    const tabFilter = tabs[activeTab].filter;
+    let filtered = applications.filter(app => {
+      let matchTab = !tabFilter;
+      if (tabFilter === 'Interviewing') {
+        matchTab = ['Interviewing', 'Interview', 'Interviewed'].includes(app.status);
+      } else if (tabFilter) {
+        matchTab = app.status === tabFilter;
+      }
+      const matchSearch = !search || app.company.toLowerCase().includes(search.toLowerCase()) || app.title.toLowerCase().includes(search.toLowerCase());
+      const matchType = !filterType || app.type === filterType;
+
+      return matchTab && matchSearch && matchType;
+    });
+
+    if (sortBy === 'Company A-Z') filtered = [...filtered].sort((a, b) => (a.company || '').localeCompare(b.company || ''));
+    else if (sortBy === 'Date Applied (Oldest)') filtered = [...filtered].sort((a, b) => new Date(a.dateApplied) - new Date(b.dateApplied));
+    else if (sortBy === 'Date Applied (Newest)') filtered = [...filtered].sort((a, b) => new Date(b.dateApplied) - new Date(a.dateApplied));
+    else if (sortBy === 'Status') filtered = [...filtered].sort((a, b) => (a.status || '').localeCompare(b.status || ''));
+
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+    const safePage = Math.min(page, totalPages || 1);
+    const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+    const counts = tabs.map(t => {
+      if (!t.filter) return applications.length;
+      if (t.filter === 'Interviewing') return applications.filter(a => ['Interviewing', 'Interview', 'Interviewed'].includes(a.status)).length;
+      return applications.filter(a => a.status === t.filter).length;
+    });
+
+    // Reset to page 1 when filters change
+    const handleTabChange = (i) => { setActiveTab(i); setPage(1); };
+    const handleSearch = (v) => { setSearch(v); setPage(1); };
+
+    return (
+      <div className="flex-1 flex flex-col h-full bg-white">
+        <DashTopBar title="My Applications" />
+        <div className="overflow-y-auto flex-1 px-8 py-6">
+
+          {/* Header */}
+          <div className="flex justify-between items-start mb-5">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Keep it up, {firstName} 💪</h2>
+              <p className="text-sm text-gray-500 mt-0.5">Showing all applied jobs. Dashboard calendar range: {dateLabel}.</p>
+            </div>
+            <div className="relative">
+              <button onClick={() => setShowCalendar(v => !v)}
+                className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 bg-white hover:bg-gray-50 transition">
+                <span>{dateLabel}</span><span>📅</span>
+              </button>
+              {showCalendar && (
+                <Calendar selectedDate={selectedDateRange.start} onDateChange={handleDateChange} onClose={() => setShowCalendar(false)} />
               )}
-              <button onClick={() => setShowSearch(s => !s)}
-                className={`flex items-center gap-1.5 border rounded-lg px-3 py-1.5 text-sm transition ${showSearch ? 'border-blue-500 text-blue-600 bg-blue-50' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
-                🔍 Search
-              </button>
-              <button onClick={() => setShowFilter(s => !s)}
-                className={`flex items-center gap-1.5 border rounded-lg px-3 py-1.5 text-sm transition ${showFilter ? 'border-blue-500 text-blue-600 bg-blue-50' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
-                ☰ Filter
-              </button>
             </div>
           </div>
 
-          {showFilter && (
-            <div className="px-6 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-6 flex-wrap">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 font-medium">Sort by:</span>
-                <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }}
-                  className="border border-gray-200 rounded-lg px-2 py-1 text-xs outline-none text-gray-700">
-                  {sortOptions.map(o => <option key={o}>{o}</option>)}
-                </select>
+          {/* Notice */}
+          {showNotice && (
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-4 mb-6">
+              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white text-lg flex-shrink-0">📋</div>
+              <div className="flex-1">
+                <p className="font-semibold text-blue-700 text-sm">New Notices</p>
+                <p className="text-xs text-gray-500 mt-0.5">You can request a follow-up 7 days after applying if the status is In Review. Only one follow-up per job.</p>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 font-medium">Job Type:</span>
-                <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1); }}
-                  className="border border-gray-200 rounded-lg px-2 py-1 text-xs outline-none text-gray-700">
-                  <option value="">All Types</option>
-                  <option>Full-Time</option><option>Part-Time</option><option>Remote</option><option>Contract</option>
-                </select>
-              </div>
-              <button onClick={() => { setSortBy(sortOptions[0]); setFilterType(''); setSearch(''); setPage(1); }}
-                className="text-xs text-red-500 hover:underline">Clear filters</button>
+              <button onClick={() => setShowNotice(false)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
             </div>
           )}
 
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-gray-400 text-xs border-b border-gray-100">
-                <th className="text-left px-6 py-3 w-8">#</th>
-                <th className="text-left px-4 py-3">Company Name</th>
-                <th className="text-left px-4 py-3">Roles</th>
-                <th className="text-left px-4 py-3">Date Applied</th>
-                <th className="text-left px-4 py-3">Status</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.map((app, idx) => (
-                <tr key={app.id} className="border-b border-gray-100 hover:bg-gray-50 transition cursor-pointer" onClick={() => setSelectedApp(app)}>
-                  <td className="px-6 py-4 text-gray-400">{(safePage - 1) * PAGE_SIZE + idx + 1}</td>
-                  <td className="px-4 py-4">
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-3 rounded p-1 text-left transition hover:bg-gray-100"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openCompanyProfile(app.company);
-                      }}
-                    >
-                      <div className={`${app.color} text-white rounded-xl w-10 h-10 flex items-center justify-center text-xs font-bold flex-shrink-0`}>{app.logo}</div>
-                      <p className="font-semibold text-gray-900">{app.company}</p>
-                    </button>
-                  </td>
-                  <td className="px-4 py-4 text-gray-600 cursor-pointer hover:text-blue-600 hover:underline"
-                    onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/jobs/${app.jobId}`); }}>
-                    {app.title}
-                  </td>
-                  <td className="px-4 py-4 text-gray-500">{app.dateApplied}</td>
-                  <td className="px-4 py-4">
-                    <span className={`text-xs px-3 py-1 rounded-full font-medium ${statusStyle[app.status] || 'border border-gray-300 text-gray-500'}`}>{app.status}</span>
-                  </td>
-                  <td className="px-4 py-4" onClick={e => e.stopPropagation()}>
-                    <div className="relative">
-                      <button onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === app.id ? null : app.id); }}
-                        className="text-gray-400 hover:text-gray-600 text-lg px-1">•••</button>
-                      {openMenu === app.id && (
-                        <div className="absolute right-0 top-8 z-50">
-                          <DropdownMenu items={buildMenuItems(app, handleRemove, navigate, setRecruiterModal)} onClose={() => setOpenMenu(null)} />
-                        </div>
-                      )}
-                    </div>
-                  </td>
+          {/* Tabs */}
+          <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
+            {tabs.map((tab, i) => (
+              <button key={tab.label} onClick={() => handleTabChange(i)}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition whitespace-nowrap ${activeTab === i ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                {tab.label} ({counts[i]})
+              </button>
+            ))}
+          </div>
+
+          {/* Table */}
+          <div className="bg-white rounded-xl border border-gray-200">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100">
+              <h3 className="font-semibold text-gray-900">Applications History</h3>
+              <div className="flex gap-2 items-center">
+                {showSearch && (
+                  <input autoFocus value={search} onChange={e => handleSearch(e.target.value)}
+                    className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-blue-400 w-48"
+                    placeholder="Search company or role..." />
+                )}
+                <button onClick={() => setShowSearch(s => !s)}
+                  className={`flex items-center gap-1.5 border rounded-lg px-3 py-1.5 text-sm transition ${showSearch ? 'border-blue-500 text-blue-600 bg-blue-50' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                  🔍 Search
+                </button>
+                <button onClick={() => setShowFilter(s => !s)}
+                  className={`flex items-center gap-1.5 border rounded-lg px-3 py-1.5 text-sm transition ${showFilter ? 'border-blue-500 text-blue-600 bg-blue-50' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                  ☰ Filter
+                </button>
+              </div>
+            </div>
+
+            {showFilter && (
+              <div className="px-6 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-6 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 font-medium">Sort by:</span>
+                  <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }}
+                    className="border border-gray-200 rounded-lg px-2 py-1 text-xs outline-none text-gray-700">
+                    {sortOptions.map(o => <option key={o}>{o}</option>)}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 font-medium">Job Type:</span>
+                  <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1); }}
+                    className="border border-gray-200 rounded-lg px-2 py-1 text-xs outline-none text-gray-700">
+                    <option value="">All Types</option>
+                    <option>Full-Time</option><option>Part-Time</option><option>Remote</option><option>Contract</option>
+                  </select>
+                </div>
+                <button onClick={() => { setSortBy(sortOptions[0]); setFilterType(''); setSearch(''); setPage(1); }}
+                  className="text-xs text-red-500 hover:underline">Clear filters</button>
+              </div>
+            )}
+
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-gray-400 text-xs border-b border-gray-100">
+                  <th className="text-left px-6 py-3 w-8">#</th>
+                  <th className="text-left px-4 py-3">Company Name</th>
+                  <th className="text-left px-4 py-3">Roles</th>
+                  <th className="text-left px-4 py-3">Date Applied</th>
+                  <th className="text-left px-4 py-3">Status</th>
+                  <th className="px-4 py-3" />
                 </tr>
-              ))}
-              {loading && (
-                <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-400 text-sm">
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  </div>
-                </td></tr>
-              )}
-              {!loading && paginated.length === 0 && (
-                <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-400 text-sm">No applications found</td></tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {paginated.map((app, idx) => (
+                  <tr key={app.id} className="border-b border-gray-100 hover:bg-gray-50 transition cursor-pointer" onClick={() => setSelectedApp(app)}>
+                    <td className="px-6 py-4 text-gray-400">{(safePage - 1) * PAGE_SIZE + idx + 1}</td>
+                    <td className="px-4 py-4">
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-3 rounded p-1 text-left transition hover:bg-gray-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openCompanyProfile(app.company);
+                        }}
+                      >
+                        <div className={`${app.color} text-white rounded-xl w-10 h-10 flex items-center justify-center text-xs font-bold flex-shrink-0`}>{app.logo}</div>
+                        <p className="font-semibold text-gray-900">{app.company}</p>
+                      </button>
+                    </td>
+                    <td className="px-4 py-4 text-gray-600 cursor-pointer hover:text-blue-600 hover:underline"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/jobs/${app.jobId}`); }}>
+                      {app.title}
+                    </td>
+                    <td className="px-4 py-4 text-gray-500">{app.dateApplied}</td>
+                    <td className="px-4 py-4">
+                      <span className={`text-xs px-3 py-1 rounded-full font-medium ${statusStyle[app.status] || 'border border-gray-300 text-gray-500'}`}>{app.status}</span>
+                    </td>
+                    <td className="px-4 py-4" onClick={e => e.stopPropagation()}>
+                      <div className="relative">
+                        <button onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === app.id ? null : app.id); }}
+                          className="text-gray-400 hover:text-gray-600 text-lg px-1">•••</button>
+                        {openMenu === app.id && (
+                          <div className="absolute right-0 top-8 z-50">
+                            <DropdownMenu items={buildMenuItems(app, handleRemove, navigate, setRecruiterModal)} onClose={() => setOpenMenu(null)} />
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {loading && (
+                  <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-400 text-sm">
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    </div>
+                  </td></tr>
+                )}
+                {!loading && paginated.length === 0 && (
+                  <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-400 text-sm">No applications found</td></tr>
+                )}
+              </tbody>
+            </table>
 
-          <Pagination current={safePage} total={totalPages} onChange={setPage} />
+            <Pagination current={safePage} total={totalPages} onChange={setPage} />
+          </div>
         </div>
-      </div>
 
-      <DetailDrawer key={selectedApp?.id || 'empty'} app={selectedApp} onClose={() => setSelectedApp(null)} onStatusChange={handleStatusChange} onToast={handleToast} />
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-      {recruiterModal && (
-        <MessageRecruiterModal
-          recruiterEmail={recruiterModal.email}
-          recruiterName={recruiterModal.name}
-          jobTitle={recruiterModal.jobTitle}
-          company={recruiterModal.company}
-          senderName={user?.fullName}
-          onClose={() => setRecruiterModal(null)}
-          onSuccess={() => setToast({ message: 'Email client opened!', type: 'success' })}
-        />
-      )}
-    </div>
-  );
-}
+        <DetailDrawer key={selectedApp?.id || 'empty'} app={selectedApp} onClose={() => setSelectedApp(null)} onStatusChange={handleStatusChange} onToast={handleToast} onNavigate={navigate} />
+        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+        {recruiterModal && (
+          <MessageRecruiterModal
+            recruiterEmail={recruiterModal.email}
+            recruiterName={recruiterModal.name}
+            jobTitle={recruiterModal.jobTitle}
+            company={recruiterModal.company}
+            senderName={user?.fullName}
+            onClose={() => setRecruiterModal(null)}
+            onSuccess={() => setToast({ message: 'Email client opened!', type: 'success' })}
+          />
+        )}
+      </div>
+    );
+  }
