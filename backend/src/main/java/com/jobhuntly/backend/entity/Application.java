@@ -64,6 +64,18 @@ public class Application {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "package_ctc")
+    private String packageCtc;
+
+    @Column(name = "gratuity")
+    private String gratuity;
+
+    @Column(name = "assessment_document_url")
+    private String assessmentDocumentUrl;
+
+    @Column(name = "assessment_description", columnDefinition = "TEXT")
+    private String assessmentDescription;
+
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
@@ -112,4 +124,12 @@ public class Application {
     public void setScore(Double score) { this.score = score; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public String getPackageCtc() { return packageCtc; }
+    public void setPackageCtc(String packageCtc) { this.packageCtc = packageCtc; }
+    public String getGratuity() { return gratuity; }
+    public void setGratuity(String gratuity) { this.gratuity = gratuity; }
+    public String getAssessmentDocumentUrl() { return assessmentDocumentUrl; }
+    public void setAssessmentDocumentUrl(String assessmentDocumentUrl) { this.assessmentDocumentUrl = assessmentDocumentUrl; }
+    public String getAssessmentDescription() { return assessmentDescription; }
+    public void setAssessmentDescription(String assessmentDescription) { this.assessmentDescription = assessmentDescription; }
 }

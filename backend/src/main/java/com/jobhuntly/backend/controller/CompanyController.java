@@ -95,6 +95,10 @@ public class CompanyController {
                 m.put("score", a.getScore() != null ? a.getScore() : 0.0);
                 m.put("resumeUrl", a.getResumeUrl());
                 m.put("coverLetter", a.getCoverLetter());
+                m.put("packageCtc", a.getPackageCtc());
+                m.put("gratuity", a.getGratuity());
+                m.put("assessmentDocumentUrl", a.getAssessmentDocumentUrl());
+                m.put("assessmentDescription", a.getAssessmentDescription());
                 result.add(m);
             }
             return ResponseEntity.ok(result);
@@ -138,6 +142,10 @@ public class CompanyController {
 
             String nextStatus = body.get("status");
             app.setStatus(nextStatus);
+            if (body.containsKey("packageCtc")) app.setPackageCtc(body.get("packageCtc"));
+            if (body.containsKey("gratuity")) app.setGratuity(body.get("gratuity"));
+            if (body.containsKey("assessmentDocumentUrl")) app.setAssessmentDocumentUrl(body.get("assessmentDocumentUrl"));
+            if (body.containsKey("assessmentDescription")) app.setAssessmentDescription(body.get("assessmentDescription"));
             applicationRepository.save(app);
 
             Notification candidateNotification = new Notification();

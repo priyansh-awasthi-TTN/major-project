@@ -68,6 +68,10 @@ export default function ApplicantProfile() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('In Review');
+  const [packageCtc, setPackageCtc] = useState('');
+  const [gratuity, setGratuity] = useState('');
+  const [assessmentDescription, setAssessmentDescription] = useState('');
+  const [assessmentDocumentFile, setAssessmentDocumentFile] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -127,7 +131,20 @@ export default function ApplicantProfile() {
     setError('');
 
     try {
-      await apiService.updateCompanyApplicationStatus(application.id, status);
+      let payload = { status };
+
+      if (status === 'Offered') {
+        payload.packageCtc = packageCtc;
+        payload.gratuity = gratuity;
+      } else if (status === 'Assessment') {
+        payload.assessmentDescription = assessmentDescription;
+        if (assessmentDocumentFile) {
+          const uploadRes = await apiService.uploadFile(assessmentDocumentFile);
+          payload.assessmentDocumentUrl = uploadRes.url;
+        }
+      }
+
+      await apiService.updateCompanyApplicationStatus(application.id, payload);
       setApplication((current) => current ? { ...current, stage: status, status } : current);
       showToast(`Status updated to ${status}.`, 'success');
     } catch (updateError) {
@@ -354,6 +371,32 @@ export default function ApplicantProfile() {
                     {COMPANY_STAGE_OPTIONS.slice(1).map((option) => <option key={option} value={option}>{option}</option>)}
                   </select>
                 </label>
+
+                {status === 'Offered' && (
+                  <div className="mt-4 space-y-3">
+                    <label className="block">
+                      <span className="text-xs font-semibold text-slate-600">Package (CTC)</span>
+                      <input type="text" placeholder="e.g. $120,000 / year" value={packageCtc} onChange={(e) => setPackageCtc(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none" />
+                    </label>
+                    <label className="block">
+                      <span className="text-xs font-semibold text-slate-600">Gratuity / Bonus</span>
+                      <input type="text" placeholder="e.g. $10,000 sign-on bonus" value={gratuity} onChange={(e) => setGratuity(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none" />
+                    </label>
+                  </div>
+                )}
+
+                {status === 'Assessment' && (
+                  <div className="mt-4 space-y-3">
+                    <label className="block">
+                      <span className="text-xs font-semibold text-slate-600">Assessment Instructions</span>
+                      <textarea placeholder="Describe the task..." rows={3} value={assessmentDescription} onChange={(e) => setAssessmentDescription(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none resize-none" />
+                    </label>
+                    <label className="block">
+                      <span className="text-xs font-semibold text-slate-600">Assessment Document (PDF/Doc)</span>
+                      <input type="file" onChange={(e) => setAssessmentDocumentFile(e.target.files[0])} className="mt-1 w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer" />
+                    </label>
+                  </div>
+                )}
 
                 <button
                   type="button"

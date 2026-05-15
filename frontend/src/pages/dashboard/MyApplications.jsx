@@ -15,10 +15,13 @@ const PAGE_SIZE = 11;
 const statusStyle = {
   'In Review': 'border border-yellow-400 text-yellow-600 bg-yellow-50',
   'Interviewing': 'border border-orange-400 text-orange-600 bg-orange-50',
+  'Interview': 'border border-orange-400 text-orange-600 bg-orange-50',
+  'Interviewed': 'border border-orange-400 text-orange-600 bg-orange-50',
   'Assessment': 'border border-blue-400 text-blue-600 bg-blue-50',
   'Offered': 'border border-purple-400 text-purple-600 bg-purple-50',
   'Hired': 'border border-green-500 text-green-600 bg-green-50',
   'Unsuitable': 'border border-red-400 text-red-500 bg-red-50',
+  'Declined': 'border border-red-400 text-red-500 bg-red-50',
   'Shortlisted': 'border border-cyan-400 text-cyan-600 bg-cyan-50',
 };
 
@@ -232,7 +235,7 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast }) {
             </div>
           )}
 
-          {app.status === 'Interviewing' && (
+          {['Interview', 'Interviewing'].includes(app.status) && (
             <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-2">
               <p className="text-sm font-semibold text-orange-700">🎤 Interview Scheduled</p>
               <p className="text-xs text-gray-500">Prepare well — research the company and practice common interview questions.</p>
@@ -243,28 +246,55 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast }) {
             </div>
           )}
 
+          {app.status === 'Interviewed' && (
+            <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-2">
+              <p className="text-sm font-semibold text-orange-700">🎤 Interview Completed</p>
+              <p className="text-xs text-gray-500">Your interview is complete. The recruiter will get back to you with the results soon.</p>
+              <div className="flex gap-2 pt-1">
+                <button onClick={() => onToast('Thank you note sent!', 'success')} className="text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600 transition">✉️ Send Thank You Note</button>
+              </div>
+            </div>
+          )}
+
           {app.status === 'Assessment' && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
               <div>
                 <p className="text-sm font-semibold text-blue-700">📝 Assessment Pending</p>
-                <p className="text-xs text-gray-500 mt-1">Complete the assessment to move forward. Your status will update to Interviewing once started.</p>
+                {app.assessmentDescription ? (
+                  <p className="text-xs text-gray-600 mt-1">{app.assessmentDescription}</p>
+                ) : (
+                  <p className="text-xs text-gray-500 mt-1">Complete the assessment to move forward. Your status will update to Interviewing once started.</p>
+                )}
               </div>
-              {assessStarted ? (
-                <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                  <span className="text-green-600">✓</span>
-                  <p className="text-xs text-green-700 font-medium">Assessment in progress. Status updated to Interviewing.</p>
+              {app.assessmentDocumentUrl ? (
+                <div className="pt-2 flex flex-col sm:flex-row gap-2">
+                  <a href={apiService.resolveFileUrl(app.assessmentDocumentUrl)} target="_blank" rel="noreferrer" className="flex-1 text-xs bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium text-center">
+                    📄 Download Assessment
+                  </a>
+                  <a href={`mailto:recruiter@${(app.company || 'company').toLowerCase().replace(/\s+/g, '')}.com?subject=${encodeURIComponent(`Assessment Submission - ${app.title}`)}&body=${encodeURIComponent(`Hi,\n\nPlease find my completed assessment attached.\n\nThank you!`)}`} onClick={() => onStatusChange(app.id, 'Interviewing')} className="flex-1 text-xs border border-blue-400 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition font-medium text-center">
+                    ✉️ Submit via Email
+                  </a>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <div className="bg-white border border-blue-100 rounded-lg p-3 text-xs text-gray-600 space-y-1">
-                    <p>⏱ Estimated time: <span className="font-medium">60–90 minutes</span></p>
-                    <p>📋 Format: <span className="font-medium">Technical + Aptitude</span></p>
-                    <p>⚠️ Once started, the timer cannot be paused.</p>
-                  </div>
-                  <button onClick={handleStartAssessment} className="w-full text-sm bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium">
-                    🚀 Start Assessment
-                  </button>
-                </div>
+                <>
+                  {assessStarted ? (
+                    <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mt-2">
+                      <span className="text-green-600">✓</span>
+                      <p className="text-xs text-green-700 font-medium">Assessment in progress. Status updated to Interviewing.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 mt-2">
+                      <div className="bg-white border border-blue-100 rounded-lg p-3 text-xs text-gray-600 space-y-1">
+                        <p>⏱ Estimated time: <span className="font-medium">60–90 minutes</span></p>
+                        <p>📋 Format: <span className="font-medium">Technical + Aptitude</span></p>
+                        <p>⚠️ Once started, the timer cannot be paused.</p>
+                      </div>
+                      <button onClick={handleStartAssessment} className="w-full text-sm bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium">
+                        🚀 Start Assessment
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -279,6 +309,8 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast }) {
                 <div className="flex justify-between"><span className="text-gray-500">Salary</span><span className="font-semibold text-gray-800">{app.salary}</span></div>
                 <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="font-medium">{app.type}</span></div>
                 <div className="flex justify-between"><span className="text-gray-500">Location</span><span className="font-medium">{app.location}</span></div>
+                {app.packageCtc && <div className="flex justify-between"><span className="text-gray-500">Package (CTC)</span><span className="font-bold text-purple-700">{app.packageCtc}</span></div>}
+                {app.gratuity && <div className="flex justify-between"><span className="text-gray-500">Gratuity / Bonus</span><span className="font-bold text-purple-700">{app.gratuity}</span></div>}
               </div>
               {confirmDecline ? (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-2">
@@ -307,7 +339,7 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast }) {
             </div>
           )}
 
-          {app.status === 'Unsuitable' && (
+          {['Unsuitable', 'Declined'].includes(app.status) && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2">
               <p className="text-sm font-semibold text-red-600">❌ Not Selected</p>
               <p className="text-xs text-gray-500">Unfortunately you were not selected. Keep applying!</p>
@@ -460,9 +492,22 @@ export default function MyApplications() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleStatusChange = (id, newStatus) => {
-    setApplications(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
-    setSelectedApp(prev => prev?.id === id ? { ...prev, status: newStatus } : prev);
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+      await apiService.updateApplicationStatus(id, newStatus);
+      setApplications(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
+      setSelectedApp(prev => prev?.id === id ? { ...prev, status: newStatus } : prev);
+      
+      if (newStatus === 'Interviewing') {
+        const interviewTabIndex = tabs.findIndex(t => t.filter === 'Interviewing');
+        if (interviewTabIndex !== -1) setActiveTab(interviewTabIndex);
+      } else if (newStatus === 'Hired') {
+        const hiredTabIndex = tabs.findIndex(t => t.filter === 'Hired');
+        if (hiredTabIndex !== -1) setActiveTab(hiredTabIndex);
+      }
+    } catch (e) {
+      setToast({ message: 'Failed to update status', type: 'error' });
+    }
   };
 
   const handleToast = (message, type = 'success') => setToast({ message, type });
@@ -491,7 +536,12 @@ export default function MyApplications() {
 
   const tabFilter = tabs[activeTab].filter;
   let filtered = applications.filter(app => {
-    const matchTab = !tabFilter || app.status === tabFilter;
+    let matchTab = !tabFilter;
+    if (tabFilter === 'Interviewing') {
+      matchTab = ['Interviewing', 'Interview', 'Interviewed'].includes(app.status);
+    } else if (tabFilter) {
+      matchTab = app.status === tabFilter;
+    }
     const matchSearch = !search || app.company.toLowerCase().includes(search.toLowerCase()) || app.title.toLowerCase().includes(search.toLowerCase());
     const matchType = !filterType || app.type === filterType;
 
@@ -506,7 +556,11 @@ export default function MyApplications() {
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const safePage = Math.min(page, totalPages || 1);
   const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const counts = tabs.map(t => t.filter ? applications.filter(a => a.status === t.filter).length : applications.length);
+  const counts = tabs.map(t => {
+    if (!t.filter) return applications.length;
+    if (t.filter === 'Interviewing') return applications.filter(a => ['Interviewing', 'Interview', 'Interviewed'].includes(a.status)).length;
+    return applications.filter(a => a.status === t.filter).length;
+  });
 
   // Reset to page 1 when filters change
   const handleTabChange = (i) => { setActiveTab(i); setPage(1); };

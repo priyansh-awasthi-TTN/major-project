@@ -16,6 +16,8 @@ const statusStyle = {
   'Shortlisted':  'border border-blue-400 text-blue-600',
   'Declined':     'border border-red-400 text-red-600',
   'Interviewing': 'border border-purple-400 text-purple-600',
+  'Interview':    'border border-purple-400 text-purple-600',
+  'Interviewed':  'border border-purple-400 text-purple-600',
   'Offered':      'border border-green-400 text-green-600',
   'Assessment':   'border border-blue-400 text-blue-600',
   'Hired':        'border border-green-500 text-green-600',
@@ -314,17 +316,24 @@ export default function DashboardHome() {
 
     const byStatus = {};
     let totalApplied = 0;
-    let interviewing = 0;
+    let activeInterviews = 0;
+    let totalInterviewed = 0;
     let hired = 0;
 
     apiApplications.forEach(app => {
       totalApplied++;
       byStatus[app.status] = (byStatus[app.status] || 0) + 1;
-      if (app.status === 'Interviewing') interviewing++;
+      
+      if (['Interviewing', 'Interview'].includes(app.status)) {
+        activeInterviews++;
+      }
+      if (['Interviewing', 'Interview', 'Interviewed', 'Hired'].includes(app.status)) {
+        totalInterviewed++;
+      }
       if (app.status === 'Hired') hired++;
     });
 
-    setStats({ totalApplied, interviewing, hired, byStatus });
+    setStats({ totalApplied, activeInterviews, totalInterviewed, hired, byStatus });
 
     // Sort descending by date so the most recent applications stay at the top.
     const sorted = [...apiApplications].sort((a, b) => {
@@ -337,10 +346,18 @@ export default function DashboardHome() {
 
   // Compute donut chart percentages from real status data
   const total = stats.totalApplied || 0;
-  const unsuitable = stats.byStatus?.['Unsuitable'] || 0;
-  const interviewed = (stats.byStatus?.['Interviewing'] || 0) + (stats.byStatus?.['Hired'] || 0);
+  const unsuitable = (stats.byStatus?.['Unsuitable'] || 0) + (stats.byStatus?.['Declined'] || 0);
+  const interviewed = stats.totalInterviewed || 0;
+  const inProgress = total - unsuitable - interviewed;
+
   const unsuitablePct = total > 0 ? Math.round((unsuitable / total) * 100) : 0;
   const interviewedPct = total > 0 ? Math.round((interviewed / total) * 100) : 0;
+  const inProgressPct = total > 0 ? 100 - unsuitablePct - interviewedPct : 0;
+  
+  const C = 2 * Math.PI * 15.9;
+  const interviewedDash = (interviewedPct / 100) * C;
+  const unsuitableDash = (unsuitablePct / 100) * C;
+  
   const dashboardPath = `${location.pathname}${location.search}${location.hash}`;
 
   const openCompanyProfile = (companyName) => {
@@ -451,21 +468,35 @@ export default function DashboardHome() {
             <div className="flex items-center gap-4">
               <div className="relative w-20 h-20 flex-shrink-0">
                 <svg viewBox="0 0 36 36" className="w-20 h-20 -rotate-90">
-                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" strokeWidth="3.5" />
-                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="#4f46e5" strokeWidth="3.5"
-                    strokeDasharray={`${unsuitablePct} ${100 - unsuitablePct}`} strokeLinecap="round" />
+                  {/* Background (In Progress) */}
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f59e0b" strokeWidth="3.5" />
+                  
+                  {/* Interviewed */}
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="#10b981" strokeWidth="3.5"
+                    strokeDasharray={`${interviewedDash} ${C - interviewedDash}`} 
+                    strokeDashoffset={0} />
+
+                  {/* Unsuitable */}
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="#ef4444" strokeWidth="3.5"
+                    strokeDasharray={`${unsuitableDash} ${C - unsuitableDash}`} 
+                    strokeDashoffset={`-${interviewedDash}`} />
                 </svg>
               </div>
-              <div className="text-xs space-y-2">
+              <div className="text-xs space-y-1">
                 <p className="flex items-center gap-1.5">
-                  <span className="inline-block w-2.5 h-2.5 bg-indigo-600 rounded-sm" />
+                  <span className="inline-block w-2.5 h-2.5 bg-green-500 rounded-sm" />
+                  <span className="font-semibold">{interviewedPct}%</span>
+                  <span className="text-gray-400">Interviewed</span>
+                </p>
+                <p className="flex items-center gap-1.5">
+                  <span className="inline-block w-2.5 h-2.5 bg-red-500 rounded-sm" />
                   <span className="font-semibold">{unsuitablePct}%</span>
                   <span className="text-gray-400">Unsuitable</span>
                 </p>
                 <p className="flex items-center gap-1.5">
-                  <span className="inline-block w-2.5 h-2.5 bg-gray-200 rounded-sm" />
-                  <span className="font-semibold">{interviewedPct}%</span>
-                  <span className="text-gray-400">Interviewed</span>
+                  <span className="inline-block w-2.5 h-2.5 bg-yellow-500 rounded-sm" />
+                  <span className="font-semibold">{inProgressPct}%</span>
+                  <span className="text-gray-400">In Progress</span>
                 </p>
                 <Link to="/dashboard/applications" className="text-blue-600 text-xs hover:underline block mt-2">
                   View All Applications →
@@ -482,10 +513,10 @@ export default function DashboardHome() {
                 {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
             </div>
-            {stats.interviewing > 0 ? (
+            {stats.activeInterviews > 0 ? (
               <div className="flex items-center gap-2 bg-blue-50 rounded-lg px-3 py-2">
                 <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                  {stats.interviewing}
+                  {stats.activeInterviews}
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-gray-800">Active Interviews</p>
@@ -503,7 +534,7 @@ export default function DashboardHome() {
           <div className="bg-white rounded-xl p-6 border border-gray-200">
             <p className="text-sm text-gray-500 mb-3">Interviewed</p>
             <div className="flex items-end justify-between">
-              <p className="text-5xl font-bold text-gray-900">{loading ? '—' : stats.interviewing}</p>
+              <p className="text-5xl font-bold text-gray-900">{loading ? '—' : stats.totalInterviewed}</p>
               <span className="text-4xl opacity-20">🎤</span>
             </div>
           </div>

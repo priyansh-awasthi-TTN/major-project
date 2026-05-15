@@ -7,7 +7,7 @@ export const JOB_DATE_FILTERS = [
   { value: '90d', label: 'Last 90 days' },
 ];
 
-export const COMPANY_STAGE_OPTIONS = ['all', 'In Review', 'Shortlisted', 'Interview', 'Interviewed', 'Hired', 'Declined'];
+export const COMPANY_STAGE_OPTIONS = ['all', 'In Review', 'Assessment', 'Shortlisted', 'Interview', 'Interviewed', 'Offered', 'Hired', 'Declined'];
 
 export function getInitials(value) {
   const cleaned = String(value || '').trim();

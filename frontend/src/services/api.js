@@ -184,8 +184,9 @@ class ApiService {
     return this.request('/company/applications/jobs');
   }
 
-  async updateCompanyApplicationStatus(id, status) {
-    return this.request(`/company/applications/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
+  async updateCompanyApplicationStatus(id, payload) {
+    const body = typeof payload === 'string' ? { status: payload } : payload;
+    return this.request(`/company/applications/${id}/status`, { method: 'PATCH', body: JSON.stringify(body) });
   }
 
   async getCompanyCalendar(startDate, endDate) {

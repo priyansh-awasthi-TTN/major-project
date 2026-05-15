@@ -62,6 +62,10 @@ public class ApplicationController {
         m.put("note", a.getNote());
         m.put("resumeUrl", a.getResumeUrl());
         m.put("coverLetter", a.getCoverLetter());
+        m.put("packageCtc", a.getPackageCtc());
+        m.put("gratuity", a.getGratuity());
+        m.put("assessmentDocumentUrl", a.getAssessmentDocumentUrl());
+        m.put("assessmentDescription", a.getAssessmentDescription());
         return m;
     }
 
