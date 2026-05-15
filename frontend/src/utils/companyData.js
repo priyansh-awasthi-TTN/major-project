@@ -212,7 +212,11 @@ export function filterApplications(applications, options = {}) {
   const query = String(search || '').trim().toLowerCase();
 
   return (applications || []).filter((application) => {
-    if (stage !== 'all' && application.stage !== stage) return false;
+    if (stage === 'Interview Stages') {
+      if (!application.stage.includes('Interview')) return false;
+    } else if (stage !== 'all' && application.stage !== stage) {
+      return false;
+    }
     if (range && !isWithinRange(application.dateApplied, range)) return false;
 
     if (!query) return true;
@@ -258,7 +262,7 @@ function addMonths(value, count) {
 
 export function buildTimeBuckets(range) {
   const normalizedRange = normalizeDateRange(range);
-  const totalDays = Math.max(1, Math.round((normalizedRange.end - normalizedRange.start) / DAY_MS) + 1);
+  const totalDays = Math.max(1, Math.ceil((normalizedRange.end - normalizedRange.start) / DAY_MS));
 
   if (totalDays <= 14) {
     return Array.from({ length: totalDays }, (_, index) => {
@@ -393,11 +397,12 @@ export function buildDashboardMetrics(jobs, applications, unreadMessages, dateRa
   const scopedApplications = (applications || []).filter((application) => isWithinRange(application.dateApplied, dateRange));
   const applicationSeries = buildSeries(dateRange, scopedApplications, (item) => item.dateApplied);
   const jobSeries = buildSeries(dateRange, scopedJobs, (item) => item.createdAt);
-  const stageCounts = buildStageCounts(scopedApplications);
-  const totalApplicants = scopedApplications.length;
+  const stageCounts = buildStageCounts(applications);
+  const totalApplicants = (applications || []).length;
+  const totalJobs = (jobs || []).length;
   const openJobs = (jobs || []).filter((job) => job.status === 'Live').length;
-  const reviewCount = scopedApplications.filter((application) => application.stage === 'In Review').length;
-  const interviewCount = scopedApplications.filter((application) => application.stage.includes('Interview')).length;
+  const reviewCount = (applications || []).filter((application) => application.stage === 'In Review').length;
+  const interviewCount = (applications || []).filter((application) => application.stage.includes('Interview')).length;
   const latestJobs = [...(jobs || [])]
     .sort((left, right) => (right.createdAt?.getTime() || 0) - (left.createdAt?.getTime() || 0))
     .slice(0, 4);
@@ -408,6 +413,7 @@ export function buildDashboardMetrics(jobs, applications, unreadMessages, dateRa
     latestJobs,
     openJobs,
     totalApplicants,
+    totalJobs,
     reviewCount,
     interviewCount,
     unreadMessages,

@@ -598,36 +598,19 @@ export default function JobListing() {
             </div>
           </section>
         ) : (
-          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-200 px-5 py-5">
-              <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-                <div className="flex flex-col gap-4">
-                  {isFromDashboard ? (
-                    <div>
-                      <button
-                        type="button"
-                        onClick={() => navigate('/company/dashboard')}
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-white"
-                        aria-label="Go back to dashboard"
-                      >
-                        <ArrowLeftIcon className="h-5 w-5" />
-                        <span>Back to dashboard</span>
-                      </button>
-                    </div>
-                  ) : null}
-
+          <div className="space-y-6">
+            <button
+              type="button"
+              onClick={() => navigate(isFromDashboard ? '/company/dashboard' : '/company/jobs')}
+              className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-900"
+            >
+              <ArrowLeftIcon className="h-4 w-4" />
+              {isFromDashboard ? 'Back to dashboard' : 'Back to job list'}
+            </button>
+            <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-200 px-5 py-5">
+                <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                   <div className="flex items-start gap-4">
-                    {!isFromDashboard ? (
-                      <button
-                        type="button"
-                        onClick={() => navigate('/company/jobs')}
-                        className="mt-0.5 inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-                        aria-label="Go back to job list"
-                      >
-                        <ArrowLeftIcon className="h-5 w-5" />
-                        <span>Back to job list</span>
-                      </button>
-                    ) : null}
                     <div className={`flex h-14 w-14 items-center justify-center rounded-xl text-xl font-semibold text-white ${getAvatarTone(selectedJob.title)}`}>
                       {getInitials(selectedJob.title)}
                     </div>
@@ -645,7 +628,6 @@ export default function JobListing() {
                       </div>
                     </div>
                   </div>
-                </div>
 
                 <div className="text-right text-sm text-slate-500">
                   <p>Posted {selectedJob.createdAt ? formatShortDate(selectedJob.createdAt) : 'N/A'}</p>
@@ -897,6 +879,7 @@ export default function JobListing() {
               ) : null}
             </div>
           </section>
+          </div>
         )}
       </div>
     </div>

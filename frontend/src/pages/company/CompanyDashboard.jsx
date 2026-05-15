@@ -19,6 +19,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useMessaging } from '../../context/MessagingContext';
 import { useNotifications } from '../../context/NotificationContext';
 import apiService from '../../services/api';
+import NotificationPanel from '../../components/NotificationPanel';
 import {
   buildDashboardMetrics,
   buildJobsById,
@@ -92,7 +93,15 @@ function SummaryCard({ to, icon: Icon, title, value, tone }) {
   );
 }
 
-function ChangeLabel({ value, label }) {
+function ChangeLabel({ value, label, to }) {
+  if (to) {
+    return (
+      <Link to={to} className="block rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:border-indigo-300 hover:bg-slate-100">
+        <p className="text-xs uppercase tracking-[0.16em] text-slate-400">{label}</p>
+        <p className="mt-2 text-2xl font-semibold text-slate-900">{formatNumber(value)}</p>
+      </Link>
+    );
+  }
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
       <p className="text-xs uppercase tracking-[0.16em] text-slate-400">{label}</p>
@@ -281,11 +290,11 @@ function ActivityChart({ applicationsSeries, jobsSeries }) {
           return (
             <div key={item.key} className="flex min-w-0 flex-col items-center gap-3">
               <div className="flex h-56 w-full items-end justify-center gap-1 rounded-[28px] bg-slate-50 px-2 pb-3 pt-6">
-                <div className="flex w-full flex-col justify-end">
-                  <div className="rounded-t-[18px] bg-indigo-600" style={{ height: applicationHeight }} />
+                <div className="flex h-full w-full flex-col justify-end">
+                  <div className="w-full rounded-t-[18px] bg-indigo-600" style={{ height: applicationHeight }} />
                 </div>
-                <div className="flex w-full flex-col justify-end">
-                  <div className="rounded-t-[18px] bg-amber-400" style={{ height: jobHeight }} />
+                <div className="flex h-full w-full flex-col justify-end">
+                  <div className="w-full rounded-t-[18px] bg-amber-400" style={{ height: jobHeight }} />
                 </div>
               </div>
               <span className="truncate text-xs font-medium text-slate-500">{item.label}</span>
@@ -312,6 +321,7 @@ export default function CompanyDashboard() {
   const { user } = useAuth();
   const { totalUnreadCount = 0 } = useMessaging();
   const { unreadCount = 0 } = useNotifications();
+  const [bellOpen, setBellOpen] = useState(false);
   const [dateRange, setDateRange] = useState(getStoredDateRange);
   const [jobs, setJobs] = useState([]);
   const [applications, setApplications] = useState([]);
@@ -385,14 +395,18 @@ export default function CompanyDashboard() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              aria-label="notifications"
-              className="relative inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
-            >
-              <BellIcon className="h-5 w-5" />
-              {unreadCount > 0 ? <span className="absolute right-2 top-2 flex h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" /> : null}
-            </button>
+            <div className="relative notification-bell">
+              <button
+                type="button"
+                aria-label="notifications"
+                onClick={() => setBellOpen((open) => !open)}
+                className="relative inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
+              >
+                <BellIcon className="h-5 w-5" />
+                {unreadCount > 0 ? <span className="absolute right-2 top-2 flex h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" /> : null}
+              </button>
+              <NotificationPanel open={bellOpen} onClose={() => setBellOpen(false)} />
+            </div>
             <Link
               to="/company/jobs/post"
               className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
@@ -423,8 +437,8 @@ export default function CompanyDashboard() {
         ) : null}
 
         <div className="mt-6 grid gap-4 md:grid-cols-3">
-          <SummaryCard to="/company/applicants" icon={UsersIcon} title="Candidates waiting for review" value={metrics.reviewCount} tone="from-[#5448f5] to-[#3b82f6]" />
-          <SummaryCard to="/company/applicants" icon={CalendarDaysIcon} title="Candidates in interview stages" value={metrics.interviewCount} tone="from-[#4ecdc4] to-[#34d399]" />
+          <SummaryCard to="/company/applicants?stage=In%20Review" icon={UsersIcon} title="Candidates waiting for review" value={metrics.reviewCount} tone="from-[#5448f5] to-[#3b82f6]" />
+          <SummaryCard to="/company/applicants?stage=Interview%20Stages" icon={CalendarDaysIcon} title="Candidates in interview stages" value={metrics.interviewCount} tone="from-[#4ecdc4] to-[#34d399]" />
           <SummaryCard to="/company/messages" icon={ChatBubbleLeftEllipsisIcon} title="Unread messages" value={metrics.unreadMessages} tone="from-[#34a3ff] to-[#3b82f6]" />
         </div>
 
@@ -450,8 +464,8 @@ export default function CompanyDashboard() {
             </div>
 
             <div className="mt-6 grid gap-4 lg:grid-cols-2">
-              <ChangeLabel value={metrics.scopedApplications.length} label="Applications in range" />
-              <ChangeLabel value={metrics.scopedJobs.length} label="Jobs posted in range" />
+              <ChangeLabel value={metrics.totalApplicants} label="Total applications" to="/company/applicants" />
+              <ChangeLabel value={metrics.totalJobs} label="Total jobs posted" to="/company/jobs" />
             </div>
           </section>
 
@@ -476,7 +490,7 @@ export default function CompanyDashboard() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-slate-900">Applicant stages</p>
-                  <p className="mt-1 text-xs text-slate-400">Counts for the selected date range</p>
+                  <p className="mt-1 text-xs text-slate-400">Current pipeline across all roles</p>
                 </div>
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600">
                   <UserGroupIcon className="h-5 w-5" />

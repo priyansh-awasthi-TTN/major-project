@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -78,9 +78,12 @@ function PipelineCard({ applicant }) {
 }
 
 export default function AllApplicants() {
+  const [searchParams] = useSearchParams();
+  const initialStage = searchParams.get('stage') || 'all';
+
   const [view, setView] = useState('table');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStage, setFilterStage] = useState('all');
+  const [filterStage, setFilterStage] = useState(initialStage);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);

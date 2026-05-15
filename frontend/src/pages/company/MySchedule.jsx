@@ -297,19 +297,25 @@ function EventModal({
   const generateMeetLink = async () => {
     console.log('🎥 Generating Google Meet link...');
     setIsGeneratingMeetLink(true);
-    
+
+    const startDateTime = form.allDay
+      ? combineDateAndTime(form.startDate, '00:00')
+      : combineDateAndTime(form.startDate, form.startTime);
+    const endDateTime = form.allDay
+      ? addDays(combineDateAndTime(form.endDate, '00:00'), 1)
+      : combineDateAndTime(form.endDate, form.endTime);
+
     try {
-      // Try to use backend API first for real Google Meet
       const response = await apiService.createGoogleMeetLink({
         summary: form.title || 'Meeting',
-        startTime: form.startDate,
-        endTime: form.endDate,
+        startAt: toLocalDateTimeString(startDateTime),
+        endAt: toLocalDateTimeString(endDateTime),
       });
-      
+
       if (response && response.meetLink) {
         onChange('meetingLink', response.meetLink);
         console.log('✅ Meet link created via backend:', response.meetLink);
-        
+
         if (typeof onShowToast === 'function') {
           onShowToast('Meeting link created successfully', 'success');
         }
@@ -319,10 +325,8 @@ function EventModal({
     } catch (backendError) {
       console.warn('⚠️ Backend API not available:', backendError.message);
     }
-    
-    // Generate Google Meet-style link
-    // NOTE: These links look authentic but won't work without Google OAuth setup
-    // For working video conferences, complete Google Cloud setup (see GOOGLE_MEET_SETUP.md)
+
+    // Generate Google Meet-style link as fallback
     const chars = 'abcdefghijklmnopqrstuvwxyz';
     let code = '';
     
@@ -354,43 +358,38 @@ function EventModal({
     setIsGeneratingMeetLink(false);
   };
 
-  const generateMeetLink = async () => {
-    console.log('🎥 Generating Google Meet link...');
-    setIsGeneratingMeetLink(true);
-
-    const startDateTime = form.allDay
-      ? combineDateAndTime(form.startDate, '00:00')
-      : combineDateAndTime(form.startDate, form.startTime);
-    const endDateTime = form.allDay
-      ? addDays(combineDateAndTime(form.endDate, '00:00'), 1)
-      : combineDateAndTime(form.endDate, form.endTime);
-
-    try {
-      const response = await apiService.createGoogleMeetLink({
-        summary: form.title || 'Meeting',
-        startAt: toLocalDateTimeString(startDateTime),
-        endAt: toLocalDateTimeString(endDateTime),
-      });
-
-      if (response && response.meetLink) {
-        onChange('meetingLink', response.meetLink);
-        console.log('✅ Meet link created via backend:', response.meetLink);
-
-        if (typeof onShowToast === 'function') {
-          onShowToast('Meeting link created successfully', 'success');
-        }
-        setIsGeneratingMeetLink(false);
-        return;
-      }
-    } catch (backendError) {
-      console.warn('⚠️ Backend API not available:', backendError.message);
-      if (typeof onShowToast === 'function') {
-        onShowToast('Google Meet setup is required before creating a meeting link.', 'error');
-      }
-    }
-
+  const removeMeetLink = () => {
+    onChange('meetingLink', '');
     setIsGeneratingMeetLink(false);
   };
+
+  const copyMeetLink = () => {
+    if (form.meetingLink) {
+      navigator.clipboard.writeText(form.meetingLink);
+      if (typeof onShowToast === 'function') {
+        onShowToast('Meeting link copied to clipboard', 'success');
+      }
+    }
+  };
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.dropdown-container')) {
+        closeAllDropdowns();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const dateSummary = useMemo(() => {
+    const startDate = combineDateAndTime(form.startDate, form.allDay ? '00:00' : form.startTime);
+    const endDate = combineDateAndTime(form.endDate, form.allDay ? '00:00' : form.endTime);
+
+    const dateFormatter = new Intl.DateTimeFormat('en-US', {
+      weekday: 'long',
       month: 'short',
       day: 'numeric',
     });
