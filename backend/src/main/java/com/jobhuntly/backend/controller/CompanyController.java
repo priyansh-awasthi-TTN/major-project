@@ -189,11 +189,13 @@ public class CompanyController {
 
             Notification companyNotification = new Notification();
             companyNotification.setRecipient(companyUser);
-            companyNotification.setActorUserId(app.getUser().getId());
-            companyNotification.setActorName(app.getUser().getFullName());
+            companyNotification.setActorUserId(companyUser.getId());
+            
+            String compName = companyUser.getCurrentCompany() != null ? companyUser.getCurrentCompany() : companyUser.getFullName();
+            companyNotification.setActorName(compName);
             companyNotification.setCategory("applications");
             companyNotification.setType("status");
-            companyNotification.setText("moved an applicant to " + nextStatus + " for " + job.getTitle());
+            companyNotification.setText("moved applicant " + app.getUser().getFullName() + " to " + nextStatus + " for " + job.getTitle());
             companyNotification.setBadge(nextStatus);
             companyNotification.setBadgeColor("border border-indigo-400 text-indigo-600");
 
