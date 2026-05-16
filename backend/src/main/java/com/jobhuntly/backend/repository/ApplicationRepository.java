@@ -36,6 +36,18 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
     boolean existsByApplicantAndCompanyJob(@Param("applicant") User applicant,
             @Param("companyUserId") Long companyUserId);
 
+    @Query("""
+            SELECT a
+            FROM Application a
+            WHERE a.user = :applicant
+              AND a.jobId IN (
+                  SELECT j.id FROM Job j WHERE j.postedByUserId = :companyUserId
+              )
+            ORDER BY a.dateApplied DESC
+            """)
+    List<Application> findByApplicantAndCompanyJobOrderByDateAppliedDesc(@Param("applicant") User applicant,
+            @Param("companyUserId") Long companyUserId);
+
     @Query("SELECT a FROM Application a WHERE a.user = :user AND a.dateApplied BETWEEN :start AND :end ORDER BY a.dateApplied DESC")
     List<Application> findByUserAndDateRange(@Param("user") User user,
             @Param("start") LocalDate start,

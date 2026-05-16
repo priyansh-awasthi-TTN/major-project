@@ -105,6 +105,12 @@ export default function ApplicantProfile() {
         setApplication(selectedApplication);
         setCandidate(candidateProfile);
         setStatus(selectedApplication.stage);
+        if (selectedApplication.interviewDate) {
+          setInterviewDate(selectedApplication.interviewDate.substring(0, 16));
+        }
+        if (selectedApplication.meetLink) {
+          setMeetLink(selectedApplication.meetLink);
+        }
       } catch (loadError) {
         if (!cancelled) {
           setError(loadError.message || 'Failed to load applicant.');
@@ -146,7 +152,7 @@ export default function ApplicantProfile() {
         }
       } else if (status === 'Interviewing' || status === 'Interview') {
         if (interviewDate) {
-          payload.interviewDate = new Date(interviewDate).toISOString().slice(0, 19); // yyyy-MM-ddTHH:mm:ss
+          payload.interviewDate = interviewDate.length === 16 ? interviewDate + ':00' : interviewDate;
         }
         if (meetLink) {
           payload.meetLink = meetLink;
@@ -157,14 +163,25 @@ export default function ApplicantProfile() {
 
       if ((status === 'Interviewing' || status === 'Interview') && interviewDate) {
         try {
+          const startAtStr = interviewDate.length === 16 ? interviewDate + ':00' : interviewDate;
           const start = new Date(interviewDate);
           const end = new Date(start.getTime() + 60 * 60 * 1000); // 1 hour duration
+          
+          // Format end time properly without shifting timezone
+          const endYear = end.getFullYear();
+          const endMonth = String(end.getMonth() + 1).padStart(2, '0');
+          const endDate = String(end.getDate()).padStart(2, '0');
+          const endHours = String(end.getHours()).padStart(2, '0');
+          const endMinutes = String(end.getMinutes()).padStart(2, '0');
+          const endAtStr = `${endYear}-${endMonth}-${endDate}T${endHours}:${endMinutes}:00`;
+
           await apiService.createCompanyCalendarEvent({
             title: `Interview with ${candidateName}`,
             description: `Interview for ${application.jobTitle}`,
-            startTime: start.toISOString(),
-            endTime: end.toISOString(),
-            meetLink: meetLink || ''
+            startAt: startAtStr,
+            endAt: endAtStr,
+            meetingLink: meetLink || '',
+            attendees: candidateEmail ? [candidateEmail] : []
           });
           showToast('Calendar event created successfully.', 'success');
         } catch (calError) {
@@ -215,13 +232,19 @@ export default function ApplicantProfile() {
         <div className="px-5 pb-12 pt-20 sm:px-6 lg:px-8">
           <div className="rounded-2xl border border-slate-200 bg-white px-6 py-10 text-center shadow-sm">
             <p className="text-lg font-semibold text-slate-900">Applicant not found.</p>
-            <Link
-              to="/company/applicants"
+            <button
+              onClick={() => {
+                if (window.history.state && window.history.state.idx > 0) {
+                  navigate(-1);
+                } else {
+                  navigate('/company/applicants');
+                }
+              }}
               className="mt-4 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white"
             >
               <ArrowLeftIcon className="h-4 w-4" />
               Back to applicants
-            </Link>
+            </button>
           </div>
         </div>
       </div>
@@ -240,10 +263,19 @@ export default function ApplicantProfile() {
         ) : null}
 
         <div className="space-y-6">
-          <Link to="/company/applicants" className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-900">
+          <button
+            onClick={() => {
+              if (window.history.state && window.history.state.idx > 0) {
+                navigate(-1);
+              } else {
+                navigate('/company/applicants');
+              }
+            }}
+            className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-900"
+          >
             <ArrowLeftIcon className="h-4 w-4" />
             Back to applicants
-          </Link>
+          </button>
 
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">

@@ -9,10 +9,14 @@ import com.jobhuntly.backend.dto.CalendarEventDTO;
 import com.jobhuntly.backend.dto.CalendarEventRequest;
 import com.jobhuntly.backend.dto.CalendarResponse;
 import com.jobhuntly.backend.entity.CalendarCategory;
+import com.jobhuntly.backend.entity.Application;
 import com.jobhuntly.backend.entity.CalendarEvent;
+import com.jobhuntly.backend.entity.Notification;
 import com.jobhuntly.backend.entity.User;
+import com.jobhuntly.backend.repository.ApplicationRepository;
 import com.jobhuntly.backend.repository.CalendarCategoryRepository;
 import com.jobhuntly.backend.repository.CalendarEventRepository;
+import com.jobhuntly.backend.repository.NotificationRepository;
 import com.jobhuntly.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -48,6 +52,8 @@ public class CompanyCalendarService {
     private final CalendarEventRepository eventRepository;
     private final ObjectMapper objectMapper;
     private final GoogleCalendarService googleCalendarService;
+    private final ApplicationRepository applicationRepository;
+    private final NotificationRepository notificationRepository;
 
     @Autowired
     public CompanyCalendarService(
@@ -55,13 +61,17 @@ public class CompanyCalendarService {
             CalendarCategoryRepository categoryRepository,
             CalendarEventRepository eventRepository,
             ObjectMapper objectMapper,
-            GoogleCalendarService googleCalendarService
+            GoogleCalendarService googleCalendarService,
+            ApplicationRepository applicationRepository,
+            NotificationRepository notificationRepository
     ) {
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
         this.eventRepository = eventRepository;
         this.objectMapper = objectMapper;
         this.googleCalendarService = googleCalendarService;
+        this.applicationRepository = applicationRepository;
+        this.notificationRepository = notificationRepository;
     }
 
     @Transactional
@@ -144,7 +154,9 @@ public class CompanyCalendarService {
         CalendarEvent event = new CalendarEvent();
         event.setOwner(companyUser);
         applyEventRequest(event, request, companyUser);
-        return toEventDTO(eventRepository.save(event));
+        event = eventRepository.save(event);
+        notifyAndUpdateApplicants(event, companyUser);
+        return toEventDTO(event);
     }
 
     @Transactional
@@ -156,7 +168,9 @@ public class CompanyCalendarService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Calendar event not found"));
 
         applyEventRequest(event, request, companyUser);
-        return toEventDTO(eventRepository.save(event));
+        event = eventRepository.save(event);
+        notifyAndUpdateApplicants(event, companyUser);
+        return toEventDTO(event);
     }
 
     @Transactional
@@ -234,9 +248,6 @@ public class CompanyCalendarService {
 
     private void applyEventRequest(CalendarEvent event, CalendarEventRequest request, User companyUser) {
         String title = normalizeName(request.getTitle(), "Event title is required");
-        if (request.getCategoryId() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Event category is required");
-        }
         if (request.getStartAt() == null || request.getEndAt() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Event start and end time are required");
         }
@@ -244,7 +255,12 @@ public class CompanyCalendarService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Event end time must be after start time");
         }
 
-        CalendarCategory category = getOwnedCategory(companyUser, request.getCategoryId());
+        CalendarCategory category;
+        if (request.getCategoryId() == null) {
+            category = categoryRepository.findByUserOrderByDisplayOrderAscNameAsc(companyUser).get(0);
+        } else {
+            category = getOwnedCategory(companyUser, request.getCategoryId());
+        }
 
         event.setCategory(category);
         event.setTitle(title);
@@ -258,6 +274,36 @@ public class CompanyCalendarService {
         event.setVisibility(normalizeChoice(request.getVisibility(), ALLOWED_VISIBILITY, "DEFAULT", "Invalid visibility"));
         event.setReminderMinutes(normalizeReminderMinutes(request.getReminderMinutes()));
         event.setAttendeesJson(writeAttendees(request.getAttendees()));
+    }
+
+    private void notifyAndUpdateApplicants(CalendarEvent event, User companyUser) {
+        List<String> attendees = readAttendees(event.getAttendeesJson());
+        for (String attendeeEmail : attendees) {
+            userRepository.findByEmailAndIsActiveTrue(attendeeEmail).ifPresent(applicant -> {
+                List<Application> apps = applicationRepository.findByApplicantAndCompanyJobOrderByDateAppliedDesc(applicant, companyUser.getId());
+                if (!apps.isEmpty()) {
+                    Application app = apps.get(0);
+                    app.setInterviewDate(event.getStartAt());
+                    app.setMeetLink(event.getMeetingLink());
+                    
+                    if (!List.of("Interviewing", "Interview").contains(app.getStatus())) {
+                        app.setStatus("Interviewing");
+                    }
+                    applicationRepository.save(app);
+
+                    Notification notification = new Notification();
+                    notification.setRecipient(applicant);
+                    String companyName = companyUser.getCurrentCompany() != null ? companyUser.getCurrentCompany() : companyUser.getFullName();
+                    notification.setActorName(companyName);
+                    notification.setCategory("Application");
+                    notification.setType("Interview");
+                    notification.setText("has scheduled an interview with you on " + event.getStartAt().toString().replace("T", " ") + ".");
+                    notification.setBadge("📅");
+                    notification.setBadgeColor("purple");
+                    notificationRepository.save(notification);
+                }
+            });
+        }
     }
 
     private User getCompanyUser(String email) {

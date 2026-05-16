@@ -116,6 +116,8 @@ public class CompanyController {
                 m.put("gratuity", a.getGratuity());
                 m.put("assessmentDocumentUrl", a.getAssessmentDocumentUrl());
                 m.put("assessmentDescription", a.getAssessmentDescription());
+                m.put("interviewDate", a.getInterviewDate() != null ? a.getInterviewDate().toString() : null);
+                m.put("meetLink", a.getMeetLink());
                 result.add(m);
             }
             return ResponseEntity.ok(result);

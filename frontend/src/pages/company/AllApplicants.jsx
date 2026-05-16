@@ -78,12 +78,24 @@ function PipelineCard({ applicant }) {
 }
 
 export default function AllApplicants() {
-  const [searchParams] = useSearchParams();
-  const initialStage = searchParams.get('stage') || 'all';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterStage = searchParams.get('stage') || 'all';
 
   const [view, setView] = useState('table');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStage, setFilterStage] = useState(initialStage);
+  
+  const setFilterStage = (stage) => {
+    setSearchParams((prev) => {
+      const newParams = new URLSearchParams(prev);
+      if (stage === 'all') {
+        newParams.delete('stage');
+      } else {
+        newParams.set('stage', stage);
+      }
+      return newParams;
+    }, { replace: true });
+  };
+
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);

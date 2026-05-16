@@ -696,7 +696,7 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast, onNavigate }) {
                   <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1); }}
                     className="border border-gray-200 rounded-lg px-2 py-1 text-xs outline-none text-gray-700">
                     <option value="">All Types</option>
-                    <option>Full-Time</option><option>Part-Time</option><option>Remote</option><option>Contract</option>
+                    <option>Full-Time</option><option>Part-Time</option><option>Remote</option><option>Contract</option><option>Internship</option>
                   </select>
                 </div>
                 <button onClick={() => { setSortBy(sortOptions[0]); setFilterType(''); setSearch(''); setPage(1); }}
