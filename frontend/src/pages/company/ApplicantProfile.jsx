@@ -132,8 +132,12 @@ export default function ApplicantProfile() {
   const candidateExperiences = useMemo(() => candidate?.experiences || [], [candidate?.experiences]);
   const candidateEducations = useMemo(() => candidate?.educations || [], [candidate?.educations]);
 
+  const isRescheduling = application && status === application.stage &&
+    (status === 'Interview' || status === 'Interviewing') &&
+    application.interviewDate;
+
   const handleStatusUpdate = async () => {
-    if (!application || status === application.stage) return;
+    if (!application || (status === application.stage && !isRescheduling)) return;
 
     setSaving(true);
     setError('');
@@ -166,7 +170,7 @@ export default function ApplicantProfile() {
           const startAtStr = interviewDate.length === 16 ? interviewDate + ':00' : interviewDate;
           const start = new Date(interviewDate);
           const end = new Date(start.getTime() + 60 * 60 * 1000); // 1 hour duration
-          
+
           // Format end time properly without shifting timezone
           const endYear = end.getFullYear();
           const endMonth = String(end.getMonth() + 1).padStart(2, '0');
@@ -175,21 +179,65 @@ export default function ApplicantProfile() {
           const endMinutes = String(end.getMinutes()).padStart(2, '0');
           const endAtStr = `${endYear}-${endMonth}-${endDate}T${endHours}:${endMinutes}:00`;
 
-          await apiService.createCompanyCalendarEvent({
-            title: `Interview with ${candidateName}`,
-            description: `Interview for ${application.jobTitle}`,
-            startAt: startAtStr,
-            endAt: endAtStr,
-            meetingLink: meetLink || '',
-            attendees: candidateEmail ? [candidateEmail] : []
-          });
-          showToast('Calendar event created successfully.', 'success');
+          let eventHandled = false;
+
+          if (application.interviewDate) {
+            // Try to find and update the existing event
+            const oldDate = new Date(application.interviewDate);
+            const sd = new Date(oldDate); sd.setDate(sd.getDate() - 3);
+            const ed = new Date(oldDate); ed.setDate(ed.getDate() + 3);
+            const searchStart = sd.toISOString().split('T')[0];
+            const searchEnd = ed.toISOString().split('T')[0];
+
+            const calendar = await apiService.getCompanyCalendar(searchStart, searchEnd);
+            const oldEvent = calendar.events?.find(e =>
+              e.title === `Interview with ${candidateName}` &&
+              e.description === `Interview for ${application.jobTitle}`
+            );
+
+            if (oldEvent) {
+              await apiService.updateCompanyCalendarEvent(oldEvent.id, {
+                categoryId: oldEvent.categoryId,
+                title: `Interview with ${candidateName}`,
+                description: `Interview for ${application.jobTitle}`,
+                startAt: startAtStr,
+                endAt: endAtStr,
+                meetingLink: meetLink || '',
+                attendees: candidateEmail ? [candidateEmail] : []
+              });
+              showToast('Calendar event updated successfully.', 'success');
+              eventHandled = true;
+            }
+          }
+
+          if (!eventHandled) {
+            await apiService.createCompanyCalendarEvent({
+              title: `Interview with ${candidateName}`,
+              description: `Interview for ${application.jobTitle}`,
+              startAt: startAtStr,
+              endAt: endAtStr,
+              meetingLink: meetLink || '',
+              attendees: candidateEmail ? [candidateEmail] : []
+            });
+            showToast('Calendar event created successfully.', 'success');
+          }
         } catch (calError) {
-          console.error("Failed to create calendar event:", calError);
+          console.error("Failed to manage calendar event:", calError);
         }
       }
       setApplication((current) => current ? { ...current, stage: status, status } : current);
-      showToast(`Status updated to ${status}.`, 'success');
+      showToast(isRescheduling ? 'Interview rescheduled successfully.' : `Status updated to ${status}.`, 'success');
+
+      if (isRescheduling) {
+        const formattedDate = new Date(interviewDate).toLocaleString();
+        const subject = encodeURIComponent('Your interview has been rescheduled');
+        const body = encodeURIComponent(
+          `Hi ${candidateName},\n\nYour interview for the ${application.jobTitle} position has been rescheduled.\n\nNew Interview Details:\nDate & Time: ${formattedDate}\nMeeting Link: ${meetLink || 'Will be shared later'}\n\nBest regards,\nJobHuntly Team`
+        );
+        const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${candidateEmail}&su=${subject}&body=${body}`;
+        window.open(gmailUrl, '_blank');
+      }
+
     } catch (updateError) {
       const message = updateError.message || 'Failed to update applicant status.';
       setError(message);
@@ -472,10 +520,10 @@ export default function ApplicantProfile() {
                 <button
                   type="button"
                   onClick={handleStatusUpdate}
-                  disabled={saving || status === application.stage}
+                  disabled={saving || (status === application.stage && !isRescheduling)}
                   className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-indigo-300"
                 >
-                  {saving ? 'Saving...' : 'Update status'}
+                  {saving ? 'Saving...' : isRescheduling ? 'Reschedule & Send Mail' : 'Update status'}
                 </button>
               </section>
 

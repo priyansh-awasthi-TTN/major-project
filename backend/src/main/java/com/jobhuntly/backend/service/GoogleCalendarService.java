@@ -58,11 +58,13 @@ public class GoogleCalendarService {
 
     /**
      * Creates a Google Meet link by creating a calendar event with conference data.
-     * Requires service-account or OAuth credentials configured in google.calendar.*.
+     * Requires service-account or OAuth credentials configured in
+     * google.calendar.*.
      */
     public String createGoogleMeetLink(String summary, LocalDateTime startTime, LocalDateTime endTime) {
         if (!meetEnabled) {
-            throw new IllegalStateException("Google Meet integration is disabled. Configure google.calendar.* settings.");
+            throw new IllegalStateException(
+                    "Google Meet integration is disabled. Configure google.calendar.* settings.");
         }
 
         try {
@@ -85,7 +87,8 @@ public class GoogleCalendarService {
     private Credential loadCredential() throws IOException {
         InputStream inputStream = resolveCredentialsStream();
         if (inputStream == null) {
-            throw new IllegalStateException("Google Calendar credentials not found. Set google.calendar.credentials-path or google.calendar.credentials-json.");
+            throw new IllegalStateException(
+                    "Google Calendar credentials not found. Set google.calendar.credentials-path or google.calendar.credentials-json.");
         }
 
         GoogleCredential baseCredential = GoogleCredential.fromStream(inputStream)
@@ -124,7 +127,7 @@ public class GoogleCalendarService {
      * Creates a real Google Calendar event with Google Meet conference.
      */
     public String createRealGoogleMeetEvent(Calendar calendarService, String summary,
-                                           LocalDateTime startTime, LocalDateTime endTime)
+            LocalDateTime startTime, LocalDateTime endTime)
             throws IOException {
 
         Event event = new Event()

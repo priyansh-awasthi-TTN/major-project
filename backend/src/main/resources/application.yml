@@ -6,10 +6,10 @@ spring:
     name: jobhuntly-backend
   
   datasource:
-    url: jdbc:mysql://localhost:3310/jobhuntly
+    url: jdbc:mysql://localhost:3306/jobhuntly
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
-    password: root
+    password: Meghajaiswal@97
 
   
   jpa:
@@ -34,9 +34,9 @@ cors:
 
 google:
   calendar:
-    enabled: false
-    credentials-path: ""
+    enabled: true
+    credentials-path: "classpath:google-credentials.json"
     credentials-json: ""
-    calendar-id: "primary"
-    timezone: "UTC"
+    calendar-id: "harshajais.hj@gmail.com"
+    timezone: "Asia/Kolkata"
     impersonated-user: ""
