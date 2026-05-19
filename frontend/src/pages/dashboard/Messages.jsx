@@ -16,6 +16,7 @@ export default function Messages() {
   const [showArchived, setShowArchived] = useState(false);
   const [openMenu, setOpenMenu]       = useState(null);
   const [toast, setToast]             = useState(null);
+  const [draftMessage, setDraftMessage] = useState('');
 
   // Auto-select from URL param (e.g. coming back from recruiter profile)
   useEffect(() => {
@@ -35,6 +36,13 @@ export default function Messages() {
       searchParams.get('type') || 'COMPANY'
     );
   }, [searchParams, messages, startNewChat]);
+
+  useEffect(() => {
+    const draft = searchParams.get('draft');
+    if (draft) {
+      setDraftMessage(draft);
+    }
+  }, [searchParams]);
 
   // Keep selected in sync when messages update (e.g. new chat message sent)
   useEffect(() => {
@@ -133,6 +141,7 @@ export default function Messages() {
           onSendAttachment={sendAttachment}
           openMenu={openMenu}
           setOpenMenu={setOpenMenu}
+          prefillMessage={selected?.id === Number(searchParams.get('user')) ? draftMessage : ''}
         />
       </div>
 

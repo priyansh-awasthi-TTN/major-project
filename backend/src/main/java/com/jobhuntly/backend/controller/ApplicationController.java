@@ -65,6 +65,10 @@ public class ApplicationController {
                 if (job.getPostedByUserId() != null) {
                     userRepository.findById(job.getPostedByUserId()).ifPresent(user -> {
                         m.put("company", user.getFullName());
+                        m.put("companyUserId", user.getId());
+                        m.put("companyEmail", user.getEmail());
+                        m.put("companyRecruiterName", user.getRecruiterName());
+                        m.put("companyUserType", user.getUserType() != null ? user.getUserType().name() : null);
                         if (user.getProfilePhotoUrl() != null) {
                             m.put("logo", user.getProfilePhotoUrl());
                         } else if (user.getFullName() != null && user.getFullName().length() >= 2) {
@@ -243,6 +247,62 @@ public class ApplicationController {
         }
     }
 
+    // POST /api/applications/{id}/reschedule-request
+    @PostMapping("/{id}/reschedule-request")
+    public ResponseEntity<?> requestReschedule(@PathVariable Long id, HttpServletRequest request) {
+        try {
+            User user = resolveUser(request);
+            Application app = applicationRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Application not found"));
+
+            if (!app.getUser().getId().equals(user.getId())) {
+                return ResponseEntity.status(403).body(Map.of("message", "Forbidden"));
+            }
+
+            Job job = jobRepository.findById(app.getJobId())
+                    .orElseThrow(() -> new RuntimeException("Job not found"));
+
+            User companyUser = null;
+            if (job.getPostedByUserId() != null) {
+                companyUser = userRepository.findById(job.getPostedByUserId()).orElse(null);
+            }
+
+            if (companyUser == null) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Company user not found"));
+            }
+
+            Notification notification = new Notification();
+            notification.setRecipient(companyUser);
+            notification.setActorUserId(user.getId());
+            notification.setActorName(user.getFullName());
+            notification.setCategory("applications");
+            notification.setType("RESCHEDULE_REQUEST");
+
+            String interviewDate = app.getInterviewDate() != null ? app.getInterviewDate().toString().replace("T", " ") : "unspecified";
+            String text = user.getFullName() + " requested to reschedule the interview for " + job.getTitle() + ". Current time: " + interviewDate + ".";
+            notification.setText(text);
+            notification.setBadge("Reschedule");
+            notification.setBadgeColor("border border-orange-400 text-orange-600");
+            notificationRepository.save(notification);
+
+            String companyName = companyUser.getCurrentCompany() != null ? companyUser.getCurrentCompany() : companyUser.getFullName();
+            String recruiterName = companyUser.getRecruiterName();
+
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("message", "Reschedule request sent successfully");
+            response.put("companyEmail", companyUser.getEmail());
+            response.put("companyName", companyName);
+            response.put("recruiterName", recruiterName);
+            response.put("jobTitle", job.getTitle());
+            response.put("interviewDate", app.getInterviewDate() != null ? app.getInterviewDate().toString() : null);
+            response.put("meetLink", app.getMeetLink());
+            response.put("applicantName", user.getFullName());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
     @PostMapping
     public ResponseEntity<?> create(@RequestBody ApplicationRequest req, HttpServletRequest request) {
         try {
@@ -299,7 +359,11 @@ public class ApplicationController {
                     .orElseThrow(() -> new RuntimeException("Application not found"));
             if (!app.getUser().getId().equals(user.getId()))
                 return ResponseEntity.status(403).build();
-            app.setStatus(body.get("status"));
+            String nextStatus = body.get("status");
+            if ("Hired".equalsIgnoreCase(app.getStatus()) && nextStatus != null && !"Hired".equalsIgnoreCase(nextStatus)) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Hired applications cannot be changed to another status."));
+            }
+            app.setStatus(nextStatus);
             return ResponseEntity.ok(toMap(applicationRepository.save(app)));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));

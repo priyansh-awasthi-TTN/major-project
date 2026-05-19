@@ -53,6 +53,7 @@ export default function ChatWindow({
   openMenu,
   setOpenMenu,
   buildProfilePath = (message) => `/dashboard/profile/${message.id}`,
+  prefillMessage = '',
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -76,6 +77,12 @@ export default function ChatWindow({
     setPendingFiles([]);
     setShowEmoji(false);
   }, [selected?.id]);
+
+  useEffect(() => {
+    if (prefillMessage && selected?.id) {
+      setInput(prefillMessage);
+    }
+  }, [prefillMessage, selected?.id]);
 
   if (!selected) {
     return (

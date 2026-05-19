@@ -138,6 +138,7 @@ function saveLS(key, val) { sessionStorage.setItem(key, JSON.stringify(val)); }
 
 // ── Detail Drawer ─────────────────────────────────────────────────────────────
 function DetailDrawer({ app, onClose, onStatusChange, onToast, onNavigate }) {
+  const { user } = useAuth();
   const [input, setInput] = useState('');
   const [notes, setNotes] = useState(() => (loadNotes()[app?.id] || []));
   const [followupSent, setFollowupSent] = useState(() => !!(loadLS(LS_FOLLOWUP)[app?.id]));
@@ -174,6 +175,33 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast, onNavigate }) {
     }
   };
 
+  const handleReschedule = async () => {
+    try {
+      const response = await apiService.requestReschedule(app.id);
+      onToast('Reschedule request sent to the company.', 'success');
+
+      const companyEmail = response?.companyEmail || '';
+      const companyName = response?.companyName || app.company || 'Company';
+      const recruiterName = response?.recruiterName || '';
+      const applicantName = response?.applicantName || 'Applicant';
+      const jobTitle = response?.jobTitle || app.title || 'the role';
+      const interviewDate = response?.interviewDate ? new Date(response.interviewDate).toLocaleString() : 'not specified';
+      const meetLink = response?.meetLink || app.meetLink || '';
+
+      if (companyEmail) {
+        const greeting = recruiterName ? `Hi ${recruiterName}` : `Hi ${companyName}`;
+        const subject = encodeURIComponent(`Reschedule request: ${jobTitle}`);
+        const body = encodeURIComponent(
+          `${greeting},\n\nI would like to request a reschedule for my interview for the ${jobTitle} position.\n\nCurrent interview time: ${interviewDate}\nMeeting link: ${meetLink || 'N/A'}\n\nPlease let me know a suitable alternative time.\n\nThanks,\n${applicantName}`
+        );
+        const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${companyEmail}&su=${subject}&body=${body}`;
+        window.open(gmailUrl, '_blank');
+      }
+    } catch (error) {
+      onToast('Failed to send reschedule request.', 'error');
+    }
+  };
+
   const handleStartAssessment = () => {
     const map = loadLS(LS_ASSESS);
     map[app.id] = { startedAt: new Date().toISOString() };
@@ -195,6 +223,33 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast, onNavigate }) {
     } catch (error) {
       onToast('Failed to notify company.', 'error');
     }
+  };
+
+  const handleThankYouNote = () => {
+    if (!app.companyUserId) {
+      onToast('Recruiter chat is not available for this application yet.', 'error');
+      return;
+    }
+
+    const recruiterName = (app.companyRecruiterName || '').trim();
+    const companyName = app.company || 'Recruiter';
+    const displayName = recruiterName || companyName;
+    const jobTitle = app.title || 'the role';
+    const interviewDate = app.interviewDate ? new Date(app.interviewDate).toLocaleString() : '';
+    const applicantName = user?.fullName || 'Applicant';
+    const dateLine = interviewDate ? ` on ${interviewDate}` : '';
+
+    const draft = `Hello ${displayName},\n\nThank you for taking the time to interview me for the ${jobTitle} position${dateLine}. I appreciate the opportunity to learn more about the role and your team. Please let me know if there is any additional information I can provide.\n\nSincerely,\n${applicantName}`;
+
+    const params = new URLSearchParams({
+      user: String(app.companyUserId),
+      name: displayName,
+      email: app.companyEmail || '',
+      type: app.companyUserType || 'COMPANY',
+      draft,
+    });
+
+    onNavigate(`/dashboard/messages?${params.toString()}`);
   };
 
   const handleAccept = () => {
@@ -271,7 +326,7 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast, onNavigate }) {
                       </a>
                     )}
                     <button onClick={() => onToast('Interview added to your calendar!', 'success')} className="text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600 transition">📅 Add to Calendar</button>
-                    <button onClick={() => onToast('Reschedule request sent.', 'success')} className="text-xs border border-orange-400 text-orange-600 px-3 py-1.5 rounded-lg hover:bg-orange-50 transition">🔄 Reschedule</button>
+                    <button onClick={handleReschedule} className="text-xs border border-orange-400 text-orange-600 px-3 py-1.5 rounded-lg hover:bg-orange-50 transition">🔄 Reschedule</button>
                   </div>
                 </>
               ) : (
@@ -279,7 +334,7 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast, onNavigate }) {
                   <p className="text-xs text-gray-500">Prepare well — research the company and practice common interview questions.</p>
                   <div className="flex gap-2 pt-1">
                     <button onClick={() => onToast('Interview added to your calendar!', 'success')} className="text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600 transition">📅 Add to Calendar</button>
-                    <button onClick={() => onToast('Reschedule request sent.', 'success')} className="text-xs border border-orange-400 text-orange-600 px-3 py-1.5 rounded-lg hover:bg-orange-50 transition">🔄 Reschedule</button>
+                    <button onClick={handleReschedule} className="text-xs border border-orange-400 text-orange-600 px-3 py-1.5 rounded-lg hover:bg-orange-50 transition">🔄 Reschedule</button>
                   </div>
                 </>
               )}
@@ -291,7 +346,7 @@ function DetailDrawer({ app, onClose, onStatusChange, onToast, onNavigate }) {
               <p className="text-sm font-semibold text-orange-700">🎤 Interview Completed</p>
               <p className="text-xs text-gray-500">Your interview is complete. The recruiter will get back to you with the results soon.</p>
               <div className="flex gap-2 pt-1">
-                <button onClick={() => onToast('Thank you note sent!', 'success')} className="text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600 transition">✉️ Send Thank You Note</button>
+                <button onClick={handleThankYouNote} className="text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600 transition">✉️ Send Thank You Note</button>
               </div>
             </div>
           )}

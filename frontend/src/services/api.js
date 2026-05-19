@@ -174,6 +174,10 @@ class ApiService {
     return this.request(`/applications/${id}/follow-up`, { method: 'POST' });
   }
 
+  async requestReschedule(id) {
+    return this.request(`/applications/${id}/reschedule-request`, { method: 'POST' });
+  }
+
   async submitAssessment(id) {
     return this.request(`/applications/${id}/submit-assessment`, { method: 'POST' });
   }
@@ -399,6 +403,13 @@ class ApiService {
 
   async getHelpSupportTickets() {
     return this.request('/help-center/tickets');
+  }
+
+  async rescheduleApplication(id, rescheduleData) {
+    return this.request(`/applications/${id}/reschedule`, {
+      method: 'POST',
+      body: JSON.stringify(rescheduleData),
+    });
   }
 }
 
