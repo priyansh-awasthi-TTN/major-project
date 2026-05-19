@@ -25,6 +25,7 @@ export default function CompanySettings() {
   const [success, setSuccess] = useState('');
   const [profileForm, setProfileForm] = useState({
     fullName: '',
+    recruiterName: '',
     website: '',
     location: '',
     companySize: '',
@@ -55,6 +56,7 @@ export default function CompanySettings() {
 
         setProfileForm({
           fullName: profile?.fullName || '',
+          recruiterName: profile?.recruiterName || '',
           website: profile?.website || '',
           location: profile?.location || '',
           companySize: profile?.companySize || '',
@@ -96,6 +98,7 @@ export default function CompanySettings() {
     try {
       await apiService.updateMyProfile({
         fullName: profileForm.fullName,
+        recruiterName: profileForm.recruiterName,
         website: profileForm.website,
         location: profileForm.location,
         companySize: profileForm.companySize,
@@ -200,6 +203,14 @@ export default function CompanySettings() {
                   <input
                     value={profileForm.fullName}
                     onChange={(event) => setProfileForm((current) => ({ ...current, fullName: event.target.value }))}
+                    className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-500"
+                  />
+                </label>
+                <label className="text-xs font-semibold text-slate-500">
+                  Recruiter Name
+                  <input
+                    value={profileForm.recruiterName}
+                    onChange={(event) => setProfileForm((current) => ({ ...current, recruiterName: event.target.value }))}
                     className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-500"
                   />
                 </label>

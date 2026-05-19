@@ -134,7 +134,8 @@ export default function CompanySidebar() {
   const { totalUnreadCount = 0 } = useMessaging();
 
   const companyName = user?.companyName || user?.fullName || 'Company Workspace';
-  const contactName = user?.fullName || companyName;
+  const recruiterName = (user?.recruiterName || '').trim();
+  const contactName = recruiterName || user?.fullName || companyName;
   const contactEmail = user?.email || 'No email available';
   const initials = getInitials(companyName);
 
@@ -157,7 +158,9 @@ export default function CompanySidebar() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-slate-900">{companyName}</p>
-                <p className="truncate text-xs text-slate-500">Workspace</p>
+                <p className="truncate text-xs text-slate-500">
+                  {recruiterName ? `Recruiter: ${recruiterName}` : 'Workspace'}
+                </p>
               </div>
               <ChevronDownIcon className="h-4 w-4 flex-shrink-0 text-slate-400" />
             </div>
