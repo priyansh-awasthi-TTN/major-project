@@ -37,6 +37,6 @@ google:
     enabled: true
     credentials-path: "classpath:google-credentials.json"
     credentials-json: ""
-    calendar-id: "harshajais.hj@gmail.com"
+    calendar-id: "primary"
     timezone: "Asia/Kolkata"
     impersonated-user: ""
