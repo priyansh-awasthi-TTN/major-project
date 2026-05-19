@@ -4,6 +4,7 @@ import java.util.List;
 
 public class UserProfileUpdateRequest {
     private String fullName;
+    private String recruiterName;
     private String email;
     private String title;
     private String company;
@@ -44,6 +45,14 @@ public class UserProfileUpdateRequest {
 
     public void setFullName(String fullName) {
         this.fullName = fullName;
+    }
+
+    public String getRecruiterName() {
+        return recruiterName;
+    }
+
+    public void setRecruiterName(String recruiterName) {
+        this.recruiterName = recruiterName;
     }
 
     public String getEmail() {

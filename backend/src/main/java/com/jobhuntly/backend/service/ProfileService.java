@@ -79,6 +79,9 @@ public class ProfileService {
             user.setFullName(request.getFullName().trim());
         }
 
+        if (request.getRecruiterName() != null) {
+            user.setRecruiterName(normalizeText(request.getRecruiterName()));
+        }
         if (request.getTitle() != null) {
             user.setHeadline(normalizeText(request.getTitle()));
         }
@@ -241,6 +244,7 @@ public class ProfileService {
         UserDTO dto = new UserDTO();
         dto.setId(user.getId());
         dto.setFullName(user.getFullName());
+        dto.setRecruiterName(user.getRecruiterName());
         dto.setEmail(user.getEmail());
         dto.setUserType(user.getUserType() != null ? user.getUserType().name() : null);
         dto.setLocation(user.getLocation());

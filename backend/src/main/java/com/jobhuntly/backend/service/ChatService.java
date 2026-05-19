@@ -108,7 +108,7 @@ public class ChatService {
             
             Map<String, Object> conversation = new HashMap<>();
             conversation.put("userId", otherUser.getId());
-            conversation.put("userName", otherUser.getFullName());
+            conversation.put("userName", getDisplayName(otherUser));
             conversation.put("userEmail", otherUser.getEmail());
             conversation.put("userType", otherUser.getUserType().toString());
             conversation.put("lastMessage", convertToDTO(message));
@@ -159,8 +159,8 @@ public class ChatService {
         Map<String, Object> readNotification = new HashMap<>();
         readNotification.put("type", "MESSAGES_READ");
         readNotification.put("readByUserId", user.getId());
-        readNotification.put("readByUserName", user.getFullName());
-        
+        readNotification.put("readByUserName", getDisplayName(user));
+
         messagingTemplate.convertAndSend(
             "/topic/messages/" + otherUser.getId() + "/notifications",
             readNotification
@@ -205,10 +205,10 @@ public class ChatService {
         ChatMessageDTO dto = new ChatMessageDTO();
         dto.setId(message.getId());
         dto.setSenderId(message.getSender().getId());
-        dto.setSenderName(message.getSender().getFullName());
+        dto.setSenderName(getDisplayName(message.getSender()));
         dto.setSenderEmail(message.getSender().getEmail());
         dto.setReceiverId(message.getReceiver().getId());
-        dto.setReceiverName(message.getReceiver().getFullName());
+        dto.setReceiverName(getDisplayName(message.getReceiver()));
         dto.setReceiverEmail(message.getReceiver().getEmail());
         dto.setContent(message.getContent());
         dto.setMessageType(message.getMessageType());
@@ -216,5 +216,20 @@ public class ChatService {
         dto.setCreatedAt(message.getCreatedAt());
         dto.setRead(message.isRead());
         return dto;
+    }
+
+    private String getDisplayName(User user) {
+        if (user == null) {
+            return "";
+        }
+
+        if (user.getUserType() == User.UserType.COMPANY) {
+            String recruiterName = user.getRecruiterName();
+            if (recruiterName != null && !recruiterName.isBlank()) {
+                return recruiterName.trim();
+            }
+        }
+
+        return user.getFullName();
     }
 }

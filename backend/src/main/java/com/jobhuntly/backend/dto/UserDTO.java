@@ -6,6 +6,7 @@ import java.util.List;
 public class UserDTO {
     private Long id;
     private String fullName;
+    private String recruiterName;
     private String email;
     private String userType;
     private String location;
@@ -57,6 +58,14 @@ public class UserDTO {
 
     public void setFullName(String fullName) {
         this.fullName = fullName;
+    }
+
+    public String getRecruiterName() {
+        return recruiterName;
+    }
+
+    public void setRecruiterName(String recruiterName) {
+        this.recruiterName = recruiterName;
     }
 
     public String getEmail() {

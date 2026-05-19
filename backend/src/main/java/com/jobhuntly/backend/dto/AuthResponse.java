@@ -55,6 +55,7 @@ public class AuthResponse {
     public static class UserDto {
         private Long id;
         private String fullName;
+        private String recruiterName;
         private String email;
         private String userType;
         private String profilePhotoUrl;
@@ -64,6 +65,7 @@ public class AuthResponse {
         public UserDto(User user) {
             this.id = user.getId();
             this.fullName = user.getFullName();
+            this.recruiterName = user.getRecruiterName();
             this.email = user.getEmail();
             this.userType = user.getUserType().name();
             this.profilePhotoUrl = user.getProfilePhotoUrl();
@@ -81,11 +83,19 @@ public class AuthResponse {
         public String getFullName() {
             return fullName;
         }
-        
+
         public void setFullName(String fullName) {
             this.fullName = fullName;
         }
-        
+
+        public String getRecruiterName() {
+            return recruiterName;
+        }
+
+        public void setRecruiterName(String recruiterName) {
+            this.recruiterName = recruiterName;
+        }
+
         public String getEmail() {
             return email;
         }

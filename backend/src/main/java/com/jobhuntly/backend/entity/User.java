@@ -66,6 +66,9 @@ public class User implements UserDetails {
     @Column(name = "company_size")
     private String companySize;
 
+    @Column(name = "recruiter_name")
+    private String recruiterName;
+
     @Column(name = "headline")
     private String headline;
 
@@ -374,6 +377,14 @@ public class User implements UserDetails {
         this.companySize = companySize;
     }
 
+    public String getRecruiterName() {
+        return recruiterName;
+    }
+
+    public void setRecruiterName(String recruiterName) {
+        this.recruiterName = recruiterName;
+    }
+
     public String getHeadline() {
         return headline;
     }
@@ -590,3 +601,4 @@ public class User implements UserDetails {
         this.country = country;
     }
 }
+
