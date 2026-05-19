@@ -38,6 +38,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
+    @ExceptionHandler(GoogleCalendarAuthorizationRequiredException.class)
+    public ResponseEntity<Map<String, Object>> handleGoogleCalendarAuthorizationRequired(
+            GoogleCalendarAuthorizationRequiredException ex) {
+        Map<String, Object> error = new HashMap<>();
+        error.put("message", ex.getMessage());
+        error.put("requiresGoogleAuth", true);
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, String>> handleResponseStatusException(ResponseStatusException ex) {
         Map<String, String> error = new HashMap<>();

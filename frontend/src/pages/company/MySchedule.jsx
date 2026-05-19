@@ -43,6 +43,7 @@ import {
   toLocalDateTimeString,
 } from './scheduleUtils';
 
+const BACKEND_ORIGIN = new URL(import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api').origin;
 const VIEW_OPTIONS = ['day', 'week', 'month'];
 const COLOR_OPTIONS = ['#0ea5e9', '#10b981', '#6366f1', '#f59e0b', '#fb7185', '#8b5cf6', '#ef4444', '#14b8a6'];
 const HOUR_HEIGHT = 72;
@@ -293,11 +294,7 @@ function EventModal({
     setShowRepeatDropdown(newState);
   };
 
-  // Generate Google Meet link via backend API
-  const generateMeetLink = async () => {
-    console.log('🎥 Generating Google Meet link...');
-    setIsGeneratingMeetLink(true);
-
+  const getMeetLinkPayload = () => {
     const startDateTime = form.allDay
       ? combineDateAndTime(form.startDate, '00:00')
       : combineDateAndTime(form.startDate, form.startTime);
@@ -305,62 +302,109 @@ function EventModal({
       ? addDays(combineDateAndTime(form.endDate, '00:00'), 1)
       : combineDateAndTime(form.endDate, form.endTime);
 
+    return {
+      summary: form.title || 'Meeting',
+      startAt: toLocalDateTimeString(startDateTime),
+      endAt: toLocalDateTimeString(endDateTime),
+    };
+  };
+
+  const completeGoogleCalendarAuthorization = async () => {
+    const { authUrl } = await apiService.getGoogleCalendarAuthUrl();
+    const popup = window.open(authUrl, 'jobhuntly-google-calendar', 'popup,width=640,height=760');
+
+    if (!popup) {
+      throw new Error('Allow pop-ups to connect Google Calendar.');
+    }
+
+    return new Promise((resolve) => {
+      let settled = false;
+
+      const cleanup = () => {
+        window.removeEventListener('message', handleMessage);
+        window.clearInterval(closePoll);
+      };
+
+      const finish = (result) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        cleanup();
+        resolve(result);
+      };
+
+      const handleMessage = (event) => {
+        if (event.origin !== BACKEND_ORIGIN || event.data?.type !== 'jobhuntly-google-calendar') {
+          return;
+        }
+
+        finish({
+          success: Boolean(event.data.success),
+          message: event.data.message,
+        });
+      };
+
+      const closePoll = window.setInterval(() => {
+        if (popup.closed) {
+          finish({
+            success: false,
+            message: 'Google Calendar authorization was not completed.',
+          });
+        }
+      }, 400);
+
+      window.addEventListener('message', handleMessage);
+    });
+  };
+
+  // Generate Google Meet link via backend API
+  const generateMeetLink = async () => {
+    setIsGeneratingMeetLink(true);
+
     try {
-      const response = await apiService.createGoogleMeetLink({
-        summary: form.title || 'Meeting',
-        startAt: toLocalDateTimeString(startDateTime),
-        endAt: toLocalDateTimeString(endDateTime),
-        startAt: toLocalDateTimeString(startDateTime),
-        endAt: toLocalDateTimeString(endDateTime),
-      });
+      const response = await apiService.createGoogleMeetLink(getMeetLinkPayload());
 
       if (response && response.meetLink) {
         onChange('meetingLink', response.meetLink);
-        console.log('✅ Meet link created via backend:', response.meetLink);
-
         if (typeof onShowToast === 'function') {
           onShowToast('Meeting link created successfully', 'success');
         }
-        setIsGeneratingMeetLink(false);
         return;
       }
-    } catch (backendError) {
-      console.warn('⚠️ Backend API not available:', backendError.message);
-      if (typeof onShowToast === 'function') {
-        onShowToast('Google Meet setup is required before creating a meeting link.', 'error');
+
+      throw new Error('Google Meet link was not returned by the server.');
+    } catch (error) {
+      let message = error.message || 'Failed to create a Google Meet link.';
+
+      if (error?.payload?.requiresGoogleAuth) {
+        try {
+          const authorization = await completeGoogleCalendarAuthorization();
+          if (!authorization.success) {
+            message = authorization.message || 'Google Calendar authorization was not completed.';
+          } else {
+            const retryResponse = await apiService.createGoogleMeetLink(getMeetLinkPayload());
+            if (!retryResponse?.meetLink) {
+              message = 'Google Meet link was not returned after authorization.';
+            } else {
+              onChange('meetingLink', retryResponse.meetLink);
+              if (typeof onShowToast === 'function') {
+                onShowToast('Meeting link created successfully', 'success');
+              }
+              return;
+            }
+          }
+        } catch (authError) {
+          message = authError.message || message;
+        }
       }
+
+      if (typeof onShowToast === 'function') {
+        onShowToast(message, 'error');
+      }
+    } finally {
+      setIsGeneratingMeetLink(false);
     }
-
-    // Generate Google Meet-style link as fallback
-    const chars = 'abcdefghijklmnopqrstuvwxyz';
-    let code = '';
-
-    // Part 1: 3 chars
-    for (let i = 0; i < 3; i++) {
-      code += chars[Math.floor(Math.random() * chars.length)];
-    }
-    code += '-';
-
-    // Part 2: 4 chars
-    for (let i = 0; i < 4; i++) {
-      code += chars[Math.floor(Math.random() * chars.length)];
-    }
-    code += '-';
-
-    // Part 3: 3 chars
-    for (let i = 0; i < 3; i++) {
-      code += chars[Math.floor(Math.random() * chars.length)];
-    }
-
-    const meetLink = `https://meet.google.com/${code}`;
-    onChange('meetingLink', meetLink);
-    console.log('✅ Meet link generated:', meetLink);
-    console.warn('⚠️ Note: This link requires Google OAuth setup to work. See GOOGLE_MEET_SETUP.md');
-
-    if (typeof onShowToast === 'function') {
-      onShowToast('Meeting link created', 'success');
-    }
-    setIsGeneratingMeetLink(false);
   };
 
   const removeMeetLink = () => {

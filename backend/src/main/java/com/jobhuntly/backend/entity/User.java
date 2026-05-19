@@ -1,5 +1,6 @@
 package com.jobhuntly.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -156,6 +157,18 @@ public class User implements UserDetails {
     
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<RefreshToken> refreshTokens;
+
+    @JsonIgnore
+    @Column(name = "google_calendar_access_token", length = 4096)
+    private String googleCalendarAccessToken;
+
+    @JsonIgnore
+    @Column(name = "google_calendar_refresh_token", length = 4096)
+    private String googleCalendarRefreshToken;
+
+    @JsonIgnore
+    @Column(name = "google_calendar_token_expires_at")
+    private LocalDateTime googleCalendarTokenExpiresAt;
     
     public enum UserType {
         JOBSEEKER, COMPANY
@@ -289,6 +302,30 @@ public class User implements UserDetails {
     
     public void setRefreshTokens(List<RefreshToken> refreshTokens) {
         this.refreshTokens = refreshTokens;
+    }
+
+    public String getGoogleCalendarAccessToken() {
+        return googleCalendarAccessToken;
+    }
+
+    public void setGoogleCalendarAccessToken(String googleCalendarAccessToken) {
+        this.googleCalendarAccessToken = googleCalendarAccessToken;
+    }
+
+    public String getGoogleCalendarRefreshToken() {
+        return googleCalendarRefreshToken;
+    }
+
+    public void setGoogleCalendarRefreshToken(String googleCalendarRefreshToken) {
+        this.googleCalendarRefreshToken = googleCalendarRefreshToken;
+    }
+
+    public LocalDateTime getGoogleCalendarTokenExpiresAt() {
+        return googleCalendarTokenExpiresAt;
+    }
+
+    public void setGoogleCalendarTokenExpiresAt(LocalDateTime googleCalendarTokenExpiresAt) {
+        this.googleCalendarTokenExpiresAt = googleCalendarTokenExpiresAt;
     }
     
     @PreUpdate

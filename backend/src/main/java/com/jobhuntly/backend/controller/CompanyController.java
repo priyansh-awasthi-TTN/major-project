@@ -10,6 +10,8 @@ import com.jobhuntly.backend.repository.NotificationRepository;
 import com.jobhuntly.backend.repository.UserRepository;
 import com.jobhuntly.backend.service.JwtService;
 import com.jobhuntly.backend.service.TokenService;
+import com.jobhuntly.backend.exception.GoogleCalendarAuthorizationRequiredException;
+import com.jobhuntly.backend.service.GoogleCalendarService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +32,7 @@ public class CompanyController {
     @Autowired private UserRepository userRepository;
     @Autowired private JwtService jwtService;
     @Autowired private TokenService tokenService;
+    @Autowired private GoogleCalendarService googleCalendarService;
 
     private Map<String, Object> toJobMap(Job job, User user) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -169,6 +172,20 @@ public class CompanyController {
                 app.setInterviewDate(LocalDateTime.parse(body.get("interviewDate")));
             }
             if (body.containsKey("meetLink")) app.setMeetLink(body.get("meetLink"));
+
+            if (("Interviewing".equals(nextStatus) || "Interview".equals(nextStatus))
+                    && app.getInterviewDate() != null
+                    && (app.getMeetLink() == null || app.getMeetLink().isBlank())) {
+                String summary = "Interview: " + app.getUser().getFullName() + " - " + job.getTitle();
+                LocalDateTime endAt = app.getInterviewDate().plusHours(1);
+                List<String> attendees = new ArrayList<>();
+                if (app.getUser().getEmail() != null && !app.getUser().getEmail().isBlank()) {
+                    attendees.add(app.getUser().getEmail());
+                }
+                String meetLink = googleCalendarService.createGoogleMeetLink(companyUser, summary, app.getInterviewDate(), endAt, attendees);
+                app.setMeetLink(meetLink);
+            }
+
             applicationRepository.save(app);
 
             Notification candidateNotification = new Notification();
@@ -179,8 +196,11 @@ public class CompanyController {
             candidateNotification.setType("status");
             
             String candidateMsg = "updated your application status for " + job.getTitle() + " to " + nextStatus;
-            if ("Interviewing".equals(nextStatus) && app.getInterviewDate() != null) {
+            if (("Interviewing".equals(nextStatus) || "Interview".equals(nextStatus)) && app.getInterviewDate() != null) {
                 candidateMsg += ". Your interview is scheduled for " + app.getInterviewDate().toString().replace("T", " ");
+                if (app.getMeetLink() != null && !app.getMeetLink().isBlank()) {
+                    candidateMsg += ". Meet link: " + app.getMeetLink();
+                }
             }
             candidateNotification.setText(candidateMsg);
             
@@ -201,7 +221,14 @@ public class CompanyController {
 
             notificationRepository.saveAll(List.of(candidateNotification, companyNotification));
 
-            return ResponseEntity.ok(Map.of("message", "Status updated successfully", "status", app.getStatus()));
+            return ResponseEntity.ok(Map.of(
+                    "message", "Status updated successfully",
+                    "status", app.getStatus(),
+                    "meetLink", app.getMeetLink(),
+                    "interviewDate", app.getInterviewDate() != null ? app.getInterviewDate().toString() : null
+            ));
+        } catch (GoogleCalendarAuthorizationRequiredException e) {
+            throw e;
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }

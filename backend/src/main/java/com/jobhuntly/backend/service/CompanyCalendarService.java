@@ -202,7 +202,7 @@ public class CompanyCalendarService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Meeting end time must be after start time");
         }
 
-        return googleCalendarService.createGoogleMeetLink(summary, startAt, endAt);
+        return googleCalendarService.createGoogleMeetLink(companyUser, summary, startAt, endAt);
     }
 
     private LocalDateTime readDateTime(Map<String, Object> payload, String... keys) {

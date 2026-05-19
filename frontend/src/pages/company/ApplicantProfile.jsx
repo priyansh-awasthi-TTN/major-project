@@ -22,6 +22,8 @@ import {
   normalizeJob,
 } from '../../utils/companyData';
 
+const BACKEND_ORIGIN = new URL(import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api').origin;
+
 function LoadingState() {
   return (
     <div className="flex min-h-[50vh] items-center justify-center">
@@ -136,6 +138,53 @@ export default function ApplicantProfile() {
     (status === 'Interview' || status === 'Interviewing') &&
     application.interviewDate;
 
+  const completeGoogleCalendarAuthorization = async () => {
+    const { authUrl } = await apiService.getGoogleCalendarAuthUrl();
+    const popup = window.open(authUrl, 'jobhuntly-google-calendar', 'popup,width=640,height=760');
+
+    if (!popup) {
+      throw new Error('Allow pop-ups to connect Google Calendar.');
+    }
+
+    return new Promise((resolve) => {
+      let settled = false;
+
+      const cleanup = () => {
+        window.removeEventListener('message', handleMessage);
+        window.clearInterval(closePoll);
+      };
+
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(result);
+      };
+
+      const handleMessage = (event) => {
+        if (event.origin !== BACKEND_ORIGIN || event.data?.type !== 'jobhuntly-google-calendar') {
+          return;
+        }
+
+        finish({
+          success: Boolean(event.data.success),
+          message: event.data.message,
+        });
+      };
+
+      const closePoll = window.setInterval(() => {
+        if (popup.closed) {
+          finish({
+            success: false,
+            message: 'Google Calendar authorization was not completed.',
+          });
+        }
+      }, 400);
+
+      window.addEventListener('message', handleMessage);
+    });
+  };
+
   const handleStatusUpdate = async () => {
     if (!application || (status === application.stage && !isRescheduling)) return;
 
@@ -163,12 +212,41 @@ export default function ApplicantProfile() {
         }
       }
 
-      await apiService.updateCompanyApplicationStatus(application.id, payload);
+      const updateStatusRequest = async () => {
+        return apiService.updateCompanyApplicationStatus(application.id, payload);
+      };
 
-      if ((status === 'Interviewing' || status === 'Interview') && interviewDate) {
+      let updateResponse;
+      try {
+        updateResponse = await updateStatusRequest();
+      } catch (requestError) {
+        if (requestError?.payload?.requiresGoogleAuth) {
+          const authorization = await completeGoogleCalendarAuthorization();
+          if (!authorization.success) {
+            throw new Error(authorization.message || 'Google Calendar authorization was not completed.');
+          }
+          updateResponse = await updateStatusRequest();
+        } else {
+          throw requestError;
+        }
+      }
+
+      let resolvedMeetLink = meetLink;
+      let resolvedInterviewDate = interviewDate;
+      if (updateResponse?.meetLink) {
+        resolvedMeetLink = updateResponse.meetLink;
+        setMeetLink(updateResponse.meetLink);
+      }
+      if (updateResponse?.interviewDate) {
+        resolvedInterviewDate = updateResponse.interviewDate;
+        const normalized = updateResponse.interviewDate.substring(0, 16);
+        setInterviewDate(normalized);
+      }
+
+      if ((status === 'Interviewing' || status === 'Interview') && resolvedInterviewDate) {
         try {
-          const startAtStr = interviewDate.length === 16 ? interviewDate + ':00' : interviewDate;
-          const start = new Date(interviewDate);
+          const startAtStr = resolvedInterviewDate.length === 16 ? resolvedInterviewDate + ':00' : resolvedInterviewDate;
+          const start = new Date(resolvedInterviewDate);
           const end = new Date(start.getTime() + 60 * 60 * 1000); // 1 hour duration
 
           // Format end time properly without shifting timezone
@@ -202,7 +280,7 @@ export default function ApplicantProfile() {
                 description: `Interview for ${application.jobTitle}`,
                 startAt: startAtStr,
                 endAt: endAtStr,
-                meetingLink: meetLink || '',
+                meetingLink: resolvedMeetLink || '',
                 attendees: candidateEmail ? [candidateEmail] : []
               });
               showToast('Calendar event updated successfully.', 'success');
@@ -216,7 +294,7 @@ export default function ApplicantProfile() {
               description: `Interview for ${application.jobTitle}`,
               startAt: startAtStr,
               endAt: endAtStr,
-              meetingLink: meetLink || '',
+              meetingLink: resolvedMeetLink || '',
               attendees: candidateEmail ? [candidateEmail] : []
             });
             showToast('Calendar event created successfully.', 'success');
@@ -229,10 +307,10 @@ export default function ApplicantProfile() {
       showToast(isRescheduling ? 'Interview rescheduled successfully.' : `Status updated to ${status}.`, 'success');
 
       if (isRescheduling) {
-        const formattedDate = new Date(interviewDate).toLocaleString();
+        const formattedDate = new Date(resolvedInterviewDate).toLocaleString();
         const subject = encodeURIComponent('Your interview has been rescheduled');
         const body = encodeURIComponent(
-          `Hi ${candidateName},\n\nYour interview for the ${application.jobTitle} position has been rescheduled.\n\nNew Interview Details:\nDate & Time: ${formattedDate}\nMeeting Link: ${meetLink || 'Will be shared later'}\n\nBest regards,\nJobHuntly Team`
+          `Hi ${candidateName},\n\nYour interview for the ${application.jobTitle} position has been rescheduled.\n\nNew Interview Details:\nDate & Time: ${formattedDate}\nMeeting Link: ${resolvedMeetLink || 'Will be shared later'}\n\nBest regards,\nJobHuntly Team`
         );
         const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${candidateEmail}&su=${subject}&body=${body}`;
         window.open(gmailUrl, '_blank');

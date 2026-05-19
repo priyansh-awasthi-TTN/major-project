@@ -37,17 +37,24 @@ class ApiService {
       console.log('API response:', { status: response.status, data });
 
       if (!response.ok) {
+        const buildError = (message) => {
+          const error = new Error(message);
+          error.status = response.status;
+          error.payload = data;
+          return error;
+        };
+
         // Handle specific error cases
         if (response.status === 401) {
-          throw new Error('Unauthorized - Please log in again');
+          throw buildError('Unauthorized - Please log in again');
         } else if (response.status === 403) {
-          throw new Error('Access denied');
+          throw buildError('Access denied');
         } else if (response.status === 404) {
-          throw new Error('Resource not found');
+          throw buildError('Resource not found');
         } else if (response.status === 500) {
-          throw new Error('Server error - Please try again later');
+          throw buildError('Server error - Please try again later');
         } else {
-          throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
+          throw buildError(data.message || `HTTP ${response.status}: ${response.statusText}`);
         }
       }
 
@@ -241,6 +248,10 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(eventDetails),
     });
+  }
+
+  async getGoogleCalendarAuthUrl() {
+    return this.request('/company/calendar/google/authorize');
   }
 
   // Job endpoints

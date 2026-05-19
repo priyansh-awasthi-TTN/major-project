@@ -57,6 +57,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/company/calendar/google/callback").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/jobs", "/api/jobs/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/companies").permitAll()
